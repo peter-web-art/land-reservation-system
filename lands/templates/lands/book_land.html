@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4>Book This Land</h4>
+            </div>
+            
+            <div class="card-body">
+                <h5>{{ land.title }}</h5>
+                <p class="text-muted">{{ land.location }}</p>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    <p><strong>Price:</strong> ${{ land.price }}</p>
+                    <p><strong>Description:</strong></p>
+                    <p>{{ land.description }}</p>
+                </div>
+                
+                <hr>
+                
+                <h5>Booking Details</h5>
+                <div class="alert alert-info">
+                    <p><strong>Customer:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-warning">Pending Approval</span></p>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-lg w-100">Confirm Booking</button>
+                </form>
+                
+                <a href="{% url 'lands:land_detail' land.id %}" class="btn btn-secondary btn-lg w-100 mt-2">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

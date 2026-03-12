@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Delete Land: {{ land.title }}</h2>
+<p>Are you sure you want to permanently delete this listing?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, delete</button>
+    <a href="{% url 'lands:owner_dashboard' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% endblock %}

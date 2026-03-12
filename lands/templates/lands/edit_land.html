@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h3>Edit Land: {{ land.title }}</h3>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.title.label }}</label>
+                        {{ form.title }}
+                        <small class="form-text text-muted">Enter the land title/name</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.location.label }}</label>
+                        {{ form.location }}
+                        <small class="form-text text-muted">City, District, or Area</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.price.label }}</label>
+                                {{ form.price }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.listing_type.label }}</label>
+                                {{ form.listing_type }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.contact_phone.label }}</label>
+                                {{ form.contact_phone }}
+                                <small class="form-text text-muted">Your contact phone number</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.contact_email.label }}</label>
+                                {{ form.contact_email }}
+                                <small class="form-text text-muted">Your contact email</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.image.label }}</label>
+                        {{ form.image }}
+                        {% if land.image %}
+                        <small class="form-text text-muted">Leave blank to keep current image</small>
+                        <img src="{{ land.image.url }}" class="img-thumbnail mt-2" style="max-width: 200px;">
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        <small class="form-text text-muted">Detailed description of the land</small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning btn-lg">Update Land</button>
+                        <a href="{% url 'lands:owner_dashboard' %}" class="btn btn-secondary btn-lg">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    {{ form.title }} { width: 100%; padding: 8px; }
+    {{ form.location }} { width: 100%; padding: 8px; }
+    {{ form.price }} { width: 100%; padding: 8px; }
+    {{ form.listing_type }} { width: 100%; padding: 8px; }
+    {{ form.contact_phone }} { width: 100%; padding: 8px; }
+    {{ form.contact_email }} { width: 100%; padding: 8px; }
+    {{ form.image }} { width: 100%; }
+    {{ form.description }} { width: 100%; padding: 8px; }
+    
+    .form-label { font-weight: bold; margin-top: 10px; }
+</style>
+
+{% endblock %}

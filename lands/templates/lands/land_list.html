@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">Featured Properties</h2>
+
+<div class="row">
+
+{% for land in lands %}
+
+<div class="col-md-4">
+
+<div class="card mb-4">
+
+{% if land.image %}
+<img src="{{ land.image.url }}" class="card-img-top">
+{% endif %}
+
+<div class="card-body">
+
+<h5>{{ land.title }}</h5>
+
+<p><b>Location:</b> {{ land.location }}</p>
+<p><b>Price:</b> ${{ land.price }}</p>
+                    <p><b>Type:</b>
+                        <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}">
+                            {{ land.get_listing_type_display }}
+                        </span>
+                    </p>
+
+</div>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endblock %}

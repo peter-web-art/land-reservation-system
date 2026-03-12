@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Owner Dashboard</h2>
+
+<div class="mb-3">
+    <a href="{% url 'lands:add_land' %}" class="btn btn-success">+ Add New Land</a>
+    <a href="{% url 'lands:reservations_management' %}" class="btn btn-primary">Manage Bookings</a>
+</div>
+
+<div class="table-responsive">
+<table class="table table-striped table-hover">
+
+<thead class="bg-primary text-white">
+<tr>
+    <th>Title</th>
+    <th>Location</th>
+    <th>Price</th>
+    <th>Type</th>
+    <th>Reservations</th>
+    <th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+{% for land in lands %}
+
+<tr>
+    <td><strong>{{ land.title }}</strong></td>
+    <td>{{ land.location }}</td>
+    <td>${{ land.price }}</td>
+    <td><span class="badge bg-info">{{ land.reservations.all|length }}</span></td>
+    <td>
+        <a href="{% url 'lands:edit_land' land.id %}" class="btn btn-sm btn-warning">Edit</a>
+        <a href="{% url 'lands:delete_land' land.id %}" class="btn btn-sm btn-danger ms-1" onclick="return confirm('Are you sure you want to delete this land?')">Delete</a>
+    </td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+</div>
+
+{% if not lands %}
+<div class="alert alert-info">
+    <p>You haven't added any lands yet.</p>
+    <a href="{% url 'lands:add_land' %}" class="btn btn-success">Add Your First Land</a>
+</div>
+{% endif %}
+
+{% endblock %}

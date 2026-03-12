@@ -27,6 +27,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Auth redirects
+LOGIN_REDIRECT_URL = '/lands/dashboard/customer/'
+LOGOUT_REDIRECT_URL = '/'
+
+
 
 # Application definition
 
@@ -39,7 +44,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'lands',
-    'reservations',
 ]
 
 MIDDLEWARE = [
@@ -57,11 +61,12 @@ ROOT_URLCONF = 'land_reservation.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
+                'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -120,3 +125,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+# store uploads in a media folder alongside manage.py (one level above BASE_DIR)
+MEDIA_ROOT = BASE_DIR.parent / 'media'  # BASE_DIR is the inner project dir
+
+
+# Authentication redirects
+LOGIN_REDIRECT_URL = '/lands/dashboard/customer/'
+LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
+

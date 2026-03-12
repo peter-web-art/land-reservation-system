@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Available Lands{% endblock %}
+
+{% block content %}
+<h2>Available Lands</h2>
+
+<div>
+    <h3>Plot A</h3>
+    <p>Location: City Center</p>
+    <p>Price: $5000</p>
+    <a href="{% url 'reserve' %}">Reserve</a>
+</div>
+
+<div>
+    <h3>Plot B</h3>
+    <p>Location: Beach Area</p>
+    <p>Price: $7000</p>
+    <a href="{% url 'reserve' %}">Reserve</a>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            {% if land.image %}
+            <img src="{{ land.image.url }}" class="card-img-top" style="height: 400px; object-fit: cover;">
+            {% endif %}
+            
+            <div class="card-body">
+                <h2>{{ land.title }}</h2>
+                
+                <hr>
+                
+                <p><strong>Location:</strong> {{ land.location }}</p>
+                <p><strong>Price:</strong> ${{ land.price }}</p>
+                <p><strong>Type:</strong>
+                    <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}">
+                        {{ land.get_listing_type_display }}
+                    </span>
+                </p>
+                <p><strong>Owner:</strong> {{ land.owner.username }}</p>
+                <p><strong>Contact:</strong> {{ land.contact_phone }} | {{ land.contact_email }}</p>
+                
+                <hr>
+                
+                <h5>Description</h5>
+                <p>{{ land.description }}</p>
+                
+                <hr>
+                
+                {% if user.is_authenticated and user != land.owner %}
+                <a href="{% url 'lands:book_land' land.id %}" class="btn btn-success btn-lg">Book This Land</a>
+                {% elif user == land.owner %}
+                <p class="text-muted">This is your land listing</p>
+                <a href="{% url 'lands:owner_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn btn-success btn-lg">Login to Book</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5>Property Info</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Property ID:</strong> #{{ land.id }}</p>
+                <p><strong>Status:</strong> <span class="badge bg-success">Available</span></p>
+                <p><strong>Reservations:</strong> {{ land.reservations.all|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

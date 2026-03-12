@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Manage Reservations</h2>
+
+{% if reservations %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="bg-primary text-white">
+                <tr>
+                    <th>Land</th>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Booking Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reservation in reservations %}
+                <tr>
+                    <td><strong>{{ reservation.land.title }}</strong></td>
+                    <td>{{ reservation.customer.username }}</td>
+                    <td>{{ reservation.customer.email }}</td>
+                    <td>{{ reservation.booking_date|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if reservation.status == 'pending' %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                        {% elif reservation.status == 'approved' %}
+                        <span class="badge bg-success">Approved</span>
+                        {% elif reservation.status == 'rejected' %}
+                        <span class="badge bg-danger">Rejected</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            {% if reservation.status == 'pending' %}
+                            <a href="{% url 'lands:update_reservation_status' reservation.id 'approved' %}" 
+                               class="btn btn-success" title="Approve">✓ Approve</a>
+                            <a href="{% url 'lands:update_reservation_status' reservation.id 'rejected' %}" 
+                               class="btn btn-danger" title="Reject">✗ Reject</a>
+                            {% else %}
+                            <a href="{% url 'lands:update_reservation_status' reservation.id 'cancelled' %}" 
+                               class="btn btn-warning" title="Cancel">Cancel</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>You don't have any reservations yet.</p>
+    </div>
+{% endif %}
+
+<a href="{% url 'lands:owner_dashboard' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+
+{% endblock %}

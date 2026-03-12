@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>Welcome to Land Reservation System</h1>
+<p>Browse available lands and reserve your preferred plot easily.</p>
+
+<a href="{% url 'lands' %}">View Available Lands</a>
+{% endblock %}

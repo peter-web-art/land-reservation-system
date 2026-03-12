@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="mb-4">Hello, {{ user.username }}!</h2>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Bookings</h5>
+                <p class="card-text h2">{{ total }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pending</h5>
+                <p class="card-text h2">{{ pending }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Approved</h5>
+                <p class="card-text h2">{{ approved }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Cancelled</h5>
+                <p class="card-text h2">{{ cancelled }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'lands:my_reservations' %}" class="btn btn-primary">View My Reservations</a>
+
+{% endblock %}

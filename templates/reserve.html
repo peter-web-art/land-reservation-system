@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Reserve Land{% endblock %}
+
+{% block content %}
+<h2>Reserve a Land</h2>
+
+<form method="POST">
+    {% csrf_token %}
+
+    <label>Name:</label><br>
+    <input type="text" name="name"><br><br>
+
+    <label>Phone:</label><br>
+    <input type="text" name="phone"><br><br>
+
+    <label>Email:</label><br>
+    <input type="email" name="email"><br><br>
+
+    <button type="submit">Submit Reservation</button>
+</form>
+{% endblock %}
