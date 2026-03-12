@@ -10,10 +10,27 @@
 
 <div class="col-md-4">
 
-<div class="card mb-4">
+<div class="card mb-4 shadow-sm">
+
+<!-- Owner Info at Top -->
+<div class="card-header bg-light d-flex align-items-center">
+    {% if land.owner.profile_picture %}
+        <img src="{{ land.owner.profile_picture.url }}" class="rounded-circle me-2" style="width: 45px; height: 45px; object-fit: cover;">
+    {% else %}
+        <div class="rounded-circle bg-white d-flex align-items-center justify-content-center me-2 border" style="width: 45px; height: 45px;">
+            <span class="text-muted" style="font-size: 20px;">👤</span>
+        </div>
+    {% endif %}
+    <div style="flex: 1;">
+        <strong style="font-size: 14px;">{{ land.owner.get_full_name|default:land.owner.username }}</strong>
+        {% if land.owner.phone %}
+            <br><small class="text-muted">{{ land.owner.phone }}</small>
+        {% endif %}
+    </div>
+</div>
 
 {% if land.image %}
-<img src="{{ land.image.url }}" class="card-img-top">
+<img src="{{ land.image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
 {% endif %}
 
 <div class="card-body">
@@ -21,12 +38,14 @@
 <h5>{{ land.title }}</h5>
 
 <p><b>Location:</b> {{ land.location }}</p>
-<p><b>Price:</b> ${{ land.price }}</p>
-                    <p><b>Type:</b>
-                        <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}">
-                            {{ land.get_listing_type_display }}
-                        </span>
-                    </p>
+<p><b>Price:</b> <span class="badge bg-success">${{ land.price }}</span></p>
+<p><b>Type:</b>
+    <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}">
+        {{ land.get_listing_type_display }}
+    </span>
+</p>
+
+<a href="{% url 'lands:land_detail' land.id %}" class="btn btn-primary btn-sm w-100 mt-3">View Details</a>
 
 </div>
 

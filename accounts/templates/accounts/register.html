@@ -2,14 +2,117 @@
 
 {% block content %}
 
-<h2>Sign Up</h2>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3>Create Your Owner Account</h3>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger small">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.first_name.label }}</label>
+                                {{ form.first_name }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.last_name.label }}</label>
+                                {{ form.last_name }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                        <small class="form-text text-muted">Optional: Contact phone number</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.profile_picture.label }}</label>
+                        {{ form.profile_picture }}
+                        <small class="form-text text-muted">Optional: Profile picture (JPG, PNG)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.bio.label }}</label>
+                        {{ form.bio }}
+                        <small class="form-text text-muted">Optional: Tell customers about yourself</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.password1.label }}</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="text-danger small">{{ form.password1.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">{{ form.password1.help_text|safe }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.password2.label }}</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="text-danger small">{{ form.password2.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success btn-lg w-100">Create Account</button>
+                </form>
+            </div>
+        </div>
+        
+        <p class="mt-3 text-center">Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
+    </div>
+</div>
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">Register</button>
-</form>
-
-<p class="mt-3">Already have an account? <a href="{% url 'login' %}">Login here</a>.</p>
+<style>
+    form input[type="text"],
+    form input[type="email"],
+    form input[type="password"],
+    form input[type="number"],
+    form input[type="tel"],
+    form input[type="file"],
+    form textarea,
+    form select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    form textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+    
+    .form-label {
+        font-weight: bold;
+        margin-top: 10px;
+    }
+</style>
 
 {% endblock %}

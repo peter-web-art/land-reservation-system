@@ -15,14 +15,12 @@
                 <hr>
                 
                 <p><strong>Location:</strong> {{ land.location }}</p>
-                <p><strong>Price:</strong> ${{ land.price }}</p>
+                <p><strong>Price:</strong> <span class="badge bg-success" style="font-size: 16px;">${{ land.price }}</span></p>
                 <p><strong>Type:</strong>
-                    <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}">
+                    <span class="badge {% if land.listing_type == 'sale' %}bg-danger{% else %}bg-info{% endif %}" style="font-size: 14px;">
                         {{ land.get_listing_type_display }}
                     </span>
                 </p>
-                <p><strong>Owner:</strong> {{ land.owner.username }}</p>
-                <p><strong>Contact:</strong> {{ land.contact_phone }} | {{ land.contact_email }}</p>
                 
                 <hr>
                 
@@ -35,7 +33,8 @@
                 <a href="{% url 'lands:book_land' land.id %}" class="btn btn-success btn-lg">Book This Land</a>
                 {% elif user == land.owner %}
                 <p class="text-muted">This is your land listing</p>
-                <a href="{% url 'lands:owner_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+                <a href="{% url 'lands:edit_land' land.id %}" class="btn btn-warning me-2">Edit</a>
+                <a href="{% url 'lands:delete_land' land.id %}" class="btn btn-danger">Delete</a>
                 {% else %}
                 <a href="{% url 'login' %}" class="btn btn-success btn-lg">Login to Book</a>
                 {% endif %}
@@ -44,6 +43,36 @@
     </div>
     
     <div class="col-md-4">
+        <!-- Owner Card -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5>📍 Listing Owner</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if land.owner.profile_picture %}
+                    <img src="{{ land.owner.profile_picture.url }}" class="rounded-circle mb-3" style="width: 100px; height: 100px; object-fit: cover;">
+                {% else %}
+                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mb-3 mx-auto" style="width: 100px; height: 100px;">
+                        <span style="font-size: 48px;">👤</span>
+                    </div>
+                {% endif %}
+                
+                <h5>{{ land.owner.get_full_name|default:land.owner.username }}</h5>
+                
+                {% if land.owner.bio %}
+                    <p class="text-muted small mt-2">{{ land.owner.bio }}</p>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="text-start">
+                    <p><strong>📞 Phone:</strong> {{ land.owner.phone|default:"Not provided" }}</p>
+                    <p><strong>✉️ Email:</strong> {{ land.owner.email }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Property Info Card -->
         <div class="card">
             <div class="card-header bg-light">
                 <h5>Property Info</h5>

@@ -39,7 +39,25 @@
     <div class="row">
         {% for land in lands %}
         <div class="col-md-4">
-            <div class="card mb-4">
+            <div class="card mb-4 shadow-sm">
+            
+                <!-- Owner Info at Top -->
+                <div class="card-header bg-light d-flex align-items-center">
+                    {% if land.owner.profile_picture %}
+                        <img src="{{ land.owner.profile_picture.url }}" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                    {% else %}
+                        <div class="rounded-circle bg-white d-flex align-items-center justify-content-center me-2 border" style="width: 40px; height: 40px;">
+                            <span class="text-muted" style="font-size: 18px;">👤</span>
+                        </div>
+                    {% endif %}
+                    <div style="flex: 1;">
+                        <strong style="font-size: 13px;">{{ land.owner.get_full_name|default:land.owner.username }}</strong>
+                        {% if land.owner.phone %}
+                            <br><small class="text-muted" style="font-size: 11px;">{{ land.owner.phone }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            
                 {% if land.image %}
                 <img src="{{ land.image.url }}" class="card-img-top" style="height: 250px; object-fit: cover;">
                 {% else %}
