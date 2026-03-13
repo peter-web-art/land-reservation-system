@@ -29,14 +29,16 @@
                 
                 <hr>
                 
-                {% if user.is_authenticated and user != land.owner %}
-                <a href="{% url 'lands:book_land' land.id %}" class="btn btn-success btn-lg">Book This Land</a>
-                {% elif user == land.owner %}
-                <p class="text-muted">This is your land listing</p>
-                <a href="{% url 'lands:edit_land' land.id %}" class="btn btn-warning me-2">Edit</a>
-                <a href="{% url 'lands:delete_land' land.id %}" class="btn btn-danger">Delete</a>
+                {% if land.is_available %}
+                    {% if user.is_authenticated and user == land.owner %}
+                        <p class="text-muted">This is your land listing</p>
+                        <a href="{% url 'lands:edit_land' land.id %}" class="btn btn-warning me-2">Edit</a>
+                        <a href="{% url 'lands:delete_land' land.id %}" class="btn btn-danger">Delete</a>
+                    {% else %}
+                        <a href="{% url 'lands:book_land' land.id %}" class="btn btn-success btn-lg">Book This Land</a>
+                    {% endif %}
                 {% else %}
-                <a href="{% url 'login' %}" class="btn btn-success btn-lg">Login to Book</a>
+                    <p class="text-warning">This land is currently booked.</p>
                 {% endif %}
             </div>
         </div>
@@ -79,7 +81,11 @@
             </div>
             <div class="card-body">
                 <p><strong>Property ID:</strong> #{{ land.id }}</p>
-                <p><strong>Status:</strong> <span class="badge bg-success">Available</span></p>
+                <p><strong>Status:</strong> 
+                    <span class="badge {% if land.is_available %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ land.status_display }}
+                    </span>
+                </p>
                 <p><strong>Reservations:</strong> {{ land.reservations.all|length }}</p>
             </div>
         </div>

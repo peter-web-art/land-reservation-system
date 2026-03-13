@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4>Check Booking Status</h4>
+            </div>
+            
+            <div class="card-body">
+                <p>Enter your email address or phone number to check your booking status.</p>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="your@email.com">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="+1234567890">
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">Check Status</button>
+                </form>
+                
+                {% if reservations %}
+                <hr>
+                <h5>Your Bookings:</h5>
+                {% for reservation in reservations %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6>{{ reservation.land.title }}</h6>
+                        <p><strong>Location:</strong> {{ reservation.land.location }}</p>
+                        <p><strong>Booking Date:</strong> {{ reservation.booking_date|date:"M d, Y H:i" }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge {% if reservation.status == 'pending' %}bg-warning{% elif reservation.status == 'approved' %}bg-success{% elif reservation.status == 'rejected' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ reservation.get_status_display }}
+                            </span>
+                        </p>
+                        {% if reservation.status == 'approved' %}
+                        <p><strong>Contact Owner:</strong> {{ reservation.land.contact_phone or 'Not provided' }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

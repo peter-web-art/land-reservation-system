@@ -16,5 +16,6 @@ urlpatterns = [
     path('reservations/<int:pk>/cancel/', views.cancel_reservation, name='cancel_reservation'),
     path('dashboard/customer/', views.customer_dashboard, name='customer_dashboard'),
     path('reservations/manage/', views.reservations_management, name='reservations_management'),
+    path('check-status/', views.check_booking_status, name='check_booking_status'),
     path('reservations/<int:pk>/status/<str:status>/', views.update_reservation_status, name='update_reservation_status'),
 ]

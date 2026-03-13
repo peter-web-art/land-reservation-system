@@ -44,6 +44,11 @@
         {{ land.get_listing_type_display }}
     </span>
 </p>
+<p><b>Status:</b>
+    <span class="badge {% if land.is_available %}bg-success{% else %}bg-danger{% endif %}">
+        {{ land.status_display }}
+    </span>
+</p>
 
 <a href="{% url 'lands:land_detail' land.id %}" class="btn btn-primary btn-sm w-100 mt-3">View Details</a>
 

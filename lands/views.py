@@ -4,6 +4,23 @@ from django import forms
 from django.db.models import Q
 from .models import Land, Reservation
 from accounts.models import User
+from twilio.rest import Client
+from django.conf import settings
+
+def send_sms_notification(phone_number, message):
+    """Send SMS notification using Twilio"""
+    try:
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        client.messages.create(
+            body=message,
+            from_=settings.TWILIO_PHONE_NUMBER,
+            to=phone_number
+        )
+        return True
+    except Exception as e:
+        # Log the error, but don't fail the approval
+        print(f"SMS sending failed: {e}")
+        return False
 
 # Form for adding land
 class LandForm(forms.ModelForm):
@@ -32,7 +49,18 @@ class SearchForm(forms.Form):
 class ReservationForm(forms.ModelForm):
     class Meta:
         model = Reservation
-        fields = []  # Only land ID is needed, other fields are auto-filled
+        fields = ['customer_name', 'customer_email', 'customer_phone']
+        
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        # If user is logged in, pre-fill their info
+        if self.user and self.user.is_authenticated:
+            self.fields['customer_name'].initial = self.user.get_full_name() or self.user.username
+            self.fields['customer_email'].initial = self.user.email
+            # Hide fields that are already known
+            self.fields['customer_name'].widget = forms.HiddenInput()
+            self.fields['customer_email'].widget = forms.HiddenInput()
 
 # Owner dashboard – list lands
 @login_required
@@ -111,30 +139,53 @@ def search_lands(request):
     return render(request, 'lands/search_results.html', {'lands': lands, 'form': form})
 
 # Add land detail view
-@login_required
 def land_detail(request, pk):
     land = Land.objects.get(pk=pk)
     return render(request, 'lands/land_detail.html', {'land': land})
 
 # Book a land
-@login_required
 def book_land(request, pk):
     land = Land.objects.get(pk=pk)
     
-    if request.method == 'POST':
-        # Check if already reserved
-        existing = Reservation.objects.filter(land=land, customer=request.user, status__in=['pending', 'approved']).exists()
-        if existing:
-            return redirect('lands:land_detail', pk=land.pk)
-        
-        reservation = Reservation.objects.create(
-            land=land,
-            customer=request.user,
-            status='pending'
-        )
-        return redirect('lands:my_reservations')
+    if not land.is_available:
+        return redirect('lands:land_detail', pk=land.pk)
     
-    return render(request, 'lands/book_land.html', {'land': land})
+    if request.method == 'POST':
+        form = ReservationForm(request.POST, user=request.user)
+        if form.is_valid():
+            # Check if already reserved (only for logged-in users)
+            if request.user.is_authenticated:
+                existing = Reservation.objects.filter(land=land, customer=request.user, status__in=['pending', 'approved']).exists()
+                if existing:
+                    return redirect('lands:land_detail', pk=land.pk)
+            
+            reservation = form.save(commit=False)
+            reservation.land = land
+            if request.user.is_authenticated:
+                reservation.customer = request.user
+            reservation.status = 'pending'
+            reservation.save()
+            return redirect('lands:my_reservations') if request.user.is_authenticated else redirect('lands:land_list')
+    else:
+        form = ReservationForm(user=request.user)
+    
+    return render(request, 'lands/book_land.html', {'land': land, 'form': form})
+
+# Check booking status (for anonymous users)
+def check_booking_status(request):
+    reservations = None
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        phone = request.POST.get('phone')
+        if email or phone:
+            filters = Q()
+            if email:
+                filters |= Q(customer_email=email) | Q(customer__email=email)
+            if phone:
+                filters |= Q(customer_phone=phone) | Q(customer__phone=phone)
+            reservations = Reservation.objects.filter(filters).select_related('land')
+    
+    return render(request, 'lands/check_status.html', {'reservations': reservations})
 
 # View user's reservations
 @login_required
@@ -186,8 +237,16 @@ def update_reservation_status(request, pk, status):
         return redirect('lands:owner_dashboard')
     
     if status in ['approved', 'rejected', 'cancelled']:
+        old_status = reservation.status
         reservation.status = status
         reservation.save()
+        
+        # Send SMS notification if approved
+        if status == 'approved' and old_status != 'approved':
+            phone_number = reservation.customer_phone or (reservation.customer.phone if reservation.customer else None)
+            if phone_number:
+                message = f"Your booking for {reservation.land.title} has been approved! Contact: {reservation.land.contact_phone or 'N/A'}"
+                send_sms_notification(phone_number, message)
     
     return redirect('lands:reservations_management')
 

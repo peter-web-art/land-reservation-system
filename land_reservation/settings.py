@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-xd$)0%cnv(@zv0=i#$e6s3x08w-0*$vdjwl=yqww+v&*ori&+f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Auth redirects
 LOGIN_REDIRECT_URL = '/lands/dashboard/customer/'
@@ -132,8 +132,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR.parent / 'media'  # BASE_DIR is the inner project dir
 
 
-# Authentication redirects
-LOGIN_REDIRECT_URL = '/lands/dashboard/customer/'
-LOGOUT_REDIRECT_URL = '/'
-LOGIN_URL = '/accounts/login/'
+# Twilio settings for SMS notifications
+# Replace these with your actual Twilio credentials
+TWILIO_ACCOUNT_SID = 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'  # Your Account SID
+TWILIO_AUTH_TOKEN = 'your_auth_token_here'  # Your Auth Token
+TWILIO_PHONE_NUMBER = '+1234567890'  # Your Twilio phone number
 

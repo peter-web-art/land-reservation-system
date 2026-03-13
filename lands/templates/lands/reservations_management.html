@@ -11,6 +11,7 @@
                 <tr>
                     <th>Land</th>
                     <th>Customer</th>
+                    <th>Phone</th>
                     <th>Email</th>
                     <th>Booking Date</th>
                     <th>Status</th>
@@ -21,8 +22,21 @@
                 {% for reservation in reservations %}
                 <tr>
                     <td><strong>{{ reservation.land.title }}</strong></td>
-                    <td>{{ reservation.customer.username }}</td>
-                    <td>{{ reservation.customer.email }}</td>
+                    <td>
+                        {% if reservation.customer %}
+                            {{ reservation.customer.username }}
+                        {% else %}
+                            {{ reservation.customer_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ reservation.customer_phone|default:"Not provided" }}</td>
+                    <td>
+                        {% if reservation.customer %}
+                            {{ reservation.customer.email }}
+                        {% else %}
+                            {{ reservation.customer_email }}
+                        {% endif %}
+                    </td>
                     <td>{{ reservation.booking_date|date:"M d, Y H:i" }}</td>
                     <td>
                         {% if reservation.status == 'pending' %}
