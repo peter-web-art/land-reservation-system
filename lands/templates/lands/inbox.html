@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Messages — LandReserve{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static "css/inbox.css" %}">
+
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">Messages</h1>
+    <div class="flex gap-2 mt-4 md:mt-0" id="msgTabs">
+      <button class="px-4 py-2 rounded-lg text-sm font-medium bg-[#1a5c38] text-white" data-filter="all" onclick="filterMessages('all',this)">
+        All
+        {% if received.count or sent.count %}
+          <span class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ received.count|add:sent.count }}</span>
+        {% endif %}
+      </button>
+      <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-filter="unread" onclick="filterMessages('unread',this)">
+        Unread
+        {% if unread_count %}
+          <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-xs">{{ unread_count }}</span>
+        {% endif %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Conversation list -->
+  {% if tab == 'inbox' or tab == 'sent' %}
+    {% if received or sent %}
+      <ul class="space-y-2" id="convList">
+        {% for msg in received %}
+        <li>
+          <a href="{% url 'lands:message_thread' msg.sender.pk %}"
+             class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#1a5c38]/30 transition-all no-underline {% if not msg.is_read %}border-l-4 border-l-amber-400{% endif %}"
+             data-read="{{ msg.is_read|yesno:'true,false' }}">
+            <div class="relative w-12 h-12 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold flex-shrink-0 overflow-hidden">
+              {% if msg.sender.profile_picture %}
+                <img src="{{ msg.sender.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+              {% else %}
+                {{ msg.sender.username|make_list|first|upper }}
+              {% endif %}
+              {% if not msg.is_read %}<span class="absolute bottom-0 right-0 w-3 h-3 bg-amber-400 rounded-full border-2 border-white"></span>{% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-start mb-1">
+                <span class="font-semibold text-gray-900">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
+                <span class="text-xs text-gray-500">{{ msg.created_at|timesince }} ago</span>
+              </div>
+              {% if msg.subject %}
+              <div class="text-sm font-medium text-gray-700 truncate">{{ msg.subject }}</div>
+              {% endif %}
+              <div class="text-sm text-gray-500 truncate">{{ msg.body|truncatechars:90 }}</div>
+              {% if msg.land %}
+              <span class="inline-flex items-center gap-1 mt-1 text-xs text-[#1a5c38]"><i class="bi bi-geo-alt-fill"></i> {{ msg.land.title|truncatechars:30 }}</span>
+              {% endif %}
+            </div>
+          </a>
+        </li>
+        {% endfor %}
+
+        {% for msg in sent %}
+        <li>
+          <a href="{% url 'lands:message_thread' msg.recipient.pk %}"
+             class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#1a5c38]/30 transition-all no-underline"
+             data-read="true">
+            <div class="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center font-bold flex-shrink-0 overflow-hidden">
+              {% if msg.recipient.profile_picture %}
+                <img src="{{ msg.recipient.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+              {% else %}
+                {{ msg.recipient.username|make_list|first|upper }}
+              {% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-start mb-1">
+                <span class="font-semibold text-gray-900">{{ msg.recipient.get_full_name|default:msg.recipient.username }}</span>
+                <span class="text-xs text-gray-500">{{ msg.created_at|timesince }} ago</span>
+              </div>
+              {% if msg.subject %}
+              <div class="text-sm font-medium text-gray-700 truncate">{{ msg.subject }}</div>
+              {% endif %}
+              <div class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-reply"></i> You: {{ msg.body|truncatechars:80 }}</div>
+              {% if msg.land %}
+              <span class="inline-flex items-center gap-1 mt-1 text-xs text-[#1a5c38]"><i class="bi bi-geo-alt-fill"></i> {{ msg.land.title|truncatechars:30 }}</span>
+              {% endif %}
+            </div>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
+        <i class="bi bi-chat-square-text text-5xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No messages yet</h3>
+        <p class="text-gray-500">When someone contacts you about a listing, their messages will appear here.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+function filterMessages(filter, btn) {
+  document.querySelectorAll('#msgTabs button').forEach(function(t) { 
+    t.classList.remove('bg-[#1a5c38]', 'text-white');
+    t.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+  });
+  btn.classList.add('bg-[#1a5c38]', 'text-white');
+  btn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+
+  var items = document.querySelectorAll('.conv-item, a[data-read]');
+  items.forEach(function(item) {
+    if (filter === 'all') {
+      item.closest('li').style.display = '';
+    } else if (filter === 'unread') {
+      var isRead = item.getAttribute('data-read') === 'true';
+      item.closest('li').style.display = isRead ? 'none' : '';
+    }
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

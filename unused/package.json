@@ -1,0 +1,22 @@
+{
+  "name": "land-reserve-frontend",
+  "version": "1.0.0",
+  "description": "Frontend build pipeline for LandReserve Django app (uses Bun)",
+  "scripts": {
+    "dev": "bun run watch",
+    "build": "bun run build:css",
+    "watch": "bun --watch run build:css",
+    "build:css": "bunx tailwindcss -i ./static/css/src/main.css -o ./static/css/styles.css --minify",
+    "lint": "bunx eslint static/js/**/*.js",
+    "clean": "rm -f static/css/styles.css"
+  },
+  "dependencies": {
+    "baseline-browser-mapping": "^2.10.16",
+    "caniuse-lite": "^1.0.30001787"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0"
+  }
+}

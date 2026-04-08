@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Admin Portal — Land Reserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8" style="max-width:1200px">
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-[#1a5c38] to-[#0f2a1a] rounded-xl p-8 mb-6 text-white flex items-center gap-5">
+    <div class="w-14 h-14 rounded-lg bg-white/10 flex items-center justify-content text-3xl flex-shrink-0 border border-white/15"><i class="bi bi-shield-lock-fill text-amber-400"></i></div>
+    <div class="flex-1">
+      <div class="text-xs text-white/50 font-semibold uppercase tracking-wider mb-1">Admin Portal</div>
+      <h1 class="text-3xl font-extrabold mb-1">Platform Management</h1>
+      <div class="text-sm text-white/50 mt-1">Logged in as <strong class="text-white/80">{{ user.username }}</strong></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-6 overflow-x-auto pb-1 border-b border-gray-200" id="adminTabs">
+    <button class="px-5 py-2.5 text-sm font-semibold text-[#1a5c38] border-b-2 border-[#1a5c38] bg-transparent" onclick="showSec('overview',this)"><i class="bi bi-speedometer2"></i> Overview</button>
+    <button class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 border-b-2 border-transparent" onclick="showSec('kyc',this)"><i class="bi bi-shield-exclamation"></i> KYC{% if kyc_pending %}<span class="ml-2 px-2 py-0.5 bg-amber-500 text-white rounded-full text-xs">{{ kyc_pending|length }}</span>{% endif %}</button>
+    <button class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 border-b-2 border-transparent" onclick="showSec('users',this)"><i class="bi bi-people"></i> Users</button>
+    <button class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 border-b-2 border-transparent" onclick="showSec('owners',this)"><i class="bi bi-person-check"></i> Owners</button>
+    <button class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 border-b-2 border-transparent" onclick="showSec('lands',this)"><i class="bi bi-geo-alt"></i> Lands</button>
+    <button class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 border-b-2 border-transparent" onclick="showSec('bookings',this)"><i class="bi bi-calendar-check"></i> Bookings</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="sec" id="sec-overview">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Total Users</div>
+        <div class="text-2xl font-bold text-gray-900">{{ total_users }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Customers</div>
+        <div class="text-2xl font-bold text-green-600">{{ total_customers }}</div>
+      </div>
+      <div class="bg-white border-l-4 border-amber-500 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Land Owners</div>
+        <div class="text-2xl font-bold text-gray-900">{{ total_owners }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Unverified</div>
+        <div class="text-2xl font-bold text-orange-600">{{ unverified }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Suspended</div>
+        <div class="text-2xl font-bold text-red-600">{{ suspended }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Total Lands</div>
+        <div class="text-2xl font-bold text-gray-900">{{ total_lands }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Approved Bookings</div>
+        <div class="text-2xl font-bold text-green-600">{{ approved_book }}</div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="text-sm text-gray-500">Pending Bookings</div>
+        <div class="text-2xl font-bold text-orange-600">{{ pending_book }}</div>
+      </div>
+    </div>
+
+    {% if kyc_pending %}
+    <div class="flex items-center gap-3 p-4 mb-4 rounded-lg border border-amber-200 bg-amber-50 cursor-pointer hover:bg-amber-100" onclick="showSec('kyc',document.querySelectorAll('.admin-tab')[1])">
+      <i class="bi bi-exclamation-triangle-fill text-xl text-amber-600"></i>
+      <div class="flex-1"><strong class="text-amber-800">{{ kyc_pending|length }} KYC review{{ kyc_pending|length|pluralize }} pending</strong></div>
+      <i class="bi bi-arrow-right text-amber-600"></i>
+    </div>
+    {% endif %}
+
+    {% if flagged %}
+    <div class="flex items-center gap-3 p-4 mb-4 rounded-lg border border-red-200 bg-red-50">
+      <i class="bi bi-person-x-fill text-xl text-red-600"></i>
+      <div class="flex-1"><strong class="text-red-800">{{ flagged|length }} suspended account{{ flagged|length|pluralize }}</strong></div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      <div>
+        <h3 class="font-semibold mb-3">Recent Users</h3>
+        {% for u in recent_users|slice:":5" %}
+        <div class="flex items-center gap-3 py-2 border-b border-gray-100">
+          <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center font-bold text-xs">{{ u.username|make_list|first|upper }}</div>
+          <span class="font-semibold text-sm flex-1">{{ u.username }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if u.role == 'owner' %}bg-green-100 text-green-700{% elif u.role == 'admin' %}bg-amber-100 text-amber-700{% else %}bg-blue-100 text-blue-700{% endif %}">{{ u.get_role_display }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <h3 class="font-semibold mb-3">Recent Bookings</h3>
+        {% for r in recent_bookings|slice:":5" %}
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm flex-1 font-medium">{{ r.land.title|truncatewords:4 }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-orange-100 text-orange-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">{{ r.get_status_display }}</span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-gray-500 py-4">No bookings yet</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- KYC -->
+  <div class="sec hidden" id="sec-kyc">
+    <h2 class="text-xl font-bold mb-4"><i class="bi bi-shield-exclamation"></i> KYC Review Queue</h2>
+    {% if kyc_pending %}
+    {% for u in kyc_pending %}
+    <div class="flex flex-col md:flex-row items-start gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-4">
+      <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center font-bold text-lg text-amber-700">{{ u.username|make_list|first|upper }}</div>
+      <div class="flex-1">
+        <div class="font-semibold">{{ u.username }}</div>
+        <div class="text-sm text-gray-500">{{ u.get_full_name|default:"No name" }} &middot; {{ u.email }}</div>
+        <div class="text-xs text-gray-400 mt-1">Joined {{ u.date_joined|date:"M d, Y" }}</div>
+        <div class="flex gap-2 mt-3">
+          {% if u.kyc_document %}<a href="{{ u.kyc_document.url }}" target="_blank" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"><i class="bi bi-file-earmark-text"></i> ID Document</a>{% endif %}
+          {% if u.govt_letter %}<a href="{{ u.govt_letter.url }}" target="_blank" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"><i class="bi bi-envelope-paper"></i> Govt Letter{% if u.govt_letter_date %} ({{ u.govt_letter_date|date:"d M Y" }}){% endif %}</a>{% endif %}
+          {% if not u.kyc_document and not u.govt_letter %}<span class="text-sm text-gray-500">No files uploaded</span>{% endif %}
+        </div>
+      </div>
+      <div class="w-full md:w-56">
+        <form method="post" action="{% url 'accounts:review_kyc' u.id %}">{% csrf_token %}
+          <input type="text" name="kyc_notes" placeholder="Rejection reason (if any)" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-2">
+          <div class="flex gap-2">
+            <button type="submit" name="action" value="approve_kyc" class="flex-1 px-3 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428]"><i class="bi bi-patch-check"></i> Approve</button>
+            <button type="submit" name="action" value="reject_kyc" class="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700"><i class="bi bi-x-lg"></i> Reject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center">
+      <div class="text-5xl mb-4">&#10003;</div>
+      <h3 class="text-xl font-semibold mb-2">All clear</h3>
+      <p class="text-gray-500">No KYC reviews pending.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- USERS -->
+  <div class="sec hidden" id="sec-users">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold"><i class="bi bi-people"></i> All Users ({{ total_users }})</h2>
+    </div>
+    {% for u in recent_users %}
+    <div class="flex flex-col md:flex-row items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-3 hover:shadow-md">
+      <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">{{ u.username|make_list|first|upper }}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-semibold">{{ u.username }}{% if u.is_verified %} <i class="bi bi-patch-check-fill text-green-600 text-sm"></i>{% endif %}</div>
+        <div class="text-sm text-gray-500">{{ u.email }} &middot; {{ u.get_full_name|default:"" }}</div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% if u.role == 'owner' %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Owner</span>
+        {% elif u.role == 'admin' %}<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">Admin</span>
+        {% else %}<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Customer</span>{% endif %}
+        {% if u.is_suspended %}<span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Suspended</span>{% else %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Active</span>{% endif %}
+        <span class="text-xs text-gray-400">{{ u.date_joined|date:"M d, Y" }}</span>
+      </div>
+      <div class="flex gap-1">
+        {% if u.role != 'owner' and not u.is_owner %}
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}<input type="hidden" name="action" value="make_owner"><button class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg" title="Promote to Owner"><i class="bi bi-arrow-up-circle"></i></button></form>
+        {% endif %}
+        {% if not u.is_verified and u.role == 'owner' %}
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}<input type="hidden" name="action" value="verify"><button class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg" title="Verify"><i class="bi bi-patch-check"></i></button></form>
+        {% endif %}
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}
+          {% if u.is_suspended %}<input type="hidden" name="action" value="unsuspend"><button class="p-2 text-gray-500 hover:text-green-600 hover:bg-gray-100 rounded-lg" title="Restore"><i class="bi bi-unlock"></i></button>
+          {% else %}<input type="hidden" name="action" value="suspend"><button class="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-lg" title="Suspend"><i class="bi bi-lock"></i></button>{% endif %}
+        </form>
+        {% if u.role != 'admin' and not u.is_staff %}
+        <button class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Delete user" onclick="toggleDelete({{ u.id }})"><i class="bi bi-trash3"></i></button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="hidden p-3 bg-red-50 border border-red-200 rounded-lg mb-3" id="del-{{ u.id }}">
+      <div class="flex items-center gap-3">
+        <i class="bi bi-exclamation-triangle-fill text-red-600 text-xl"></i>
+        <div class="flex-1"><strong class="text-red-700">Delete {{ u.username }}?</strong><div class="text-sm text-gray-500">This will permanently remove the user and all their data.</div></div>
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}<input type="hidden" name="action" value="delete_user"><button class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-semibold">Confirm Delete</button></form>
+        <button class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm" onclick="toggleDelete({{ u.id }})">Cancel</button>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-gray-500 text-center py-12">No users yet</p>
+    {% endfor %}
+  </div>
+
+  <!-- OWNERS -->
+  <div class="sec hidden" id="sec-owners">
+    <h2 class="text-xl font-bold mb-4"><i class="bi bi-person-check"></i> Owner Verification ({{ total_owners }})</h2>
+    {% for u in recent_owners %}
+    <div class="flex flex-col md:flex-row items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-3">
+      <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600">{{ u.username|make_list|first|upper }}</div>
+      <div class="flex-1">
+        <div class="font-semibold">{{ u.username }}</div>
+        <div class="text-sm text-gray-500">{{ u.email }} &middot; {{ u.phone|default:"No phone" }}</div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% if u.kyc_status == 'approved' %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">KYC Approved</span>
+        {% elif u.kyc_status == 'pending' %}<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">KYC Pending</span>
+        {% elif u.kyc_status == 'rejected' %}<span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">KYC Rejected</span>
+        {% else %}<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">No KYC</span>{% endif %}
+        {% if u.is_verified %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-patch-check-fill"></i> Verified</span>{% else %}<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">Unverified</span>{% endif %}
+      </div>
+      <div class="flex gap-1">
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}
+          {% if u.is_verified %}<input type="hidden" name="action" value="unverify"><button class="px-3 py-1.5 border border-amber-500 text-amber-600 rounded-lg text-sm font-medium hover:bg-amber-50">Unverify</button>
+          {% else %}<input type="hidden" name="action" value="verify"><button class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428]"><i class="bi bi-patch-check"></i> Verify</button>{% endif %}
+        </form>
+        <form method="post" action="{% url 'accounts:admin_user_action' u.id %}">{% csrf_token %}
+          {% if u.is_suspended %}<input type="hidden" name="action" value="unsuspend"><button class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Restore</button>
+          {% else %}<input type="hidden" name="action" value="suspend"><button class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Suspend</button>{% endif %}
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-gray-500 text-center py-12">No owners registered yet</p>
+    {% endfor %}
+  </div>
+
+  <!-- LANDS -->
+  <div class="sec hidden" id="sec-lands">
+    <h2 class="text-xl font-bold mb-4"><i class="bi bi-geo-alt"></i> All Listings ({{ total_lands }})</h2>
+    {% if recent_lands %}
+    <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+      <table class="w-full">
+        <thead><tr class="border-b border-gray-200"><th class="text-left px-4 py-3 text-sm font-medium text-gray-500"></th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Title</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Owner</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Location</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Type</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Price</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Status</th></tr></thead>
+        <tbody>
+          {% for land in recent_lands %}
+          <tr class="border-b border-gray-100">
+            <td class="px-4 py-3"><div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100">{% if land.image %}<img src="{{ land.image.url }}" class="w-full h-full object-cover">{% else %}<div class="w-full h-full flex items-center justify-center">🌿</div>{% endif %}</div></td>
+            <td class="px-4 py-3 font-medium"><a href="{% url 'lands:land_detail' land.id %}" class="hover:text-[#1a5c38]">{{ land.title|truncatewords:6 }}</a></td>
+            <td class="px-4 py-3 text-sm">{{ land.owner.username }}{% if land.owner.is_verified %} <i class="bi bi-patch-check-fill text-green-600 text-xs"></i>{% endif %}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ land.location|truncatewords:4 }}</td>
+            <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-semibold {% if land.listing_type == 'rent' %}bg-sky-100 text-sky-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ land.get_listing_type_display }}</span></td>
+            <td class="px-4 py-3 font-semibold">${{ land.price }}</td>
+            <td class="px-4 py-3">{% if land.is_available %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Available</span>{% else %}<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unavailable</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12"><h3 class="text-lg font-semibold">No listings yet</h3></div>
+    {% endif %}
+  </div>
+
+  <!-- BOOKINGS -->
+  <div class="sec hidden" id="sec-bookings">
+    <h2 class="text-xl font-bold mb-4"><i class="bi bi-calendar-check"></i> Recent Bookings ({{ total_bookings }})</h2>
+    {% if recent_bookings %}
+    <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+      <table class="w-full">
+        <thead><tr class="border-b border-gray-200"><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Land</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Customer</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Owner</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Date</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Period</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Price</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Status</th><th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Payment</th></tr></thead>
+        <tbody>
+          {% for r in recent_bookings %}
+          <tr class="border-b border-gray-100">
+            <td class="px-4 py-3 font-medium text-sm"><a href="{% url 'lands:land_detail' r.land.id %}" class="hover:text-[#1a5c38]">{{ r.land.title|truncatewords:5 }}</a></td>
+            <td class="px-4 py-3 text-sm">{% if r.customer %}{{ r.customer.username }}{% else %}{{ r.customer_name|default:"Guest" }}{% endif %}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ r.land.owner.username }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ r.booking_date|date:"M d" }}</td>
+            <td class="px-4 py-3 text-sm">{% if r.start_date %}{{ r.start_date|date:"M d" }} — {{ r.end_date|date:"M d" }}{% else %}—{% endif %}</td>
+            <td class="px-4 py-3 font-semibold">${{ r.agreed_price|default:r.land.price }}</td>
+            <td class="px-4 py-3">{% if r.status == 'pending' %}<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">Pending</span>{% elif r.status == 'approved' %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Approved</span>{% elif r.status == 'rejected' %}<span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Rejected</span>{% else %}<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Cancelled</span>{% endif %}</td>
+            <td class="px-4 py-3">{% if r.payment_status == 'paid' %}<span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Paid</span>{% elif r.payment_status == 'refunded' %}<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Refunded</span>{% else %}<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unpaid</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12"><h3 class="text-lg font-semibold">No bookings yet</h3></div>
+    {% endif %}
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+function showSec(id, btn) {
+  document.querySelectorAll('.sec').forEach(function(s) { s.classList.add('hidden'); s.classList.remove('block'); });
+  document.querySelectorAll('#adminTabs button').forEach(function(t) { t.classList.remove('text-[#1a5c38]', 'border-b-2', 'border-[#1a5c38]'); t.classList.add('text-gray-600', 'border-transparent'); });
+  var s = document.getElementById('sec-' + id);
+  if (s) { s.classList.remove('hidden'); s.classList.add('block'); }
+  if (btn) { btn.classList.remove('text-gray-600', 'border-transparent'); btn.classList.add('text-[#1a5c38]', 'border-b-2', 'border-[#1a5c38]'); }
+}
+function toggleDelete(id) {
+  var el = document.getElementById('del-' + id);
+  if (el) el.classList.toggle('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

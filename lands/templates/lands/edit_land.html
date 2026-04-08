@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Edit {{ land.title }} — LandReserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+    <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-[#1a5c38] no-underline">Dashboard</a>
+    <span>/</span>
+    <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-[#1a5c38] no-underline">{{ land.title|truncatechars:20 }}</a>
+    <span>/</span>
+    <span>Edit</span>
+  </div>
+  
+  <h1 class="text-3xl font-bold text-gray-900 mb-2">Edit Listing</h1>
+  <p class="text-gray-500 mb-8">Changes are live immediately after saving.</p>
+
+  <form method="post" enctype="multipart/form-data" class="max-w-3xl">
+    {% csrf_token %}
+
+    <!-- Basic Info -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
+        <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
+      </div>
+      <div class="space-y-4">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.title.label }} <span class="text-red-500">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}<div class="text-red-500 text-sm mt-1">{{ form.title.errors }}</div>{% endif %}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.listing_type.label }}</label>
+            {{ form.listing_type }}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.land_use.label }}</label>
+            {{ form.land_use }}
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span class="text-red-500">*</span></label>
+          {{ form.description }}
+          {% if form.description.errors %}<div class="text-red-500 text-sm mt-1">{{ form.description.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Location & Size -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">2</span>
+        <h3 class="text-lg font-semibold text-gray-900">Location & Size</h3>
+      </div>
+      <div class="space-y-4">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.location.label }} <span class="text-red-500">*</span></label>
+          {{ form.location }}
+          {% if form.location.errors %}<div class="text-red-500 text-sm mt-1">{{ form.location.errors }}</div>{% endif %}
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-geo-alt"></i> Latitude</label>
+            {{ form.latitude }}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-geo-alt"></i> Longitude</label>
+            {{ form.longitude }}
+          </div>
+        </div>
+        <div id="editLandMap" class="h-64 rounded-lg overflow-hidden mb-3"></div>
+        <div class="text-sm text-gray-500 mb-3"><i class="bi bi-info-circle"></i> Click on the map to update coordinates.</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.size.label }}</label>
+            {{ form.size }}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.size_unit.label }}</label>
+            {{ form.size_unit }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">3</span>
+        <h3 class="text-lg font-semibold text-gray-900">Pricing</h3>
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price.label }} ($) <span class="text-red-500">*</span></label>
+            {{ form.price }}
+            {% if form.price.errors %}<div class="text-red-500 text-sm mt-1">{{ form.price.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price_unit.label }}</label>
+            {{ form.price_unit }}
+          </div>
+        </div>
+        <div id="rentPricingSection">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.weekly_discount.label }} (%)</label>
+              {{ form.weekly_discount }}
+              <div class="text-sm text-gray-500 mt-1">Discount for 7+ day bookings</div>
+              {% if form.weekly_discount.errors %}<div class="text-red-500 text-sm mt-1">{{ form.weekly_discount.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.monthly_discount.label }} (%)</label>
+              {{ form.monthly_discount }}
+              <div class="text-sm text-gray-500 mt-1">Discount for 28+ day bookings</div>
+              {% if form.monthly_discount.errors %}<div class="text-red-500 text-sm mt-1">{{ form.monthly_discount.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.min_duration_days.label }} (days)</label>
+              {{ form.min_duration_days }}
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.max_duration_days.label }}</label>
+              {{ form.max_duration_days }}
+              <div class="text-sm text-gray-500 mt-1">Leave blank for no limit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
+        <h3 class="text-lg font-semibold text-gray-900">Photo</h3>
+      </div>
+      <div class="space-y-4">
+        {% if land.image %}
+        <div class="mb-4">
+          <img src="{{ land.image.url }}" class="max-h-40 rounded-lg object-cover" alt="Current">
+          <div class="text-sm text-gray-500 mt-2">Current photo — upload a new one to replace it.</div>
+        </div>
+        {% endif %}
+        <div class="mb-4">
+          {{ form.image }}
+          <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP — max 5 MB</div>
+          {% if form.image.errors %}<div class="text-red-500 text-sm mt-1">{{ form.image.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
+        <h3 class="text-lg font-semibold text-gray-900">Contact Details</h3>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_phone.label }}</label>
+          {{ form.contact_phone }}
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_email.label }}</label>
+          {{ form.contact_email }}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
+        <i class="bi bi-check-lg"></i> Save Changes
+      </button>
+      <a href="{% url 'lands:owner_dashboard' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
+      <a href="{% url 'lands:delete_land' land.id %}" class="ml-auto px-6 py-3 bg-red-600 text-white rounded-lg font-semibold text-lg hover:bg-red-700 transition-colors no-underline" onclick="return confirm('Delete this listing permanently?')">
+        <i class="bi bi-trash"></i> Delete
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+const ltEl = document.getElementById('id_listing_type');
+const rs   = document.getElementById('rentPricingSection');
+function toggle() { if(rs && ltEl) rs.style.display = ltEl.value === 'rent' ? '' : 'none'; }
+if (ltEl) { ltEl.addEventListener('change', toggle); toggle(); }
+
+document.addEventListener('DOMContentLoaded', function(){
+  var mapEl = document.getElementById('editLandMap');
+  if (!mapEl || typeof L === 'undefined') return;
+  var latInput = document.getElementById('id_latitude');
+  var lngInput = document.getElementById('id_longitude');
+  var initLat = parseFloat(latInput && latInput.value) || -6.5;
+  var initLng = parseFloat(lngInput && lngInput.value) || 35.5;
+  var initZoom = (latInput && latInput.value) ? 14 : 6;
+  var map = L.map('editLandMap').setView([initLat, initLng], initZoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OSM', maxZoom: 18
+  }).addTo(map);
+  var marker = null;
+  if (latInput && latInput.value && lngInput && lngInput.value) {
+    marker = L.marker([initLat, initLng]).addTo(map);
+  }
+  map.on('click', function(e) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker(e.latlng).addTo(map);
+    if (latInput) latInput.value = e.latlng.lat.toFixed(6);
+    if (lngInput) lngInput.value = e.latlng.lng.toFixed(6);
+  });
+});
+</script>
+{% endblock %}

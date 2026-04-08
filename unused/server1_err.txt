@@ -1,0 +1,10 @@
+[31/Mar/2026 13:30:20] "GET / HTTP/1.1" 200 13334
+[31/Mar/2026 13:30:20,627] - Broken pipe from ('127.0.0.1', 54859)
+[31/Mar/2026 13:49:40] "GET / HTTP/1.1" 200 13334
+[31/Mar/2026 13:49:40] "GET /static/css/inline-styles.8add77a1c3d4.css HTTP/1.1" 200 386
+[31/Mar/2026 13:49:40] "GET /static/css/base.52806e291d43.css HTTP/1.1" 200 6633
+[31/Mar/2026 13:49:40] "GET /static/css/land_list.16dc64eec255.css HTTP/1.1" 200 2233
+[31/Mar/2026 13:49:43] "GET /favicon.ico HTTP/1.1" 404 5837
+Watching for file changes with StatReloader
+C:\Users\ECHO HEIGHTS AGENCY\Downloads\fixed-land-reservation-system\fixed-land-system\land_reservation\settings.py changed, reloading.
+Watching for file changes with StatReloader

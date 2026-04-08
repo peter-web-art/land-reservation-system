@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}404 — Page Not Found · LandReserve{% endblock %}
+{% block content %}
+<div class="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
+  <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6 text-4xl">🌿</div>
+  <h1 class="text-6xl font-bold text-gray-900 mb-2">404</h1>
+  <p class="text-lg text-gray-500 mb-8">This page doesn't exist or has been moved.</p>
+  <a href="/" class="inline-flex items-center gap-2 px-6 py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+    <i class="bi bi-house"></i> Back to Home
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Saved — LandReserve{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="mb-8">
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+      <a href="{% url 'lands:customer_dashboard' %}" class="hover:text-[#1a5c38] no-underline">Dashboard</a>
+      <span>/</span>
+      <span>Saved</span>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-900"><i class="bi bi-heart text-[#1a5c38]"></i> Saved Lands</h1>
+  </div>
+
+  {% if items %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    {% for w in items %}
+    <div class="relative">
+      <a href="{% url 'lands:land_detail' w.land.id %}" class="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#1a5c38]/30 transition-all no-underline">
+        <div class="aspect-video bg-gray-100 overflow-hidden relative">
+          {% if w.land.image %}
+            <img src="{{ w.land.image.url }}" alt="{{ w.land.title }}" loading="lazy" class="w-full h-full object-cover">
+          {% else %}
+            <div class="w-full h-full flex items-center justify-center text-4xl">🌿</div>
+          {% endif %}
+          {% if w.land.owner.is_verified %}
+            <div class="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-1 bg-white/90 rounded-full text-xs font-semibold text-[#1a5c38]">
+              <i class="bi bi-patch-check-fill"></i> Verified
+            </div>
+          {% endif %}
+        </div>
+        <div class="p-4">
+          <div class="flex justify-between items-start mb-1">
+            <div class="text-sm text-gray-500">{{ w.land.location }}</div>
+            <div class="font-bold text-[#1a5c38]">{{ w.land.price_display }}</div>
+          </div>
+          <div class="text-gray-900 font-medium truncate">
+            <span>{{ w.land.title }}</span>
+            {% if w.land.size %} &middot; <span>{{ w.land.size }} {{ w.land.get_size_unit_display }}</span>{% endif %}
+          </div>
+          <div class="mt-2">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if w.land.listing_type == 'sale' %}bg-red-100 text-red-700{% else %}bg-sky-100 text-sky-700{% endif %}">
+              {% if w.land.listing_type == 'rent' %}🏡 Rent{% else %}🏷️ Sale{% endif %}
+            </span>
+          </div>
+        </div>
+      </a>
+      <form method="post" action="{% url 'lands:toggle_wishlist' w.land.id %}" class="absolute top-3 right-3 z-10">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'lands:my_wishlist' %}">
+        <button type="submit" class="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-red-500 transition-colors" title="Remove from saved"><i class="bi bi-heart-fill"></i></button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
+    <i class="bi bi-heart text-5xl text-gray-300 mb-4"></i>
+    <h3 class="text-xl font-semibold text-gray-800 mb-2">No saved lands yet</h3>
+    <p class="text-gray-500 mb-4">Tap the heart icon on any listing to save it here.</p>
+    <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+      <i class="bi bi-search"></i> Browse Lands
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

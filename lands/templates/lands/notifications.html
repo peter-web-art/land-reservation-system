@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Notifications — Land Reserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
+      <p class="text-gray-500">Stay updated on your bookings and messages</p>
+    </div>
+    <a href="{% url 'lands:land_list' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+
+  {% if notifications %}
+  <div class="space-y-3">
+    {% for n in notifications %}
+    <div class="flex items-start gap-4 p-4 bg-white border {% if not n.is_read %}border-l-4 border-l-amber-500{% else %}border-gray-200{% endif %} rounded-xl hover:shadow-md transition-all">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
+        {% if n.notification_type == 'booking_approved' %}bg-green-100 text-green-600
+        {% elif n.notification_type == 'booking_rejected' %}bg-red-100 text-red-600
+        {% elif n.notification_type == 'booking_new' %}bg-amber-100 text-amber-600
+        {% elif n.notification_type == 'payment_received' %}bg-blue-100 text-blue-600
+        {% elif n.notification_type == 'message_received' %}bg-purple-100 text-purple-600
+        {% else %}bg-gray-100 text-gray-600{% endif %}">
+        {% if n.notification_type == 'booking_approved' %}<i class="bi bi-check-circle"></i>
+        {% elif n.notification_type == 'booking_rejected' %}<i class="bi bi-x-circle"></i>
+        {% elif n.notification_type == 'booking_new' %}<i class="bi bi-calendar-plus"></i>
+        {% elif n.notification_type == 'payment_received' %}<i class="bi bi-credit-card"></i>
+        {% elif n.notification_type == 'message_received' %}<i class="bi bi-envelope"></i>
+        {% else %}<i class="bi bi-bell"></i>{% endif %}
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold text-gray-900">{{ n.title }}</div>
+          <div class="text-xs text-gray-400">{{ n.created_at|timesince }} ago</div>
+        </div>
+        <div class="text-sm text-gray-600 mt-1">{{ n.message }}</div>
+        {% if n.link %}
+        <a href="{{ n.link }}" class="inline-flex items-center gap-1 mt-2 text-sm text-[#1a5c38] hover:underline">
+          View details <i class="bi bi-arrow-right"></i>
+        </a>
+        {% endif %}
+      </div>
+      {% if not n.is_read %}
+      <form method="post" action="{% url 'lands:mark_notification_read' n.id %}">{% csrf_token %}
+        <button class="p-2 text-gray-400 hover:text-[#1a5c38] rounded-lg hover:bg-gray-100" title="Mark as read">
+          <i class="bi bi-check2"></i>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
+    <div class="text-5xl mb-4">🔔</div>
+    <h3 class="text-xl font-semibold text-gray-800 mb-2">No notifications</h3>
+    <p class="text-gray-500">You're all caught up!</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

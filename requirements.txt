@@ -1,0 +1,30 @@
+# Core
+Django>=4.2,<5.0
+Pillow>=10.0
+gunicorn>=21.0
+
+# SMS
+twilio>=8.0
+
+# Static files
+whitenoise>=6.0
+
+# Security
+django-ratelimit>=4.0          # Rate limiting
+django-axes>=6.0               # Brute-force login protection
+# FIX #4: pin to >=4.0 — CONTENT_SECURITY_POLICY dict format only works in 4.x
+django-csp>=4.0
+bleach>=6.0                    # XSS prevention / input sanitization
+django-cors-headers>=4.0       # CORS headers
+
+# Auth
+django-allauth>=65.0           # Google OAuth & social login
+
+# Utilities
+python-dateutil>=2.8
+dj-database-url>=2.0           # PostgreSQL connection string
+psycopg2-binary>=2.9           # PostgreSQL driver (production)
+
+# Media storage (production)
+cloudinary>=1.36
+django-cloudinary-storage>=0.3

@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block title %}Account Settings — LandReserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8" style="max-width:1080px">
+  <div class="flex flex-col lg:flex-row gap-10">
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-24 self-start">
+      <div class="text-center pb-6 border-b border-gray-200 mb-5">
+        <div>
+          {% if request.user.profile_picture %}
+            <img src="{{ request.user.profile_picture.url }}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-200 mx-auto" alt="Profile">
+          {% else %}
+            <div class="w-24 h-24 rounded-full bg-gray-600 text-white inline-flex items-center justify-center text-3xl font-bold border-4 border-gray-200">{{ request.user.username|make_list|first|upper }}</div>
+          {% endif %}
+        </div>
+        <div class="mt-3 text-lg font-bold text-gray-900">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="text-sm text-gray-500">{{ request.user.email }}</div>
+        <div class="flex gap-2 justify-center mt-2 flex-wrap">
+          {% if request.user.role == 'owner' or request.user.is_owner %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-houses"></i> Owner</span>
+          {% elif request.user.role == 'admin' %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold"><i class="bi bi-shield-check"></i> Admin</span>
+          {% else %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold"><i class="bi bi-person"></i> Customer</span>
+          {% endif %}
+          {% if request.user.is_verified %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-patch-check-fill"></i> Verified</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-1">
+        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full bg-gray-50" onclick="showSection('personal', this)">
+          <i class="bi bi-person text-lg w-6 text-center text-gray-500"></i> Personal Info
+        </button>
+        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('security', this)">
+          <i class="bi bi-shield-lock text-lg w-6 text-center text-gray-500"></i> Login &amp; Security
+        </button>
+        {% if request.user.role == 'owner' or request.user.is_owner %}
+        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('verification', this)">
+          <i class="bi bi-patch-check text-lg w-6 text-center text-gray-500"></i> Verification
+          {% if request.user.kyc_status == 'approved' %}
+            <span class="ml-auto px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Verified</span>
+          {% elif request.user.kyc_status == 'pending' %}
+            <span class="ml-auto px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Pending</span>
+          {% elif request.user.kyc_status == 'rejected' %}
+            <span class="ml-auto px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">Rejected</span>
+          {% endif %}
+        </button>
+        {% endif %}
+      </nav>
+    </aside>
+
+    <!-- RIGHT CONTENT AREA -->
+    <div class="flex-1 min-w-0">
+
+      <!-- PERSONAL INFO SECTION -->
+      <div class="profile-section block" id="section-personal">
+        <h2 class="text-2xl font-bold text-gray-900 mb-1">Personal Info</h2>
+        <p class="text-gray-500 mb-6">Update your personal details and how others see you on Land Reserve.</p>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <!-- Profile Picture -->
+          <div class="flex items-center gap-5 mb-6 p-5 bg-gray-50 rounded-xl border border-gray-200">
+            {% if request.user.profile_picture %}
+              <img src="{{ request.user.profile_picture.url }}" class="w-20 h-20 rounded-full object-cover border-3 border-gray-200 flex-shrink-0" alt="Avatar" id="avatarPreviewImg">
+            {% else %}
+              <div class="w-20 h-20 rounded-full bg-gray-600 text-white flex items-center justify-center text-2xl font-bold flex-shrink-0" id="avatarPreviewImg">{{ request.user.username|make_list|first|upper }}</div>
+            {% endif %}
+            <div class="flex-1">
+              <h4 class="font-semibold mb-1">Profile photo</h4>
+              <p class="text-sm text-gray-500 mb-2">JPG, PNG, or WebP — max 5 MB</p>
+              <label class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 cursor-pointer">
+                <i class="bi bi-camera"></i> Change photo
+                {{ form.profile_picture }}
+              </label>
+              {% if form.profile_picture.errors %}
+                <div class="text-red-500 text-sm mt-1">{{ form.profile_picture.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Name Fields -->
+          <div class="border-b border-gray-200 py-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">First name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}<div class="text-red-500 text-sm mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Last name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}<div class="text-red-500 text-sm mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="border-b border-gray-200 py-4">
+            <div class="mb-0">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Email address</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+              <div class="text-sm text-gray-500 mt-1">We'll send booking confirmations to this email</div>
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div class="border-b border-gray-200 py-4">
+            <div class="mb-0">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Phone number</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
+              <div class="text-sm text-gray-500 mt-1">Used for SMS booking notifications</div>
+            </div>
+          </div>
+
+          <!-- Bio -->
+          <div class="border-b border-gray-200 py-4">
+            <div class="mb-0">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">About you</label>
+              {{ form.bio }}
+              {% if form.bio.errors %}<div class="text-red-500 text-sm mt-1">{{ form.bio.errors.0 }}</div>{% endif %}
+              <div class="text-sm text-gray-500 mt-1">Tell customers a bit about yourself — shown on your listings</div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
+              <i class="bi bi-check-lg"></i> Save Changes
+            </button>
+            <a href="{% url 'lands:customer_dashboard' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- LOGIN & SECURITY SECTION -->
+      <div class="profile-section hidden" id="section-security">
+        <h2 class="text-2xl font-bold text-gray-900 mb-1">Login &amp; Security</h2>
+        <p class="text-gray-500 mb-6">Manage your account security and how you sign in.</p>
+
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div class="p-0">
+            <div class="flex items-center justify-between py-5 px-6 border-b border-gray-200">
+              <div>
+                <h4 class="font-semibold">Password</h4>
+                <p class="text-sm text-gray-500">Last updated when you created your account</p>
+              </div>
+              <a href="{% url 'account_change_password' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors">Update</a>
+            </div>
+            <div class="flex items-center justify-between py-5 px-6 border-b border-gray-200">
+              <div>
+                <h4 class="font-semibold">Account</h4>
+                <p class="text-sm text-gray-500">Username: <strong>{{ request.user.username }}</strong></p>
+              </div>
+              <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold"><i class="bi bi-check-circle"></i> Active</span>
+            </div>
+            <div class="flex items-center justify-between py-5 px-6">
+              <div>
+                <h4 class="font-semibold">Connected accounts</h4>
+                <p class="text-sm text-gray-500">Sign in faster with Google or social accounts</p>
+              </div>
+              <a href="{% url 'socialaccount_connections' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors">Manage</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VERIFICATION / KYC SECTION -->
+      {% if request.user.role == 'owner' or request.user.is_owner %}
+      <div class="profile-section hidden" id="section-verification">
+        <h2 class="text-2xl font-bold text-gray-900 mb-1">Identity Verification</h2>
+        <p class="text-gray-500 mb-6">Verify your identity to get a trust badge on your listings and build customer confidence.</p>
+
+        <!-- KYC Status Banner -->
+        {% if request.user.kyc_status == 'approved' %}
+        <div class="flex items-center gap-3 p-4 mb-6 rounded-xl border border-green-200" style="background:#d1fae5;">
+          <i class="bi bi-patch-check-fill text-2xl text-green-600"></i>
+          <div>
+            <h4 style="color:#065f46">Verification Complete</h4>
+            <p style="color:#065f46" class="text-sm">Your Verified Owner badge is active on all your listings.
+              {% if request.user.govt_letter_date %} Govt. letter dated {{ request.user.govt_letter_date|date:"d M Y" }}.{% endif %}
+            </p>
+          </div>
+        </div>
+        {% elif request.user.kyc_status == 'pending' %}
+        <div class="flex items-center gap-3 p-4 mb-6 rounded-xl border border-amber-200" style="background:#fef3c7;">
+          <i class="bi bi-clock-fill text-2xl text-amber-600"></i>
+          <div>
+            <h4 style="color:#92400e">Documents Under Review</h4>
+            <p style="color:#92400e" class="text-sm">Our team is reviewing your documents. This usually takes 24–48 hours.</p>
+          </div>
+        </div>
+        {% else %}
+        {% if request.user.kyc_status == 'rejected' and request.user.kyc_notes %}
+        <div class="flex items-center gap-3 p-4 mb-6 rounded-xl border border-red-200" style="background:#fee2e2;">
+          <i class="bi bi-x-circle-fill text-2xl text-red-600"></i>
+          <div>
+            <h4 style="color:#dc2626">Documents Rejected</h4>
+            <p style="color:#dc2626" class="text-sm"><strong>Reason:</strong> {{ request.user.kyc_notes }}</p>
+            <p style="color:#dc2626" class="text-sm mt-1">Please resubmit corrected documents below.</p>
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Why Verify Info Box -->
+        <div class="rounded-lg p-4 mb-6 flex items-start gap-3 border border-blue-200" style="background:#dbeafe;">
+          <i class="bi bi-info-circle-fill text-xl text-blue-600 flex-shrink-0 mt-0.5"></i>
+          <div>
+            <strong class="text-sm" style="color:#1e40af">Why verify your identity?</strong>
+            <p class="text-sm mt-1" style="color:#1e40af">Verified owners get a trust badge on all listings, priority placement in search results, and higher customer confidence.</p>
+          </div>
+        </div>
+
+        <!-- KYC WIZARD FORM -->
+        <form method="post" action="{% url 'accounts:submit_kyc' %}" enctype="multipart/form-data" id="kycForm">
+          {% csrf_token %}
+
+          <!-- Wizard Step Indicator -->
+          <div class="flex items-center mb-8">
+            <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="goToStep(1)">
+              <div class="w-9 h-9 rounded-full border-2 border-[#1a5c38] bg-[#1a5c38] text-white flex items-center justify-center font-bold text-sm">1</div>
+              <div class="text-xs font-semibold text-[#1a5c38] mt-2 text-center">ID Document</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="goToStep(2)">
+              <div class="w-9 h-9 rounded-full border-2 border-gray-300 bg-white text-gray-500 flex items-center justify-center font-bold text-sm">2</div>
+              <div class="text-xs font-semibold text-gray-500 mt-2 text-center">Ownership Proof</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="goToStep(3)">
+              <div class="w-9 h-9 rounded-full border-2 border-gray-300 bg-white text-gray-500 flex items-center justify-center font-bold text-sm">3</div>
+              <div class="text-xs font-semibold text-gray-500 mt-2 text-center">Govt. Letter</div>
+            </div>
+            <div class="flex-1 h-0.5 bg-gray-200"></div>
+            <div class="flex flex-col items-center flex-1 cursor-pointer" onclick="goToStep(4)">
+              <div class="w-9 h-9 rounded-full border-2 border-gray-300 bg-white text-gray-500 flex items-center justify-center font-bold text-sm">4</div>
+              <div class="text-xs font-semibold text-gray-500 mt-2 text-center">Review</div>
+            </div>
+          </div>
+
+          <!-- Step 1: ID Document -->
+          <div class="wizard-card block" id="wizard-step-1">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold text-sm">1</div>
+              <div>
+                <h3 class="font-semibold">Upload ID Document</h3>
+                <p class="text-sm text-gray-500">National ID, Passport, or Voter's Card</p>
+              </div>
+            </div>
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#1a5c38] hover:bg-green-50 transition-colors" id="dropZone1" onclick="document.getElementById('kycDocInput').click()">
+              <input type="file" name="kyc_document" id="kycDocInput" accept=".jpg,.jpeg,.png,.pdf,.webp" {% if not request.user.kyc_document %}required{% endif %}>
+              <i class="bi bi-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
+              <h4 class="font-semibold mb-1">Drag &amp; drop your ID document here</h4>
+              <p class="text-sm text-gray-500">or click to browse — JPG, PNG, WebP, or PDF (max 10 MB)</p>
+              <div class="hidden inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold" id="fileName1"></div>
+              {% if request.user.kyc_document %}
+                <div class="inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold"><i class="bi bi-paperclip"></i> Previously uploaded — upload again to replace</div>
+              {% endif %}
+            </div>
+            <div class="flex justify-end mt-5">
+              <button type="button" class="px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors" onclick="goToStep(2)">Continue <i class="bi bi-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- Step 2: Ownership Proof -->
+          <div class="wizard-card hidden" id="wizard-step-2">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold text-sm">2</div>
+              <div>
+                <h3 class="font-semibold">Upload Land Ownership Proof</h3>
+                <p class="text-sm text-gray-500">Title deed, CCRO, or Certificate of Ownership</p>
+              </div>
+            </div>
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#1a5c38] hover:bg-green-50 transition-colors" id="dropZone2" onclick="document.getElementById('ownershipInput').click()">
+              <input type="file" name="ownership_proof" id="ownershipInput" accept=".jpg,.jpeg,.png,.pdf,.webp">
+              <i class="bi bi-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
+              <h4 class="font-semibold mb-1">Drag &amp; drop your ownership proof here</h4>
+              <p class="text-sm text-gray-500">or click to browse — JPG, PNG, WebP, or PDF (max 10 MB)</p>
+              <div class="hidden inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold" id="fileName2"></div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 mt-4 flex items-start gap-2">
+              <i class="bi bi-lightbulb text-amber-500 flex-shrink-0 mt-0.5"></i>
+              <p class="text-sm text-gray-500">If your ID and ownership documents are in one combined file, you can upload the same file in both steps.</p>
+            </div>
+            <div class="flex justify-between mt-5">
+              <button type="button" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors" onclick="goToStep(1)"><i class="bi bi-arrow-left"></i> Back</button>
+              <button type="button" class="px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors" onclick="goToStep(3)">Continue <i class="bi bi-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- Step 3: Government Letter -->
+          <div class="wizard-card hidden" id="wizard-step-3">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold text-sm">3</div>
+              <div>
+                <h3 class="font-semibold">Upload Government Letter</h3>
+                <p class="text-sm text-gray-500">Barua ya Serikali za Mtaa — must be within the last 2 months</p>
+              </div>
+            </div>
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-[#1a5c38] hover:bg-green-50 transition-colors" id="dropZone3" onclick="document.getElementById('govtLetterInput').click()">
+              <input type="file" name="govt_letter" id="govtLetterInput" accept=".jpg,.jpeg,.png,.pdf,.webp" {% if not request.user.govt_letter %}required{% endif %}>
+              <i class="bi bi-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
+              <h4 class="font-semibold mb-1">Drag &amp; drop your government letter here</h4>
+              <p class="text-sm text-gray-500">or click to browse — JPG, PNG, WebP, or PDF (max 10 MB)</p>
+              <div class="hidden inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold" id="fileName3"></div>
+              {% if request.user.govt_letter %}
+                <div class="inline-flex items-center gap-2 mt-3 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold"><i class="bi bi-paperclip"></i> Previously uploaded — upload again to replace</div>
+              {% endif %}
+            </div>
+            <div class="mt-4">
+              <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="bi bi-calendar3"></i> Date on the letter <span class="text-red-500">*</span></label>
+              <input type="date" name="govt_letter_date" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" id="govtLetterDate"
+                value="{{ request.user.govt_letter_date|date:'Y-m-d'|default:'' }}"
+                max="{{ today_date }}"
+                {% if not request.user.govt_letter_date %}required{% endif %}>
+              <div class="text-sm text-amber-600 mt-1"><i class="bi bi-exclamation-triangle"></i> Must be dated within the last <strong>2 months</strong></div>
+            </div>
+            <div class="flex justify-between mt-5">
+              <button type="button" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors" onclick="goToStep(2)"><i class="bi bi-arrow-left"></i> Back</button>
+              <button type="button" class="px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors" onclick="goToStep(4)">Continue <i class="bi bi-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- Step 4: Review & Submit -->
+          <div class="wizard-card hidden" id="wizard-step-4">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold text-sm">4</div>
+              <div>
+                <h3 class="font-semibold">Review &amp; Submit</h3>
+                <p class="text-sm text-gray-500">Confirm your documents before submitting for verification</p>
+              </div>
+            </div>
+
+            <div id="reviewList"></div>
+
+            <div class="bg-gray-50 rounded-lg p-4 mt-4 flex items-start gap-3">
+              <i class="bi bi-shield-check text-xl text-[#1a5c38] flex-shrink-0 mt-0.5"></i>
+              <p class="text-sm text-gray-700">By submitting, you confirm these documents are genuine and belong to you. Our team will review within <strong>24–48 hours</strong>.</p>
+            </div>
+
+            <div class="flex justify-between mt-5 pt-5 border-t border-gray-200">
+              <button type="button" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors" onclick="goToStep(3)"><i class="bi bi-arrow-left"></i> Back</button>
+              <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors" id="kycSubmitBtn">
+                <i class="bi bi-upload"></i>
+                {% if request.user.kyc_status == 'rejected' %}Resubmit Documents{% else %}Submit for Verification{% endif %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showSection(name, btn) {
+  document.querySelectorAll('.profile-section').forEach(function(s) { s.classList.add('hidden'); s.classList.remove('block'); });
+  document.querySelectorAll('.sidebar-link').forEach(function(l) { l.classList.remove('bg-gray-50'); });
+  var target = document.getElementById('section-' + name);
+  if (target) { target.classList.remove('hidden'); target.classList.add('block'); }
+  if (btn) btn.classList.add('bg-gray-50');
+  if (window.innerWidth <= 1024) {
+    var content = document.querySelector('.profile-content, .flex-1');
+    if (content) content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+(function() {
+  var hash = window.location.hash.replace('#', '');
+  if (hash === 'security' || hash === 'verification') {
+    var btn = document.querySelector('.sidebar-link[onclick*="' + hash + '"]');
+    if (btn) showSection(hash, btn);
+  }
+})();
+
+var currentStep = 1;
+function goToStep(step) {
+  if (step < 1 || step > 4) return;
+  currentStep = step;
+  document.querySelectorAll('.wizard-card').forEach(function(c) { c.classList.add('hidden'); c.classList.remove('block'); });
+  var card = document.getElementById('wizard-step-' + step);
+  if (card) { card.classList.remove('hidden'); card.classList.add('block'); }
+  if (step === 4) populateReview();
+}
+
+function populateReview() {
+  var list = document.getElementById('reviewList');
+  if (!list) return;
+  var kycFile = document.getElementById('kycDocInput');
+  var ownerFile = document.getElementById('ownershipInput');
+  var govtFile = document.getElementById('govtLetterInput');
+  var govtDate = document.getElementById('govtLetterDate');
+  var kycName = (kycFile && kycFile.files.length) ? kycFile.files[0].name : null;
+  var ownerName = (ownerFile && ownerFile.files.length) ? ownerFile.files[0].name : null;
+  var govtName = (govtFile && govtFile.files.length) ? govtFile.files[0].name : null;
+  var dateVal = govtDate ? govtDate.value : '';
+  var hasExistingKyc = {% if request.user.kyc_document %}true{% else %}false{% endif %};
+  var hasExistingGovt = {% if request.user.govt_letter %}true{% else %}false{% endif %};
+  var existingDate = '{{ request.user.govt_letter_date|date:"d M Y"|default:"" }}';
+  var html = '';
+  if (kycName) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">ID Document</div><div class="font-semibold text-gray-900">' + escHtml(kycName) + '</div></div></div>';
+  else if (hasExistingKyc) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">ID Document</div><div class="font-semibold text-gray-900">Previously uploaded file</div></div></div>';
+  else html += '<div class="flex items-center gap-3 p-3.5 bg-amber-50 rounded-lg mb-2"><i class="bi bi-exclamation-circle-fill text-amber-600 text-xl"></i><div><div class="text-xs text-gray-500">ID Document</div><div class="font-semibold text-amber-700">Not uploaded</div></div></div>';
+  if (ownerName) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">Ownership Proof</div><div class="font-semibold text-gray-900">' + escHtml(ownerName) + '</div></div></div>';
+  else html += '<div class="flex items-center gap-3 p-3.5 bg-amber-50 rounded-lg mb-2"><i class="bi bi-exclamation-circle-fill text-amber-600 text-xl"></i><div><div class="text-xs text-gray-500">Ownership Proof</div><div class="font-semibold text-amber-700">Not uploaded (optional if combined with ID)</div></div></div>';
+  if (govtName) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter</div><div class="font-semibold text-gray-900">' + escHtml(govtName) + '</div></div></div>';
+  else if (hasExistingGovt) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter</div><div class="font-semibold text-gray-900">Previously uploaded file</div></div></div>';
+  else html += '<div class="flex items-center gap-3 p-3.5 bg-amber-50 rounded-lg mb-2"><i class="bi bi-exclamation-circle-fill text-amber-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter</div><div class="font-semibold text-amber-700">Not uploaded</div></div></div>';
+  if (dateVal) { var d = new Date(dateVal); var formatted = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}); html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter Date</div><div class="font-semibold text-gray-900">' + formatted + '</div></div></div>'; }
+  else if (existingDate) html += '<div class="flex items-center gap-3 p-3.5 bg-green-50 rounded-lg mb-2"><i class="bi bi-check-circle-fill text-green-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter Date</div><div class="font-semibold text-gray-900">' + existingDate + '</div></div></div>';
+  else html += '<div class="flex items-center gap-3 p-3.5 bg-amber-50 rounded-lg mb-2"><i class="bi bi-exclamation-circle-fill text-amber-600 text-xl"></i><div><div class="text-xs text-gray-500">Government Letter Date</div><div class="font-semibold text-amber-700">Not provided</div></div></div>';
+  list.innerHTML = html;
+}
+function escHtml(str) { var div = document.createElement('div'); div.appendChild(document.createTextNode(str)); return div.innerHTML; }
+
+function setupDropZone(zoneId, inputId, displayId) {
+  var zone = document.getElementById(zoneId);
+  var input = document.getElementById(inputId);
+  var display = document.getElementById(displayId);
+  if (!zone || !input) return;
+  zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('border-[#1a5c38]', 'bg-green-50'); });
+  zone.addEventListener('dragleave', function() { zone.classList.remove('border-[#1a5c38]', 'bg-green-50'); });
+  zone.addEventListener('drop', function(e) { e.preventDefault(); zone.classList.remove('border-[#1a5c38]', 'bg-green-50'); if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; showFileName(display, e.dataTransfer.files[0].name); } });
+  input.addEventListener('change', function() { if (input.files.length) showFileName(display, input.files[0].name); });
+}
+function showFileName(el, name) { if (!el) return; el.classList.remove('hidden'); el.innerHTML = '<i class="bi bi-file-earmark-check"></i> ' + escHtml(name); }
+document.addEventListener('DOMContentLoaded', function() { setupDropZone('dropZone1', 'kycDocInput', 'fileName1'); setupDropZone('dropZone2', 'ownershipInput', 'fileName2'); setupDropZone('dropZone3', 'govtLetterInput', 'fileName3'); });
+
+(function() {
+  var ppInput = document.getElementById('{{ form.profile_picture.id_for_label }}');
+  if (!ppInput) return;
+  ppInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var preview = document.getElementById('avatarPreviewImg');
+        if (preview) {
+          if (preview.tagName === 'IMG') { preview.src = e.target.result; }
+          else {
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'w-20 h-20 rounded-full object-cover border-4 border-gray-200';
+            img.alt = 'Avatar';
+            img.id = 'avatarPreviewImg';
+            preview.parentNode.replaceChild(img, preview);
+          }
+        }
+      };
+      reader.readAsDataURL(this.files[0]);
+    }
+  });
+})();
+</script>
+{% endblock %}

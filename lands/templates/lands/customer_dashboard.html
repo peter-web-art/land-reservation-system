@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dashboard — Land Reserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8" style="max-width:960px">
+  <h1 class="text-3xl font-bold text-gray-900 mb-8">Welcome back, {{ user.first_name|default:user.username }}</h1>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Total Bookings</div>
+      <div class="text-2xl font-bold text-gray-900">{{ total }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Pending</div>
+      <div class="text-2xl font-bold text-orange-600">{{ pending }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Confirmed</div>
+      <div class="text-2xl font-bold text-green-600">{{ approved }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Cancelled</div>
+      <div class="text-2xl font-bold text-red-600">{{ cancelled }}</div>
+    </div>
+  </div>
+
+  <!-- Recent bookings -->
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Your bookings</h2>
+      <a href="{% url 'lands:my_reservations' %}" class="text-[#1a5c38] hover:underline text-sm">Show all &rarr;</a>
+    </div>
+    {% if recent_reservations %}
+    <div class="space-y-3">
+      {% for r in recent_reservations %}
+      <a href="{% url 'lands:land_detail' r.land.id %}" class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:shadow-md transition-all no-underline">
+        <div class="w-24 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
+          {% if r.land.image %}<img src="{{ r.land.image.url }}" class="w-full h-full object-cover" loading="lazy" alt="">
+          {% else %}<div class="w-full h-full flex items-center justify-center text-2xl">🌿</div>{% endif %}
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
+          <div class="text-sm text-gray-500">{{ r.land.location }}{% if r.start_date %} &middot; {{ r.start_date|date:"M d" }} &rarr; {{ r.end_date|date:"M d" }}{% endif %}</div>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-orange-100 text-orange-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">{{ r.get_status_display }}</span>
+            <span class="font-semibold text-gray-900">${{ r.agreed_price|default:r.land.price }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12 text-center border-none">
+      <div class="text-5xl mb-4">📋</div>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">No bookings yet</h3>
+      <p class="text-gray-500 mb-4">Time to start exploring — find the perfect land for you.</p>
+      <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+        <i class="bi bi-search"></i> Start exploring
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if wishlist_items %}
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Your wishlists</h2>
+      <a href="{% url 'lands:my_wishlist' %}" class="text-[#1a5c38] hover:underline text-sm">Show all ({{ wishlist_count }}) &rarr;</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {% for w in wishlist_items %}
+      <a href="{% url 'lands:land_detail' w.land.id %}" class="block no-underline">
+        <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 mb-2">
+          {% if w.land.image %}<img src="{{ w.land.image.url }}" class="w-full h-full object-cover" loading="lazy">
+          {% else %}<div class="w-full h-full flex items-center justify-center text-3xl">🌿</div>{% endif %}
+        </div>
+        <div class="font-medium text-gray-900 truncate">{{ w.land.title }}</div>
+        <div class="text-sm text-gray-500 truncate">{{ w.land.location }}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not can_switch_mode and not user.is_staff and user.role != 'admin' %}
+  <div class="flex items-center gap-6 p-6 bg-[#1a5c38]/5 border border-[#1a5c38]/20 rounded-xl">
+    <div class="flex-1">
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Become a Host</h3>
+      <p class="text-gray-600 mb-4">It's easy to start hosting and earn extra income by listing your land.</p>
+      <form method="post" action="{% url 'lands:switch_to_owner' %}">{% csrf_token %}
+        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+          <i class="bi bi-houses"></i> Try hosting
+        </button>
+      </form>
+    </div>
+    <div class="text-6xl hidden sm:block">🏡</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

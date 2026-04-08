@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}500 — Server Error · LandReserve{% endblock %}
+{% block content %}
+<div class="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
+  <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
+    <i class="bi bi-exclamation-octagon-fill text-red-500 text-3xl"></i>
+  </div>
+  <h1 class="text-6xl font-bold text-gray-900 mb-2">500</h1>
+  <p class="text-lg text-gray-500 mb-2">Something went wrong on our end.</p>
+  <p class="text-sm text-gray-400 mb-8">Please try again in a moment. If the issue persists, contact support.</p>
+  <div class="flex gap-3">
+    <a href="/" class="inline-flex items-center gap-2 px-6 py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+      <i class="bi bi-house"></i> Back to Home
+    </a>
+    <a href="{% url 'lands:help_center' %}" class="inline-flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors no-underline">
+      <i class="bi bi-envelope"></i> Contact Support
+    </a>
+  </div>
+</div>
+{% endblock %}

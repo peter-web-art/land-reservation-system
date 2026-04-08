@@ -1,0 +1,13 @@
+# Bun configuration for LandReserve frontend
+# https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Cache packages globally for speed
+cache = true
+
+[install.scopes]
+# No private registry needed
+
+[run]
+# Silence Bun's noisy output in CI
+silent = false

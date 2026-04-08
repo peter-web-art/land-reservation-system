@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Hosting Dashboard — Land Reserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ user.first_name|default:user.username }}</h1>
+      <p class="text-gray-500 mt-1">Manage your listings and reservations</p>
+    </div>
+    <div class="flex gap-3 mt-4 md:mt-0">
+      <a href="{% url 'lands:calendar_view' %}" class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+        <i class="bi bi-calendar3"></i> Calendar
+      </a>
+      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+        <i class="bi bi-plus-lg"></i> New listing
+      </a>
+      <form method="post" action="{% url 'lands:switch_mode' %}">{% csrf_token %}
+        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          Switch to traveling
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if not user.is_verified %}
+  <div class="flex items-center gap-4 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-lg">
+    <i class="bi bi-exclamation-triangle-fill text-amber-600 text-xl"></i>
+    <div class="flex-1">
+      <div class="font-semibold text-amber-900">Verify your identity</div>
+      <div class="text-sm text-amber-700">Complete KYC to get a verified badge and build trust with customers.</div>
+    </div>
+    <a href="{% url 'accounts:profile_edit' %}" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors">Verify now</a>
+  </div>
+  {% endif %}
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Listings</div>
+      <div class="text-2xl font-bold text-gray-900">{{ lands|length }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Available</div>
+      <div class="text-2xl font-bold text-green-600">{{ available_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Pending</div>
+      <div class="text-2xl font-bold text-amber-600">{{ pending_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Confirmed</div>
+      <div class="text-2xl font-bold text-[#1a5c38]">{{ approved_count }}</div>
+    </div>
+  </div>
+
+  <!-- Earnings Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-green-700">This Month</div>
+      <div class="text-2xl font-bold text-green-800">${{ monthly_earnings|default:"0" }}</div>
+    </div>
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-blue-700">Last 7 Days</div>
+      <div class="text-2xl font-bold text-blue-800">${{ weekly_earnings|default:"0" }}</div>
+    </div>
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-purple-700">All Time</div>
+      <div class="text-2xl font-bold text-purple-800">${{ total_earnings|default:"0" }}</div>
+    </div>
+    <div class="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-amber-700">Total Bookings</div>
+      <div class="text-2xl font-bold text-amber-800">{{ total_bookings|default:"0" }}</div>
+    </div>
+  </div>
+
+  <!-- Pending reservation requests -->
+  {% if recent_bookings %}
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Pending requests</h2>
+      <a href="{% url 'lands:reservations_management' %}" class="text-[#1a5c38] hover:underline text-sm">All reservations &rarr;</a>
+    </div>
+    <div class="space-y-3">
+      {% for r in recent_bookings %}
+      <div class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all">
+        <div class="w-20 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+          {% if r.land.primary_image %}<img src="{{ r.land.primary_image.url }}" class="w-full h-full object-cover">
+          {% else %}<div class="w-full h-full flex items-center justify-center text-2xl">🌿</div>{% endif %}
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
+          <div class="text-sm text-gray-500">{{ r.customer.username }} &middot; {% if r.start_date %}{{ r.start_date|date:"M d" }} — {{ r.end_date|date:"M d" }}{% else %}Booking request{% endif %}</div>
+        </div>
+        <div class="font-semibold text-lg text-gray-900">${{ r.agreed_price|default:r.land.price }}</div>
+        <div class="flex gap-2">
+          <form method="post" action="{% url 'lands:update_reservation_status' r.id 'approved' %}">{% csrf_token %}
+            <button class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check-lg"></i> Accept</button>
+          </form>
+          <form method="post" action="{% url 'lands:update_reservation_status' r.id 'rejected' %}">{% csrf_token %}
+            <button class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors"><i class="bi bi-x-lg"></i> Decline</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Your Listings -->
+  <div>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Your listings</h2>
+      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+        <i class="bi bi-plus-lg"></i> Add new
+      </a>
+    </div>
+    {% if lands %}
+    <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="w-20"></th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Listing</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Location</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Type</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Price</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Status</th>
+            <th class="w-32 text-left px-4 py-3 text-sm font-medium text-gray-500">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for land in lands %}
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="p-4">
+              <div class="w-16 h-12 rounded-lg overflow-hidden bg-gray-100">
+                {% if land.primary_image %}<img src="{{ land.primary_image.url }}" class="w-full h-full object-cover">
+                {% else %}<div class="w-full h-full flex items-center justify-center text-xl">🌿</div>{% endif %}
+              </div>
+            </td>
+            <td class="px-4 py-3"><a href="{% url 'lands:land_detail' land.id %}" class="font-medium text-gray-900 hover:text-[#1a5c38] no-underline">{{ land.title }}</a></td>
+            <td class="px-4 py-3 text-gray-500">{{ land.location }}</td>
+            <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{{ land.get_listing_type_display }}</span></td>
+            <td class="px-4 py-3 font-medium text-gray-900">${{ land.price }}</td>
+            <td class="px-4 py-3">
+              {% if land.is_available %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Available</span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unavailable</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex gap-1">
+                <a href="{% url 'lands:edit_land' land.id %}" class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg transition-colors" title="Edit"><i class="bi bi-pencil"></i></a>
+                <a href="{% url 'lands:land_detail' land.id %}" class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg transition-colors" title="View"><i class="bi bi-eye"></i></a>
+                <a href="{% url 'lands:delete_land' land.id %}" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><i class="bi bi-trash3"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
+      <div class="text-5xl mb-4">🏡</div>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">No listings yet</h3>
+      <p class="text-gray-500 mb-4">Start hosting by creating your first listing.</p>
+      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+        <i class="bi bi-plus-lg"></i> Create listing
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

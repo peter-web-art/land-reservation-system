@@ -1,0 +1,465 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ land.title }} — LandReserve{% endblock %}
+{% block content %}
+
+<div class="container mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{{ land.title }}</h1>
+    <div class="flex items-center gap-2 mt-4 md:mt-0">
+      <button onclick="shareListing()" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+        <i class="bi bi-share"></i>
+        <span>Share</span>
+      </button>
+      <button onclick="toggleSave()" id="saveBtn" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors {% if is_wishlisted %}text-red-500{% endif %}">
+        <i class="bi bi-heart{% if is_wishlisted %}-fill{% endif %}"></i>
+        <span>{% if is_wishlisted %}Saved{% else %}Save{% endif %}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Gallery -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-6" id="galleryGrid">
+    {% with images=land.get_all_images %}
+    {% if images %}
+    <div class="md:col-span-2 md:row-span-2 relative cursor-pointer rounded-l-xl overflow-hidden" onclick="openGallery(0)">
+      <img src="{{ images.0.url }}" alt="{{ land.title }}" class="w-full h-full object-cover min-h-[300px]">
+    </div>
+    {% if images|length > 1 %}
+    {% for img in images|slice:"1:5" %}
+    <div class="hidden md:block relative cursor-pointer overflow-hidden {% if forloop.counter == 1 %}rounded-tr-xl{% elif forloop.counter == 3 %}rounded-br-xl{% endif %}" onclick="openGallery({{ forloop.counter }})">
+      <img src="{{ img.url }}" alt="Photo {{ forloop.counter|add:'1' }}" class="w-full h-full object-cover min-h-[150px]">
+    </div>
+    {% endfor %}
+    {% if images|length > 5 %}
+    <div class="hidden md:flex relative cursor-pointer bg-gray-100 items-center justify-center rounded-r-xl" onclick="openGallery(4)">
+      <i class="bi bi-images text-2xl"></i> +{{ images|length|add:'-5' }} more
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="hidden md:flex relative bg-gray-100 items-center justify-center rounded-r-xl">
+      <i class="bi bi-images text-2xl"></i> Show all photos
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="md:col-span-2 md:row-span-2 rounded-xl flex items-center justify-center bg-green-100 text-6xl">🌍</div>
+    {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex flex-col lg:flex-row gap-8">
+    <!-- Left Column -->
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold mb-2 lg:hidden">{{ land.title }}</h1>
+      <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 mb-4">
+        {% if land.owner.is_verified %}
+        <span class="inline-flex items-center gap-1 px-3 py-1 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold">
+          <i class="bi bi-patch-check-fill"></i> Verified Owner
+        </span>
+        <span>·</span>
+        {% endif %}
+        <span class="flex items-center gap-1"><i class="bi bi-geo-alt-fill"></i> {{ land.location }}</span>
+        {% if land.size %}
+        <span>·</span>
+        <span class="flex items-center gap-1"><i class="bi bi-rulers"></i> {{ land.size }} {{ land.get_size_unit_display }}</span>
+        {% endif %}
+        <span>·</span>
+        <span>
+          {% if land.is_available %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-check-circle"></i> Available</span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Reserved</span>
+          {% endif %}
+        </span>
+      </div>
+      
+      <!-- Host Section -->
+      <div class="border-t border-b border-gray-200 py-6 mb-6">
+        <div class="flex items-center gap-4">
+          {% if land.owner.profile_picture %}
+          <div class="w-16 h-16 rounded-full overflow-hidden">
+            <img src="{{ land.owner.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+          </div>
+          {% else %}
+          <div class="w-16 h-16 rounded-full bg-[#1a5c38] text-white flex items-center justify-center text-2xl font-bold">{{ land.owner.username|slice:":1"|upper }}</div>
+          {% endif %}
+          <div>
+            <h3 class="font-semibold text-lg">Hosted by {{ land.owner.get_full_name|default:land.owner.username }}</h3>
+            <p class="text-gray-500 text-sm">{{ land.owner.lands.count }} listings · {% if land.owner.is_verified %}Verified{% else %}Unverified{% endif %}</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- About Section -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="bi bi-info-circle text-[#1a5c38]"></i>
+          About this land
+        </h2>
+        <p class="text-base text-gray-700">{{ land.description }}</p>
+      </div>
+      
+      <!-- Land Details -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="bi bi-grid-3x3-gap text-[#1a5c38]"></i>
+          Land Details
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-tag text-gray-400"></i>
+            <span>{% if land.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}</span>
+          </div>
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-flower1 text-gray-400"></i>
+            <span>{{ land.get_land_use_display }}</span>
+          </div>
+          {% if land.size %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-rulers text-gray-400"></i>
+            <span>{{ land.size }} {{ land.get_size_unit_display }}</span>
+          </div>
+          {% endif %}
+          {% if land.owner.is_verified %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-shield-check text-gray-400"></i>
+            <span>Verified Owner</span>
+          </div>
+          {% endif %}
+          {% if land.listing_type == 'rent' and land.weekly_discount > 0 %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-tag-fill text-gray-400"></i>
+            <span>{{ land.weekly_discount }}% weekly discount</span>
+          </div>
+          {% endif %}
+          {% if land.listing_type == 'rent' and land.monthly_discount > 0 %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-tag-fill text-gray-400"></i>
+            <span>{{ land.monthly_discount }}% monthly discount</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Contact -->
+      <div class="mb-6">
+        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+          <i class="bi bi-telephone text-[#1a5c38]"></i>
+          Contact
+        </h2>
+        {% if land.contact_phone %}
+        <p class="mb-2 text-gray-700"><i class="bi bi-phone"></i> {{ land.contact_phone }}</p>
+        {% endif %}
+        {% if land.contact_email %}
+        <p class="text-gray-700"><i class="bi bi-envelope"></i> {{ land.contact_email }}</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Right Column - Booking Card -->
+    <div class="w-full lg:w-96">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-lg p-6 sticky top-20">
+        <div class="flex items-baseline gap-2 mb-2">
+          <span class="text-2xl font-bold text-[#1a5c38]">{{ land.price_display }}</span>
+          {% if land.listing_type == 'rent' %}<span class="text-gray-500">/ month</span>{% endif %}
+        </div>
+        <div class="flex items-center gap-1 text-sm text-gray-600 mb-4">
+          <i class="bi bi-star-fill text-amber-400"></i>
+          <span>4.9</span> · 28 reviews
+        </div>
+        
+        {% if land.is_available %}
+          {% if user.is_authenticated and user == land.owner %}
+          <div class="flex gap-2 mt-4">
+            <a href="{% url 'lands:edit_land' land.id %}" class="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold text-center hover:bg-amber-600 transition-colors"><i class="bi bi-pencil"></i> Edit</a>
+            <a href="{% url 'lands:delete_land' land.id %}" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold text-center hover:border-gray-400 hover:bg-gray-50 transition-colors"><i class="bi bi-trash"></i> Delete</a>
+          </div>
+          {% elif user.is_authenticated %}
+          <a href="{% url 'lands:book_land' land.id %}" class="block w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
+            {% if land.listing_type == 'rent' %}Reserve{% else %}Request Info{% endif %}
+          </a>
+          {% if user != land.owner %}
+          <button onclick="document.getElementById('msgOwnerModal').classList.remove('hidden');" class="w-full mt-2 px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+            Contact Owner
+          </button>
+          {% endif %}
+          {% else %}
+          <button onclick="openModal('login')" class="w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
+            Log in to {% if land.listing_type == 'rent' %}Reserve{% else %}Request Info{% endif %}
+          </button>
+          {% endif %}
+        {% else %}
+        <div class="text-center text-gray-500 mt-4">
+          <strong>Currently Unavailable</strong>
+          <p class="m-0 text-sm">This land is not available right now</p>
+        </div>
+        {% endif %}
+        
+        <p class="text-center text-sm text-gray-500 mt-4">You won't be charged yet</p>
+        
+        <div class="border-t border-gray-200 mt-4 pt-4 space-y-2 text-sm">
+          <div class="flex justify-between">
+            <span>{{ land.price_display }}</span>
+            <span>{% if land.listing_type == 'rent' %}x 1 month{% else %}total{% endif %}</span>
+          </div>
+          {% if land.listing_type == 'rent' %}
+          {% if land.weekly_discount > 0 %}
+          <div class="flex justify-between">
+            <span>Weekly discount</span>
+            <span>-{{ land.weekly_discount }}%</span>
+          </div>
+          {% endif %}
+          {% if land.monthly_discount > 0 %}
+          <div class="flex justify-between">
+            <span>Monthly discount</span>
+            <span>-{{ land.monthly_discount }}%</span>
+          </div>
+          {% endif %}
+          {% endif %}
+          <div class="flex justify-between">
+            <span class="text-gray-500">Service fee</span>
+            <span class="text-green-600">Free</span>
+          </div>
+          <div class="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
+            <span>Total</span>
+            <span>{{ land.price_display }}</span>
+          </div>
+        </div>
+        
+        {% if user.is_authenticated %}
+        <div class="mt-4 text-center">
+          <button onclick="document.getElementById('reportModal').classList.remove('hidden');" class="bg-transparent border-none text-gray-500 text-sm underline cursor-pointer">
+            Report this listing
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Similar Listings -->
+{% if similar_lands %}
+<div class="container mx-auto px-4 py-8 border-t border-gray-200 mt-8">
+  <h2 class="text-xl font-semibold mb-6">More lands you might like</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    {% for sl in similar_lands %}
+    <a href="{% url 'lands:land_detail' sl.id %}" class="block no-underline">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {% if sl.primary_image %}
+        <img src="{{ sl.primary_image.url }}" class="w-full h-40 object-cover">
+        {% else %}
+        <div class="w-full h-40 bg-green-100 flex items-center justify-center text-4xl">🌍</div>
+        {% endif %}
+      </div>
+      <h3 class="font-semibold mt-2 text-gray-900">{{ sl.title }}</h3>
+      <p class="text-gray-500 text-sm">{{ sl.location }}</p>
+      <p class="font-semibold text-gray-900">{{ sl.price_display }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Message Modal -->
+{% if user.is_authenticated and user != land.owner %}
+<div class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center" id="msgOwnerModal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b border-gray-200">
+      <h3 class="font-semibold">Message {{ land.owner.get_full_name|default:land.owner.username }}</h3>
+      <button onclick="document.getElementById('msgOwnerModal').classList.add('hidden')" class="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+    </div>
+    <div class="p-4">
+      <form method="post" action="{% url 'lands:send_message' %}">
+        {% csrf_token %}
+        <input type="hidden" name="recipient" value="{{ land.owner.pk }}">
+        <input type="hidden" name="land" value="{{ land.pk }}">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
+          <textarea name="body" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" placeholder="Hi, I'm interested in this land..." required></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors"><i class="bi bi-send"></i> Send</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Report Modal -->
+{% if user.is_authenticated %}
+<div class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center" id="reportModal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div class="flex items-center justify-between p-4 border-b border-gray-200">
+      <h3 class="font-semibold flex items-center gap-2"><i class="bi bi-flag"></i> Report Listing</h3>
+      <button onclick="document.getElementById('reportModal').classList.add('hidden')" class="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+    </div>
+    <div class="p-4">
+      <form method="post" action="{% url 'lands:report_listing' land.id %}">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+          <textarea name="reason" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" placeholder="Describe the issue..." required></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 transition-colors"><i class="bi bi-flag"></i> Submit Report</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const galleryImages = [
+  {% for img in land.get_all_images %}
+  '{{ img.url }}'{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+let currentGalleryIndex = 0;
+
+function openGallery(index) {
+  currentGalleryIndex = index;
+  if (!galleryImages.length) return;
+  
+  const modal = document.createElement('div');
+  modal.id = 'galleryModal';
+  modal.className = 'fixed inset-0 z-[70] bg-black/90 flex items-center justify-center';
+  modal.onclick = function(e) {
+    if (e.target === modal) closeGallery();
+  };
+  
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
+      <div class="flex items-center justify-between p-4 border-b border-gray-200">
+        <h3 class="font-semibold">{{ land.title }} - Photo ${index + 1} of ${galleryImages.length}</h3>
+        <button onclick="closeGallery()" class="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+      </div>
+      <div class="p-0 relative">
+        <img id="galleryImage" src="${galleryImages[index]}" class="w-full max-h-[70vh] object-contain">
+        ${galleryImages.length > 1 ? `
+        <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 text-xl">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <button onclick="nextGalleryImage()" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 text-xl">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+        ` : ''}
+      </div>
+      ${galleryImages.length > 1 ? `
+      <div class="flex gap-2 p-4 overflow-x-auto">
+        ${galleryImages.map((img, i) => `
+          <img src="${img}" onclick="goToGalleryImage(${i})" class="w-16 h-16 object-cover rounded-lg cursor-pointer opacity:${i === index ? '1' : '0.5'};border:2px solid ${i === index ? '#1a5c38' : 'transparent'};">
+        `).join('')}
+      </div>
+      ` : ''}
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGallery() {
+  const modal = document.getElementById('galleryModal');
+  if (modal) modal.remove();
+  document.body.style.overflow = '';
+}
+
+function prevGalleryImage() {
+  currentGalleryIndex = (currentGalleryIndex - 1 + galleryImages.length) % galleryImages.length;
+  document.getElementById('galleryImage').src = galleryImages[currentGalleryIndex];
+  updateGalleryDots();
+}
+
+function nextGalleryImage() {
+  currentGalleryIndex = (currentGalleryIndex + 1) % galleryImages.length;
+  document.getElementById('galleryImage').src = galleryImages[currentGalleryIndex];
+  updateGalleryDots();
+}
+
+function goToGalleryImage(index) {
+  currentGalleryIndex = index;
+  document.getElementById('galleryImage').src = galleryImages[index];
+  updateGalleryDots();
+}
+
+function updateGalleryDots() {
+  const dots = document.querySelectorAll('#galleryModal .flex img[onclick^="goToGalleryImage"]');
+  dots.forEach((dot, i) => {
+    dot.style.opacity = i === currentGalleryIndex ? '1' : '0.5';
+    dot.style.border = i === currentGalleryIndex ? '2px solid #1a5c38' : '2px solid transparent';
+  });
+}
+
+function shareListing() {
+  if (navigator.share) {
+    navigator.share({
+      title: '{{ land.title }}',
+      text: 'Check out this land on LandReserve: {{ land.title }} in {{ land.location }}',
+      url: window.location.href
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      alert('Link copied to clipboard!');
+    });
+  }
+}
+
+function toggleSave() {
+  const landId = {{ land.pk }};
+  const btn = document.getElementById('saveBtn');
+  const icon = btn.querySelector('i');
+  const span = btn.querySelector('span');
+  
+  fetch(`/lands/${landId}/wishlist/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({land_id: landId})
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'added') {
+      icon.className = 'bi bi-heart-fill';
+      span.textContent = 'Saved';
+      btn.classList.add('text-red-500');
+    } else {
+      icon.className = 'bi bi-heart';
+      span.textContent = 'Save';
+      btn.classList.remove('text-red-500');
+    }
+  })
+  .catch(err => console.error('Error:', err));
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+document.addEventListener('keydown', function(e) {
+  const modal = document.getElementById('galleryModal');
+  if (!modal) return;
+  
+  if (e.key === 'Escape') closeGallery();
+  if (e.key === 'ArrowLeft') prevGalleryImage();
+  if (e.key === 'ArrowRight') nextGalleryImage();
+});
+</script>
+{% endblock %}

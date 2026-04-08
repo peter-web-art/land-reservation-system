@@ -1,0 +1,795 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Find Your Perfect Land - LandReserve{% endblock %}
+
+{% block hero %}
+<section class="relative bg-[#1a5c38] py-16 md:py-24 overflow-hidden">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+  </div>
+  <div class="container mx-auto px-4 relative z-10">
+    <div class="max-w-2xl mx-auto text-center">
+      <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">Find your next perfect land</h1>
+      <p class="text-lg text-white/80 mb-8">Discover the best lands for rent, sale, and agricultural purposes</p>
+    </div>
+  </div>
+  
+  <!-- Hero Search Bar -->
+  <div class="container mx-auto px-4 relative z-10 mt-8">
+    <form class="bg-white rounded-xl shadow-lg p-2 md:p-3 max-w-4xl mx-auto" method="GET" action="{% url 'lands:land_list' %}" id="heroSearchForm">
+      <div class="flex flex-col md:flex-row gap-2">
+        <div class="flex-1 relative">
+          <label class="text-xs font-medium text-gray-500 block mb-1 px-1"><i class="bi bi-geo-alt"></i> Location</label>
+          <input type="text" name="location" id="locationInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" placeholder="Where are you looking?" value="{{ request.GET.location|default:'' }}" autocomplete="off">
+          <div id="locationDropdown" class="hidden absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
+        </div>
+        <div class="w-full md:w-40 relative">
+          <label class="text-xs font-medium text-gray-500 block mb-1 px-1"><i class="bi bi-house-door"></i> Type</label>
+          <select name="type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] bg-white">
+            <option value="">Any</option>
+            <option value="rent" {% if request.GET.type == 'rent' %}selected{% endif %}>For Rent</option>
+            <option value="sale" {% if request.GET.type == 'sale' %}selected{% endif %}>For Sale</option>
+          </select>
+        </div>
+        <div class="w-full md:w-32 relative">
+          <label class="text-xs font-medium text-gray-500 block mb-1 px-1"><i class="bi bi-currency-dollar"></i> Min Price</label>
+          <input type="number" name="min_price" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" placeholder="Min price" value="{{ request.GET.min_price|default:'' }}" min="0">
+        </div>
+        <div class="w-full md:w-32 relative">
+          <label class="text-xs font-medium text-gray-500 block mb-1 px-1"><i class="bi bi-currency-dollar"></i> Max Price</label>
+          <input type="number" name="max_price" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" placeholder="Max price" value="{{ request.GET.max_price|default:'' }}" min="0">
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="w-full md:w-auto px-6 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors flex items-center justify-center gap-2">
+            <i class="bi bi-search"></i> Search
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block main_class %}flex flex-col flex-1 overflow-hidden min-h-screen{% endblock %}
+
+{% block content %}
+{% if show_login_prompt %}
+<!-- LOGIN PROMPT (shown to anonymous users) -->
+<div class="flex flex-1 items-center justify-center min-h-[60vh] bg-gray-50">
+  <div class="text-center max-w-md mx-auto px-4">
+    <div class="w-20 h-20 bg-[#1a5c38]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+      <i class="bi bi-lock text-4xl text-[#1a5c38]"></i>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-900 mb-2">Log in to browse lands</h2>
+    <p class="text-gray-500 mb-6">You need to be logged in to view and search available land listings.</p>
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <a href="/accounts/login/" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">Log In</a>
+      <a href="/accounts/register/" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Create Account</a>
+    </div>
+  </div>
+</div>
+{% else %}
+<!-- FULL-HEIGHT SPLIT VIEW -->
+<div class="flex flex-1 overflow-hidden min-h-0">
+
+  <!-- LEFT PANEL: 60% — Listings -->
+  <div class="w-full md:w-3/5 h-full overflow-y-auto border-r border-gray-200" id="listingsPanel">
+    
+    <!-- Top bar: count + sort -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
+      <p class="text-sm font-medium text-gray-700">
+        <strong class="text-[#1a5c38] font-bold">{{ paginator.count }}</strong> lands found
+        {% if request.GET.location %} in {{ request.GET.location }}{% endif %}
+      </p>
+      <div class="relative">
+        <select onchange="window.location.href=this.value" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] cursor-pointer">
+          <option value="?sort=newest{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Newest</option>
+          <option value="?sort=price_low{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+          <option value="?sort=price_high{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+          <option value="?sort=size_large{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'size_large' %}selected{% endif %}>Size: Largest</option>
+        </select>
+        <i class="bi bi-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+      </div>
+    </div>
+
+    <!-- Active Filter Chips -->
+    {% with cf=current_filters %}
+    {% if cf.listing_type or cf.land_use or cf.location or cf.keyword or cf.min_price or cf.max_price or cf.min_size or cf.max_size or cf.availability %}
+    <div class="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 overflow-x-auto flex-shrink-0">
+      {% if cf.listing_type %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        {% if cf.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'type' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      {% if cf.land_use %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        {{ cf.land_use|title }}
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'use' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      {% if cf.location %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        <i class="bi bi-geo-alt"></i> {{ cf.location }}
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'location' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      {% if cf.min_price or cf.max_price %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        <i class="bi bi-currency-dollar"></i>
+        {% if cf.min_price and cf.max_price %}{{ cf.min_price }} - {{ cf.max_price }}
+        {% elif cf.min_price %}>& {{ cf.min_price }}
+        {% else %}< {{ cf.max_price }}{% endif %}
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'min_price' and k != 'max_price' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      {% if cf.min_size or cf.max_size %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        <i class="bi bi-rulers"></i>
+        {% if cf.min_size and cf.max_size %}{{ cf.min_size }} - {{ cf.max_size }}
+        {% elif cf.min_size %}>& {{ cf.min_size }}
+        {% else %}< {{ cf.max_size }}{% endif %} acres
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'min_size' and k != 'max_size' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      {% if cf.availability %}
+      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
+        {{ cf.availability|title }}
+        <a href="?{% for k,v in request.GET.items %}{% if k != 'availability' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
+      </span>
+      {% endif %}
+      <a href="{% url 'lands:land_list' %}" class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1a5c38] shrink-0">
+        <i class="bi bi-x-circle"></i> Clear all
+      </a>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Land Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4" id="landCardsGrid">
+      {% for land in lands %}
+      <a href="{% url 'lands:land_detail' land.pk %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-[#1a5c38]/30 transition-all block" data-land-id="{{ land.pk }}">
+        <div class="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+          {% with images=land.get_all_images %}
+          {% if images %}
+          <div class="land-card__carousel" data-land-id="{{ land.pk }}">
+            <div class="land-card__carousel-track flex h-full transition-transform duration-300" style="transform: translateX(0);">
+              {% for img in images %}
+              <div class="land-card__carousel-slide w-full h-full flex-shrink-0">
+                <img src="{{ img.url }}" alt="{{ land.title }}" loading="lazy" class="w-full h-full object-cover">
+              </div>
+              {% endfor %}
+            </div>
+            {% if images|length > 1 %}
+            <button class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors" onclick="event.preventDefault(); event.stopPropagation(); moveCarousel({{ land.pk }}, -1)">
+              <i class="bi bi-chevron-left text-gray-600"></i>
+            </button>
+            <button class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors" onclick="event.preventDefault(); event.stopPropagation(); moveCarousel({{ land.pk }}, 1)">
+              <i class="bi bi-chevron-right text-gray-600"></i>
+            </button>
+            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {% for img in images %}
+              <button class="land-card__carousel-dot w-2 h-2 rounded-full bg-white/70 hover:bg-white transition-colors {% if forloop.first %}bg-white{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); goToSlide({{ land.pk }}, {{ forloop.counter0 }})"></button>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="w-full h-full flex items-center justify-center text-gray-300">
+            <i class="bi bi-image text-5xl"></i>
+          </div>
+          {% endif %}
+          {% endwith %}
+          
+          <!-- Badges -->
+          <div class="absolute top-3 left-3 flex gap-2">
+            {% if land.listing_type == 'rent' %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-500 text-white rounded-full text-xs font-semibold">Rent</span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#1a5c38] text-white rounded-full text-xs font-semibold">Sale</span>
+            {% endif %}
+          </div>
+
+          <!-- Verified badge -->
+          {% if land.owner.is_verified %}
+          <div class="absolute top-3 right-12 inline-flex items-center gap-1 px-2 py-1 bg-white/90 rounded-full text-xs font-semibold text-[#1a5c38]">
+            <i class="bi bi-patch-check-fill"></i> Verified
+          </div>
+          {% endif %}
+          
+          <!-- Wishlist -->
+          {% if land.pk in wishlisted_ids %}
+          <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-red-500 transition-colors" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ land.pk }}, this)"><i class="bi bi-heart-fill"></i></button>
+          {% else %}
+          <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-gray-400 hover:text-red-500 transition-colors" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ land.pk }}, this)"><i class="bi bi-heart"></i></button>
+          {% endif %}
+        </div>
+        <div class="p-4">
+          <!-- Status + Posted -->
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              {% if land.is_available %}
+              <span class="w-2 h-2 rounded-full bg-green-500"></span>
+              <span class="text-xs font-medium text-green-600">Available</span>
+              {% else %}
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span class="text-xs font-medium text-amber-600">Reserved</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <h3 class="text-base font-semibold text-gray-900 mb-1 truncate group-hover:text-[#1a5c38] transition-colors">{{ land.title }}</h3>
+          <p class="text-sm text-gray-500 mb-2 flex items-center gap-1 truncate"><i class="bi bi-geo-alt"></i> {{ land.location }}</p>
+          <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+            {% if land.size %}
+            <span class="flex items-center gap-1"><i class="bi bi-rulers"></i> {{ land.size }} {{ land.get_size_unit_display }}</span>
+            {% endif %}
+            {% if land.land_use %}
+            <span>{{ land.get_land_use_display }}</span>
+            {% endif %}
+          </div>
+          <div class="flex items-baseline gap-1">
+            <span class="text-lg font-bold text-[#1a5c38]">{{ land.price_display }}</span>
+            <span class="text-xs text-gray-500">{% if land.listing_type == 'rent' %}/ month{% else %}total{% endif %}</span>
+          </div>
+        </div>
+      </a>
+      {% empty %}
+      <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <i class="bi bi-search text-3xl text-gray-400"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800 mb-2">No lands found</h3>
+        <p class="text-gray-500 mb-4">Try adjusting your search criteria</p>
+        <a href="{% url 'lands:land_list' %}" class="px-6 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">Browse All Lands</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-4 py-6 border-t border-gray-200">
+      <div class="flex items-center justify-between">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+            <i class="bi bi-chevron-left"></i> Previous
+          </a>
+        {% else %}
+          <span class="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-300 cursor-not-allowed">
+            <i class="bi bi-chevron-left"></i> Previous
+          </span>
+        {% endif %}
+        
+        <div class="flex items-center gap-1">
+          {% for num in paginator.page_range %}
+            {% if num == page_obj.number %}
+              <span class="w-10 h-10 flex items-center justify-center bg-[#1a5c38] text-white rounded-lg text-sm font-semibold">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+              <a href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">{{ num }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+        
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+            Next <i class="bi bi-chevron-right"></i>
+          </a>
+        {% else %}
+          <span class="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-300 cursor-not-allowed">
+            Next <i class="bi bi-chevron-right"></i>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- RIGHT PANEL: 40% — Map (desktop) -->
+  <div class="hidden md:block w-2/5 h-full relative" id="mapPanel">
+    <div id="map" class="w-full h-full"></div>
+    
+    <!-- Map Controls -->
+    <div class="absolute top-4 right-4 flex flex-col gap-2 z-[400]">
+      <!-- Satellite / Street toggle -->
+      <div class="flex bg-white rounded-lg shadow-md overflow-hidden">
+        <button class="px-3 py-1.5 text-xs font-medium bg-[#1a5c38] text-white" id="streetLayerBtn">
+          <i class="bi bi-map"></i> Street
+        </button>
+        <button class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50" id="satelliteLayerBtn">
+          <i class="bi bi-layers"></i> Satellite
+        </button>
+      </div>
+      <!-- Draw to search -->
+      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="drawPolygon" title="Draw to Search">
+        <i class="bi bi-bezier2"></i>
+      </button>
+      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all hidden" id="clearDraw" title="Clear Drawing">
+        <i class="bi bi-x"></i>
+      </button>
+      <!-- Zoom -->
+      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="zoomIn" title="Zoom In">
+        <i class="bi bi-plus"></i>
+      </button>
+      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="zoomOut" title="Zoom Out">
+        <i class="bi bi-dash"></i>
+      </button>
+    </div>
+
+    <!-- Draw tools bar -->
+    <div class="absolute bottom-4 left-4 right-4 flex items-center gap-2 p-3 bg-white rounded-lg shadow-md hidden" id="drawTools">
+      <span class="text-xs font-medium text-gray-600">Click map to draw area</span>
+      <button class="ml-auto px-3 py-1.5 bg-[#1a5c38] text-white rounded text-xs font-medium" id="startDraw">
+        <i class="bi bi-pencil"></i> Draw
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- MOBILE: Map Panel (hidden on desktop) -->
+<div class="fixed inset-0 z-20 bg-white hidden" id="mobileMapPanel">
+  <div id="mobileMap" class="w-full h-full"></div>
+  <div class="absolute top-4 right-4 flex gap-2 z-[400]">
+    <div class="flex bg-white rounded-lg shadow-md overflow-hidden">
+      <button class="px-3 py-1.5 text-xs font-medium bg-[#1a5c38] text-white" id="mobileStreetBtn">Street</button>
+      <button class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50" id="mobileSatelliteBtn">Satellite</button>
+    </div>
+    <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38]" id="mobileZoomIn"><i class="bi bi-plus"></i></button>
+    <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38]" id="mobileZoomOut"><i class="bi bi-dash"></i></button>
+  </div>
+</div>
+
+<!-- MOBILE: Toggle Button -->
+<div class="fixed bottom-6 right-6 z-30 md:hidden">
+  <button onclick="toggleMobileView()" class="w-14 h-14 bg-[#1a5c38] text-white rounded-full shadow-lg flex items-center justify-center gap-2 hover:bg-[#134428] transition-colors">
+    <i class="bi bi-map text-xl" id="mobileToggleIcon"></i>
+  </button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============================================
+// WISHLIST TOGGLE
+// ============================================
+function toggleWishlist(landId, btn) {
+   fetch(`/lands/${landId}/wishlist/`, {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       'X-CSRFToken': getCookie('csrftoken'),
+       'X-Requested-With': 'XMLHttpRequest'
+     },
+     body: JSON.stringify({land_id: landId})
+   })
+   .then(response => response.json())
+   .then(data => {
+     if (data.status === 'added') {
+       btn.classList.add('text-red-500');
+       btn.classList.remove('text-gray-400');
+       btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
+     } else {
+       btn.classList.remove('text-red-500');
+       btn.classList.add('text-gray-400');
+       btn.innerHTML = '<i class="bi bi-heart"></i>';
+     }
+   })
+   .catch(err => console.error('Error:', err));
+}
+
+function getCookie(name) {
+   let cookieValue = null;
+   if (document.cookie && document.cookie !== '') {
+     const cookies = document.cookie.split(';');
+     for (let i = 0; i < cookies.length; i++) {
+       const cookie = cookies[i].trim();
+       if (cookie.substring(0, name.length + 1) === (name + '=')) {
+         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+         break;
+       }
+     }
+   }
+   return cookieValue;
+}
+
+// ============================================
+// IMAGE CAROUSEL
+// ============================================
+const carouselState = {};
+
+function moveCarousel(landId, direction) {
+  const carousel = document.querySelector(`.land-card__carousel[data-land-id="${landId}"]`);
+  if (!carousel) return;
+  
+  const track = carousel.querySelector('.land-card__carousel-track');
+  const slides = carousel.querySelectorAll('.land-card__carousel-slide');
+  const dots = carousel.querySelectorAll('.land-card__carousel-dot');
+  
+  if (!carouselState[landId]) carouselState[landId] = 0;
+  
+  carouselState[landId] += direction;
+  
+  if (carouselState[landId] < 0) carouselState[landId] = slides.length - 1;
+  if (carouselState[landId] >= slides.length) carouselState[landId] = 0;
+  
+  track.style.transform = `translateX(-${carouselState[landId] * 100}%)`;
+  
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('bg-white', i === carouselState[landId]);
+    dot.classList.toggle('bg-white/70', i !== carouselState[landId]);
+  });
+}
+
+function goToSlide(landId, index) {
+  const carousel = document.querySelector(`.land-card__carousel[data-land-id="${landId}"]`);
+  if (!carousel) return;
+  
+  const track = carousel.querySelector('.land-card__carousel-track');
+  const dots = carousel.querySelectorAll('.land-card__carousel-dot');
+  
+  carouselState[landId] = index;
+  track.style.transform = `translateX(-${index * 100}%)`;
+  
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('bg-white', i === index);
+    dot.classList.toggle('bg-white/70', i !== index);
+  });
+}
+
+// ============================================
+// LOCATION AUTOCOMPLETE
+// ============================================
+const locationInput = document.getElementById('locationInput');
+const locationDropdown = document.getElementById('locationDropdown');
+let autocompleteTimeout;
+
+if (locationInput) {
+  locationInput.addEventListener('input', function() {
+    clearTimeout(autocompleteTimeout);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+      locationDropdown.classList.add('hidden');
+      return;
+    }
+    
+    autocompleteTimeout = setTimeout(() => {
+      fetch(`/lands/api/location-autocomplete/?q=${encodeURIComponent(query)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.suggestions.length > 0) {
+            locationDropdown.innerHTML = data.suggestions.map(s => 
+              `<div class="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2" data-value="${s.value}">
+                <i class="bi bi-${s.type === 'region' ? 'globe' : 'geo-alt'}"></i>
+                ${s.value}
+              </div>`
+            ).join('');
+            locationDropdown.classList.remove('hidden');
+          } else {
+            locationDropdown.classList.add('hidden');
+          }
+        });
+    }, 300);
+  });
+  
+  locationInput.addEventListener('blur', function() {
+    setTimeout(() => locationDropdown.classList.add('hidden'), 200);
+  });
+  
+  locationDropdown.addEventListener('click', function(e) {
+    const item = e.target.closest('[data-value]');
+    if (item) {
+      locationInput.value = item.dataset.value;
+      locationDropdown.classList.add('hidden');
+      document.getElementById('heroSearchForm').submit();
+    }
+  });
+}
+
+// ============================================
+// MOBILE VIEW TOGGLE
+// ============================================
+let mobileView = 'list';
+
+function toggleMobileView() {
+  const listingsPanel = document.getElementById('listingsPanel');
+  const mobileMapPanel = document.getElementById('mobileMapPanel');
+  const toggleIcon = document.getElementById('mobileToggleIcon');
+  const toggleBtn = document.querySelector('.fixed.bottom-6 button');
+
+  if (mobileView === 'list') {
+    mobileView = 'map';
+    listingsPanel.classList.add('hidden');
+    mobileMapPanel.classList.remove('hidden');
+    toggleIcon.className = 'bi bi-list text-xl';
+    if (window.mobileMap) window.mobileMap.invalidateSize();
+  } else {
+    mobileView = 'list';
+    listingsPanel.classList.remove('hidden');
+    mobileMapPanel.classList.add('hidden');
+    toggleIcon.className = 'bi bi-map text-xl';
+  }
+}
+
+// ============================================
+// MAP INITIALIZATION (Desktop)
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+  const mapElement = document.getElementById('map');
+  if (!mapElement || typeof L === 'undefined') return;
+  
+  // Initialize desktop map
+  const map = L.map('map', {
+    zoomControl: false
+  }).setView([-6.5, 35.5], 6);
+  
+  // Base layers
+  const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 18
+  });
+  
+  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '&copy; Esri',
+    maxZoom: 18
+  });
+  
+  streetLayer.addTo(map);
+  
+  // Parse pins
+  const pins = JSON.parse('{{ map_pins|safe }}');
+  const markers = [];
+  const markerMap = {};
+  
+  // Custom price marker icon
+  function createPriceMarker(price, status) {
+    const color = status === 'available' ? '#1a5c38' : '#f59e0b';
+    return L.divIcon({
+      className: 'custom-marker-wrapper',
+      html: `<div class="custom-marker" style="border-color: ${color}; color: ${color};">
+        ${price}
+        <span class="custom-marker__tail" style="border-top-color: ${color};"></span>
+      </div>`,
+      iconSize: [80, 36],
+      iconAnchor: [40, 36]
+    });
+  }
+  
+  // Add markers
+  pins.forEach(pin => {
+    if (!pin.lat || !pin.lng) return;
+    
+    const marker = L.marker([pin.lat, pin.lng], {
+      icon: createPriceMarker(pin.price, pin.status)
+    }).addTo(map);
+    
+    marker.bindPopup(`
+      <div style="min-width:200px">
+        <strong>${pin.title}</strong><br>
+        <span style="color:#717171"><i class="bi bi-geo-alt"></i> ${pin.location}</span><br>
+        <strong style="color:#1a5c38">${pin.price}</strong><br>
+        <span style="font-size:12px;color:${pin.status === 'available' ? '#059669' : '#f59e0b'};">
+          ${pin.status === 'available' ? 'Available' : 'Reserved'}
+        </span><br>
+        <a href="/lands/${pin.id}/" style="color:#1a5c38;font-weight:600;font-size:13px;">View Details &rarr;</a>
+      </div>
+    `, { maxWidth: 250 });
+    
+    marker.landId = pin.id;
+    markers.push(marker);
+    markerMap[pin.id] = marker;
+  });
+  
+  // Fit bounds
+  if (markers.length > 0) {
+    const bounds = L.latLngBounds(pins.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]));
+    if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+  }
+  
+  // Zoom controls
+  document.getElementById('zoomIn')?.addEventListener('click', () => map.zoomIn());
+  document.getElementById('zoomOut')?.addEventListener('click', () => map.zoomOut());
+  
+  // Layer toggle
+  document.getElementById('streetLayerBtn')?.addEventListener('click', function() {
+    if (map.hasLayer(satelliteLayer)) {
+      map.removeLayer(satelliteLayer);
+      streetLayer.addTo(map);
+    }
+    document.getElementById('streetLayerBtn')?.classList.add('bg-[#1a5c38]', 'text-white');
+    document.getElementById('streetLayerBtn')?.classList.remove('text-gray-600');
+    document.getElementById('satelliteLayerBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
+    document.getElementById('satelliteLayerBtn')?.classList.add('text-gray-600');
+  });
+  
+  document.getElementById('satelliteLayerBtn')?.addEventListener('click', function() {
+    if (map.hasLayer(streetLayer)) {
+      map.removeLayer(streetLayer);
+      satelliteLayer.addTo(map);
+    }
+    document.getElementById('satelliteLayerBtn')?.classList.add('bg-[#1a5c38]', 'text-white');
+    document.getElementById('satelliteLayerBtn')?.classList.remove('text-gray-600');
+    document.getElementById('streetLayerBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
+    document.getElementById('streetLayerBtn')?.classList.add('text-gray-600');
+  });
+  
+  // Card-marker cross-highlight
+  document.querySelectorAll('.land-card').forEach(card => {
+    const landId = card.dataset.landId;
+    
+    card.addEventListener('mouseenter', () => {
+      if (markerMap[landId]) {
+        markerMap[landId].openPopup();
+        const el = markerMap[landId].getElement();
+        if (el) el.querySelector('.custom-marker')?.classList.add('highlighted');
+      }
+    });
+    
+    card.addEventListener('mouseleave', () => {
+      if (markerMap[landId]) {
+        markerMap[landId].closePopup();
+        const el = markerMap[landId].getElement();
+        if (el) el.querySelector('.custom-marker')?.classList.remove('highlighted');
+      }
+    });
+  });
+  
+  // Marker hover highlights card
+  markers.forEach(marker => {
+    marker.on('mouseover', () => {
+      const card = document.querySelector(`.land-card[data-land-id="${marker.landId}"]`);
+      if (card) card.classList.add('highlighted');
+    });
+    
+    marker.on('mouseout', () => {
+      const card = document.querySelector(`.land-card[data-land-id="${marker.landId}"]`);
+      if (card) card.classList.remove('highlighted');
+    });
+  });
+  
+  // Draw polygon functionality
+  let drawControl = null;
+  let drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
+  let isDrawing = false;
+  
+  function isPointInPolygon(point, polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i].lat, yi = polygon[i].lng;
+      const xj = polygon[j].lat, yj = polygon[j].lng;
+      if (((yi > point.lng) !== (yj > point.lng)) &&
+          (point.lat < (xj - xi) * (point.lng - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+  
+  document.getElementById('drawPolygon')?.addEventListener('click', function() {
+    document.getElementById('drawTools').classList.remove('hidden');
+    document.getElementById('drawTools').style.display = 'flex';
+    this.classList.add('bg-[#1a5c38]', 'text-white');
+    this.classList.remove('text-gray-600');
+    isDrawing = true;
+    map.getContainer().style.cursor = 'crosshair';
+  });
+  
+  document.getElementById('clearDraw')?.addEventListener('click', function() {
+    drawnItems.clearLayers();
+    markers.forEach(m => m.setOpacity(1));
+    this.classList.add('hidden');
+    document.getElementById('drawPolygon')?.classList.remove('bg-[#1a5c38]', 'text-white');
+    document.getElementById('drawPolygon')?.classList.add('text-gray-600');
+    document.getElementById('drawTools').classList.add('hidden');
+    isDrawing = false;
+    map.getContainer().style.cursor = '';
+  });
+  
+  document.getElementById('startDraw')?.addEventListener('click', function() {
+    this.classList.add('bg-[#1a5c38]', 'text-white');
+    this.classList.remove('text-gray-600');
+    isDrawing = true;
+  });
+  
+  map.on('click', function(e) {
+    if (!isDrawing) return;
+    const latlng = e.latlng;
+    
+    // Simple rectangle draw on click
+    if (!window.drawStart) {
+      window.drawStart = latlng;
+      return;
+    }
+    
+    const rect = L.rectangle([window.drawStart, latlng], {
+      color: '#1a5c38',
+      fillColor: '#1a5c38',
+      fillOpacity: 0.1,
+      weight: 2
+    });
+    drawnItems.addLayer(rect);
+    
+    const latlngs = [window.drawStart, { lat: window.drawStart.lat, lng: latlng.lng }, latlng, { lat: latlng.lat, lng: window.drawStart.lng }];
+    
+    markers.forEach(marker => {
+      const point = marker.getLatLng();
+      if (isPointInPolygon(point, latlngs)) {
+        marker.setOpacity(1);
+      } else {
+        marker.setOpacity(0.3);
+      }
+    });
+    
+    window.drawStart = null;
+    document.getElementById('clearDraw').classList.remove('hidden');
+    isDrawing = false;
+    map.getContainer().style.cursor = '';
+  });
+  
+  // Fix map size on load
+  setTimeout(() => map.invalidateSize(), 200);
+  
+  // ============================================
+  // MOBILE MAP (init on first show)
+  // ============================================
+  window.mobileMap = null;
+  
+  const mobileMapEl = document.getElementById('mobileMap');
+  if (mobileMapEl && typeof L !== 'undefined') {
+    const mobileMap = L.map('mobileMap', { zoomControl: false }).setView([-6.5, 35.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
+    }).addTo(mobileMap);
+    
+    window.mobileMap = mobileMap;
+    
+    pins.forEach(pin => {
+      if (!pin.lat || !pin.lng) return;
+      L.marker([pin.lat, pin.lng], {
+        icon: createPriceMarker(pin.price, pin.status)
+      }).addTo(mobileMap);
+    });
+    
+    if (markers.length > 0) {
+      const bounds = L.latLngBounds(pins.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]));
+      if (bounds.isValid()) mobileMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
+    }
+    
+    document.getElementById('mobileZoomIn')?.addEventListener('click', () => mobileMap.zoomIn());
+    document.getElementById('mobileZoomOut')?.addEventListener('click', () => mobileMap.zoomOut());
+    
+    const mobileStreetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '', maxZoom: 18 });
+    const mobileSatelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '', maxZoom: 18 });
+    
+    document.getElementById('mobileStreetBtn')?.addEventListener('click', function() {
+      mobileMap.removeLayer(mobileSatelliteLayer);
+      mobileStreetLayer.addTo(mobileMap);
+      this.classList.add('bg-[#1a5c38]', 'text-white');
+      this.classList.remove('text-gray-600');
+      document.getElementById('mobileSatelliteBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
+      document.getElementById('mobileSatelliteBtn')?.classList.add('text-gray-600');
+    });
+    
+    document.getElementById('mobileSatelliteBtn')?.addEventListener('click', function() {
+      mobileMap.removeLayer(mobileStreetLayer);
+      mobileSatelliteLayer.addTo(mobileMap);
+      this.classList.add('bg-[#1a5c38]', 'text-white');
+      this.classList.remove('text-gray-600');
+      document.getElementById('mobileStreetBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
+      document.getElementById('mobileStreetBtn')?.classList.add('text-gray-600');
+    });
+  }
+});
+
+// ============================================
+// CLOSE DROPDOWNS ON OUTSIDE CLICK
+// ============================================
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.relative') || !e.target.closest('#locationInput')) {
+    document.getElementById('locationDropdown')?.classList.add('hidden');
+  }
+});
+</script>
+{% endblock %}

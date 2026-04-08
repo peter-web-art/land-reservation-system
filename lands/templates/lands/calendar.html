@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Booking Calendar — Land Reserve{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/main.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.10.2/main.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Booking Calendar</h1>
+      <p class="text-gray-500 mt-1">View all your reservations in calendar format</p>
+    </div>
+    <div class="flex gap-3 mt-4 md:mt-0">
+      <a href="{% url 'lands:reservations_management' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+        <i class="bi bi-list-ul mr-2"></i> List View
+      </a>
+      <a href="{% url 'lands:owner_dashboard' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+        <i class="bi bi-arrow-left mr-2"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div class="lg:col-span-3">
+      <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <div id="calendar"></div>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <h3 class="font-semibold text-gray-900 mb-3">Legend</h3>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded bg-green-500"></span>
+            <span class="text-sm text-gray-600">Approved</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded bg-amber-500"></span>
+            <span class="text-sm text-gray-600">Pending</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <h3 class="font-semibold text-gray-900 mb-3">Your Lands</h3>
+        <div class="space-y-2">
+          {% for land in lands %}
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-[#1a5c38]"></span>
+            <span class="text-sm text-gray-600">{{ land.title }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,listWeek'
+    },
+    events: {{ events_json|safe }},
+    eventClick: function(info) {
+      alert('Booking: ' + info.event.title + '\nStatus: ' + info.event.extendedProps.status);
+    },
+    eventRender: function(info) {
+      if (info.event.extendedProps.status === 'approved') {
+        info.el.style.backgroundColor = '#22c55e';
+        info.el.style.borderColor = '#22c55e';
+      } else {
+        info.el.style.backgroundColor = '#f59e0b';
+        info.el.style.borderColor = '#f59e0b';
+      }
+    }
+  });
+  calendar.render();
+});
+</script>
+{% endblock %}

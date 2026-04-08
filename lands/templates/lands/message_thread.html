@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Chat with {{ other_user.username }} — LandReserve{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static "css/message_thread.css" %}">
+
+<div class="container mx-auto px-4 py-8">
+  <!-- LEFT: Chat panel -->
+  <div class="flex flex-col lg:flex-row gap-6">
+    <div class="flex-1">
+      <!-- Header -->
+      <div class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-4">
+        <a href="{% url 'lands:inbox' %}" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Back to messages">
+          <i class="bi bi-chevron-left text-xl"></i>
+        </a>
+        <div class="w-12 h-12 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold overflow-hidden">
+          {% if other_user.profile_picture %}
+            <img src="{{ other_user.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+          {% else %}
+            {{ other_user.username|make_list|first|upper }}
+          {% endif %}
+        </div>
+        <div>
+          <div class="font-semibold text-gray-900">{{ other_user.get_full_name|default:other_user.username }}</div>
+          <div class="text-sm text-gray-500">{{ other_user.username }}</div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4 mb-4 max-h-96 overflow-y-auto" id="chatMessages">
+        {% if thread %}
+          {% for msg in thread %}
+          <div class="flex {% if msg.sender == request.user %}justify-end{% else %}justify-start{% endif %} mb-4">
+            <div class="max-w-[70%] px-4 py-2 rounded-2xl {% if msg.sender == request.user %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-900{% endif %}">
+              {{ msg.body }}
+              {% if msg.land %}
+              <div class="mt-1"><span class="text-xs opacity-75 flex items-center gap-1"><i class="bi bi-geo-alt-fill"></i> {{ msg.land.title|truncatechars:25 }}</span></div>
+              {% endif %}
+              <div class="text-xs opacity-50 mt-1 text-right">{{ msg.created_at|date:"M d, H:i" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <i class="bi bi-chat-square-dots text-5xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">No messages yet.<br>Start the conversation below.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Compose -->
+      <div class="bg-white border border-gray-200 rounded-xl p-4">
+        <form method="post" action="" class="flex gap-2" id="composeForm">
+          {% csrf_token %}
+          <textarea name="body" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" id="composeInput" placeholder="Type a message..." rows="1" required></textarea>
+          <button type="submit" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg hover:bg-[#134428] transition-colors" id="sendBtn" title="Send message">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: Details sidebar -->
+    <div class="w-full lg:w-80">
+      <!-- User info -->
+      <div class="bg-white border border-gray-200 rounded-xl p-6 mb-4 text-center">
+        <div class="w-20 h-20 rounded-full bg-[#1a5c38] text-white flex items-center justify-center text-3xl font-bold mx-auto mb-3 overflow-hidden">
+          {% if other_user.profile_picture %}
+            <img src="{{ other_user.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+          {% else %}
+            {{ other_user.username|make_list|first|upper }}
+          {% endif %}
+        </div>
+        <div class="font-semibold text-lg text-gray-900">{{ other_user.get_full_name|default:other_user.username }}</div>
+        <div class="text-sm text-gray-500 flex items-center justify-center gap-1">
+          <i class="bi bi-person"></i> @{{ other_user.username }}
+          {% if other_user.date_joined %}
+            &middot; Joined {{ other_user.date_joined|date:"M Y" }}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Related land cards from thread -->
+      {% for msg in thread %}
+        {% if msg.land and forloop.first %}
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden mb-4">
+          <div class="text-sm font-medium text-gray-500 px-4 pt-4">Related listing</div>
+          <a href="{% url 'lands:land_detail' msg.land.pk %}" class="block no-underline text-gray-900">
+            <div class="aspect-video bg-gray-100 overflow-hidden relative">
+              {% if msg.land.image %}
+                <img src="{{ msg.land.image.url }}" alt="{{ msg.land.title }}" loading="lazy" class="w-full h-full object-cover">
+              {% else %}
+                <div class="w-full h-full flex items-center justify-center text-4xl">🏞</div>
+              {% endif %}
+              <span class="absolute top-2 left-2 px-2 py-1 bg-white/90 rounded text-xs font-semibold">{{ msg.land.get_listing_type_display }}</span>
+            </div>
+            <div class="p-4">
+              <div class="font-semibold truncate">{{ msg.land.title }}</div>
+              <div class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ msg.land.location }}</div>
+              <div class="flex gap-3 text-xs text-gray-500 mt-2">
+                {% if msg.land.size %}
+                  <span class="flex items-center gap-1"><i class="bi bi-arrows-angle-expand"></i> {{ msg.land.size }} {{ msg.land.get_size_unit_display }}</span>
+                {% endif %}
+                {% if msg.land.land_use %}
+                  <span class="flex items-center gap-1"><i class="bi bi-grid"></i> {{ msg.land.get_land_use_display }}</span>
+                {% endif %}
+              </div>
+              <div class="mt-2">
+                <span class="text-lg font-bold text-[#1a5c38]">${{ msg.land.price|floatformat:0 }}</span>
+                {% if msg.land.price_unit and msg.land.price_unit != 'total' %}
+                  <span class="text-sm text-gray-500">/{{ msg.land.get_price_unit_display }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Quick actions -->
+      <a href="{% url 'lands:inbox' %}" class="flex items-center justify-center gap-2 w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+        <i class="bi bi-arrow-left"></i> All messages
+      </a>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+(function() {
+  var box = document.getElementById('chatMessages');
+  if (box) box.scrollTop = box.scrollHeight;
+
+  var ta = document.getElementById('composeInput');
+  if (ta) {
+    ta.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (this.value.trim()) {
+          document.getElementById('composeForm').submit();
+        }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
+{% endblock %}
