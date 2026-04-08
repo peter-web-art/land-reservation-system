@@ -1,0 +1,216 @@
+/* Google Maps Responsive Styling */
+
+.map-container {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+.map-wrapper {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+@media (max-width: 1024px) {
+    .map-container {
+        height: 60vh;
+    }
+}
+
+@media (max-width: 768px) {
+    .map-container {
+        height: 50vh;
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-container {
+        height: 40vh;
+        min-height: 250px;
+    }
+}
+
+.map-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 400;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.map-control-btn {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: none;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.map-control-btn:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05);
+}
+
+.map-control-btn:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .map-control-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+.custom-marker {
+    background: white;
+    border: 2px solid #1a5c38;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-marker.available {
+    border-color: #059669;
+    color: #059669;
+}
+
+.custom-marker.reserved {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.custom-marker:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: scale(1.1);
+}
+
+.map-info-window {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.map-info-window h3 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.map-info-window p {
+    margin: 4px 0;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+@media (max-width: 768px) {
+    .map-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        background: white;
+    }
+    
+    .map-overlay .map-container {
+        height: 100vh;
+    }
+}
+
+.map-layer-toggle {
+    display: flex;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.map-layer-toggle button {
+    padding: 8px 12px;
+    border: none;
+    background: white;
+    color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.map-layer-toggle button.active {
+    background: #1a5c38;
+    color: white;
+}
+
+.map-layer-toggle button:hover {
+    background: #f5f5f5;
+}
+
+.map-layer-toggle button.active:hover {
+    background: #134428;
+}
+
+.map-filter-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 300;
+}
+
+@media (max-width: 768px) {
+    .map-filter-panel {
+        bottom: 70px;
+        left: 10px;
+        right: 10px;
+        padding: 12px;
+    }
+}
+
+.map-draw-tools {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    border-radius: 4px;
+    padding: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.map-draw-tools.active {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.map-draw-tools button {
+    padding: 8px 12px;
+    background: #1a5c38;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.map-draw-tools button:hover {
+    background: #134428;
+}
