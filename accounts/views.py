@@ -141,7 +141,11 @@ def register(request):
             from django.utils.http import url_has_allowed_host_and_scheme
             if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                 return redirect(next_url)
-            return redirect('lands:customer_dashboard')
+            
+            # Role-based redirect after signup
+            from .decorators import role_based_redirect
+            redirect_url = role_based_redirect(user)
+            return redirect(redirect_url)
         # Return JSON for modal
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             errors = {f: e.as_text() for f, e in form.errors.items()}
