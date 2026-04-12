@@ -24,8 +24,8 @@ urlpatterns = [
     path('', land_list),
     path('admin/', admin.site.urls),
     path('health/', health_check, name='health_check'),       # Health check endpoint
-    path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/', include('accounts.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/', include('allauth.urls')),
     path('lands/', include('lands.urls')),
 ]

@@ -1,11 +1,15 @@
+from urllib.parse import urlencode
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login as auth_login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django import forms
 from django.utils.html import strip_tags
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Count, Q
+from django.urls import reverse
 import bleach, re
 
 try:
@@ -26,6 +30,14 @@ def sanitize(value, max_length=None):
     if max_length:
         cleaned = cleaned[:max_length]
     return cleaned
+
+
+def auth_modal_redirect(request, tab='login'):
+    params = {'auth': tab}
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        params['next'] = next_url
+    return redirect(f"{reverse('lands:land_list')}?{urlencode(params)}")
 
 
 # ── Forms ──────────────────────────────────────────────────────────────────────
@@ -130,30 +142,56 @@ class ProfileEditForm(forms.ModelForm):
 # ── Auth Views ────────────────────────────────────────────────────────────────
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
+def login_view(request):
+    if request.method != 'POST':
+        return auth_modal_redirect(request, 'login')
+
+    username = sanitize(request.POST.get('username', ''), 150)
+    password = request.POST.get('password', '')
+    user = authenticate(request, username=username, password=password)
+
+    if user is None:
+        messages.error(request, 'Invalid username or password. Please try again.')
+        return auth_modal_redirect(request, 'login')
+
+    auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    messages.success(request, f'Welcome back, {user.username}.')
+
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return redirect(next_url)
+
+    from .decorators import role_based_redirect
+    return redirect(role_based_redirect(user))
+
+
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def register(request):
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST, request.FILES)
-        if form.is_valid():
-            user = form.save()
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            messages.success(request, f'Welcome, {user.username}! Your account has been created.')
-            next_url = request.POST.get('next') or request.GET.get('next') or ''
-            from django.utils.http import url_has_allowed_host_and_scheme
-            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-                return redirect(next_url)
-            
-            # Role-based redirect after signup
-            from .decorators import role_based_redirect
-            redirect_url = role_based_redirect(user)
-            return redirect(redirect_url)
-        # Return JSON for modal
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            errors = {f: e.as_text() for f, e in form.errors.items()}
-            from django.http import JsonResponse
-            return JsonResponse({'success': False, 'errors': errors}, status=400)
-    else:
-        form = UserRegistrationForm()
-    return render(request, 'accounts/register.html', {'form': form})
+    if request.method != 'POST':
+        return auth_modal_redirect(request, 'register')
+
+    form = UserRegistrationForm(request.POST, request.FILES)
+    if form.is_valid():
+        user = form.save()
+        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(request, f'Welcome, {user.username}! Your account has been created.')
+        next_url = request.POST.get('next') or request.GET.get('next') or ''
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+            return redirect(next_url)
+
+        from .decorators import role_based_redirect
+        return redirect(role_based_redirect(user))
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        errors = {f: e.as_text() for f, e in form.errors.items()}
+        from django.http import JsonResponse
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+    for field, errors in form.errors.items():
+        label = form.fields.get(field).label if field in form.fields else 'Error'
+        for error in errors:
+            messages.error(request, f'{label}: {error}')
+    return auth_modal_redirect(request, 'register')
 
 
 @login_required
