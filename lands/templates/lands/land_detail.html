@@ -149,11 +149,15 @@
           <i class="bi bi-telephone text-[#1a5c38]"></i>
           Contact
         </h2>
+        {% if user.is_authenticated %}
         {% if land.contact_phone %}
         <p class="mb-2 text-gray-700"><i class="bi bi-phone"></i> {{ land.contact_phone }}</p>
         {% endif %}
         {% if land.contact_email %}
         <p class="text-gray-700"><i class="bi bi-envelope"></i> {{ land.contact_email }}</p>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-gray-500">Sign in to contact the owner directly and keep your conversations inside LandReserve.</p>
         {% endif %}
       </div>
     </div>
@@ -163,11 +167,10 @@
       <div class="bg-white rounded-xl border border-gray-200 shadow-lg p-6 sticky top-20">
         <div class="flex items-baseline gap-2 mb-2">
           <span class="text-2xl font-bold text-[#1a5c38]">{{ land.price_display }}</span>
-          {% if land.listing_type == 'rent' %}<span class="text-gray-500">/ month</span>{% endif %}
         </div>
-        <div class="flex items-center gap-1 text-sm text-gray-600 mb-4">
-          <i class="bi bi-star-fill text-amber-400"></i>
-          <span>4.9</span> · 28 reviews
+        <div class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <i class="bi bi-shield-check text-[#1a5c38]"></i>
+          <span>{% if land.owner.is_verified %}Verified owner{% else %}Owner verification pending{% endif %}</span>
         </div>
         
         {% if land.is_available %}
@@ -201,8 +204,8 @@
         
         <div class="border-t border-gray-200 mt-4 pt-4 space-y-2 text-sm">
           <div class="flex justify-between">
+            <span>{% if land.listing_type == 'rent' %}Quoted monthly rate{% else %}Listing price{% endif %}</span>
             <span>{{ land.price_display }}</span>
-            <span>{% if land.listing_type == 'rent' %}x 1 month{% else %}total{% endif %}</span>
           </div>
           {% if land.listing_type == 'rent' %}
           {% if land.weekly_discount > 0 %}
@@ -409,6 +412,16 @@ function shareListing() {
 }
 
 function toggleSave() {
+  const isAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+  if (!isAuthenticated) {
+    if (typeof openModal === 'function') {
+      openModal('login');
+      return;
+    }
+    window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+    return;
+  }
+
   const landId = {{ land.pk }};
   const btn = document.getElementById('saveBtn');
   const icon = btn.querySelector('i');
@@ -418,7 +431,7 @@ function toggleSave() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken'),
+      'X-CSRFToken': getCsrfToken(),
       'X-Requested-With': 'XMLHttpRequest'
     },
     body: JSON.stringify({land_id: landId})
@@ -438,19 +451,12 @@ function toggleSave() {
   .catch(err => console.error('Error:', err));
 }
 
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
+function getCsrfToken() {
+  const metaToken = document.querySelector('meta[name="csrf-token"]');
+  if (metaToken && metaToken.content && metaToken.content !== 'NOTPROVIDED') {
+    return metaToken.content;
   }
-  return cookieValue;
+  return '';
 }
 
 document.addEventListener('keydown', function(e) {

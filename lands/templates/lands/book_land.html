@@ -141,6 +141,7 @@
           </div>
         </div>
 
+        {% if land.listing_type == 'rent' %}
         <div class="bg-white border border-gray-200 rounded-xl p-6">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}3{% else %}2{% endif %}</span>
@@ -165,10 +166,11 @@
             <div class="text-sm text-gray-500 mt-1">Enter your M-Pesa/Airtel confirmation code after sending payment</div>
           </div>
         </div>
+        {% endif %}
 
         <div class="bg-white border border-gray-200 rounded-xl p-6">
           <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}4{% else %}3{% endif %}</span>
+            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}4{% else %}2{% endif %}</span>
             <h3 class="font-semibold">Additional Notes <span class="text-gray-400 text-sm">(optional)</span></h3>
           </div>
           {{ form.notes }}
@@ -213,7 +215,7 @@
 
         <div id="priceBreakdown" class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <span>{{ land.price_display }}{% if land.listing_type == 'rent' %}/day base{% endif %}</span>
+            <span>{% if land.listing_type == 'rent' %}Estimated daily rate{% else %}Listing price{% endif %}</span>
             <span id="basePrice" class="font-medium">${{ land.price }}</span>
           </div>
           {% if land.weekly_discount > 0 %}
@@ -295,11 +297,12 @@
         <div id="reviewContact">—</div>
       </div>
       
-      <!-- Payment -->
+      {% if land.listing_type == 'rent' %}
       <div class="p-3 bg-gray-50 rounded">
         <div class="text-xs text-gray-500 uppercase mb-2">Payment Method</div>
         <div id="reviewPayment">—</div>
       </div>
+      {% endif %}
       
       <!-- Total -->
       <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
@@ -326,6 +329,7 @@
 </div>
 
 <script>
+const isRental = {% if land.listing_type == 'rent' %}true{% else %}false{% endif %};
 const pricePerDay = {{ price_per_day|default:0 }};
 const weeklyDisc  = {{ weekly_discount|default:0 }};
 const monthlyDisc = {{ monthly_discount|default:0 }};
@@ -464,23 +468,27 @@ if (sd) sd.addEventListener('change', function(){
 if (ed) ed.addEventListener('change', updatePricing);
 
 document.getElementById('reviewBookingBtn').addEventListener('click', function() {
-  const sd = document.getElementById('startDate').value;
-  const ed = document.getElementById('endDate').value;
-  
-  document.getElementById('reviewStart').textContent = sd ? formatDate(sd) : '—';
-  document.getElementById('reviewEnd').textContent = ed ? formatDate(ed) : '—';
-  
-  if (sd && ed) {
-    const start = new Date(sd), end = new Date(ed);
-    const days = Math.round((end - start) / 86400000);
-    let durStr = '';
-    if (days >= 365) durStr = Math.floor(days/365) + ' yr ' + Math.floor((days%365)/30) + ' mo';
-    else if (days >= 30) durStr = Math.floor(days/30) + ' month' + (Math.floor(days/30)!==1?'s':'');
-    else if (days >= 7) durStr = Math.floor(days/7) + ' week' + (Math.floor(days/7)!==1?'s':'');
-    else durStr = days + ' day' + (days!==1?'s':'');
-    document.getElementById('reviewDuration').textContent = durStr;
-  } else {
-    document.getElementById('reviewDuration').textContent = '—';
+  const startField = document.getElementById('startDate');
+  const endField = document.getElementById('endDate');
+  const sd = startField ? startField.value : '';
+  const ed = endField ? endField.value : '';
+
+  if (isRental) {
+    document.getElementById('reviewStart').textContent = sd ? formatDate(sd) : '—';
+    document.getElementById('reviewEnd').textContent = ed ? formatDate(ed) : '—';
+
+    if (sd && ed) {
+      const start = new Date(sd), end = new Date(ed);
+      const days = Math.round((end - start) / 86400000);
+      let durStr = '';
+      if (days >= 365) durStr = Math.floor(days/365) + ' yr ' + Math.floor((days%365)/30) + ' mo';
+      else if (days >= 30) durStr = Math.floor(days/30) + ' month' + (Math.floor(days/30)!==1?'s':'');
+      else if (days >= 7) durStr = Math.floor(days/7) + ' week' + (Math.floor(days/7)!==1?'s':'');
+      else durStr = days + ' day' + (days!==1?'s':'');
+      document.getElementById('reviewDuration').textContent = durStr;
+    } else {
+      document.getElementById('reviewDuration').textContent = '—';
+    }
   }
   
   const nameEl = document.querySelector('[name="customer_name"]');
@@ -492,9 +500,11 @@ document.getElementById('reviewBookingBtn').addEventListener('click', function()
   if (phoneEl && phoneEl.value) contactHtml += '<i class="bi bi-phone"></i> ' + phoneEl.value;
   document.getElementById('reviewContact').innerHTML = contactHtml || '—';
   
-  const pm = document.querySelector('input[name="payment_method"]:checked');
-  const pmLabel = pm ? pm.parentElement.querySelector('.text-sm').textContent : '—';
-  document.getElementById('reviewPayment').innerHTML = pmLabel;
+  if (isRental) {
+    const pm = document.querySelector('input[name="payment_method"]:checked');
+    const pmLabel = pm ? pm.parentElement.querySelector('.text-sm').textContent : '—';
+    document.getElementById('reviewPayment').innerHTML = pmLabel;
+  }
   
   const totalEl = document.getElementById('totalPrice');
   document.getElementById('reviewTotal').textContent = totalEl ? totalEl.textContent : '—';

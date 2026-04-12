@@ -20,6 +20,8 @@ class User(AbstractUser):
     # KYC / Proof of Ownership
     kyc_document    = models.FileField(upload_to='kyc/', blank=True, null=True,
                         help_text="ID / Land title / ownership proof document")
+    ownership_proof = models.FileField(upload_to='kyc/ownership/', blank=True, null=True,
+                        help_text="Separate land title or ownership proof document")
     kyc_status      = models.CharField(max_length=20, default='not_submitted',
                         choices=[('not_submitted','Not Submitted'),('pending','Pending Review'),
                                  ('approved','Approved'),('rejected','Rejected')])

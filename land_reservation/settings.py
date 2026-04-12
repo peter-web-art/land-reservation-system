@@ -4,6 +4,7 @@ Security-hardened configuration.
 """
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -16,6 +17,9 @@ SECRET_KEY = os.environ.get(
 
 # ─── DEBUG / HOSTS ───────────────────────────────────────────────────────────
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+if not DEBUG and SECRET_KEY.startswith('django-insecure-'):
+    raise ImproperlyConfigured('Set a unique SECRET_KEY in the environment when DEBUG is False.')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver').split(',')
 
@@ -139,7 +143,11 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG else
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 
@@ -283,7 +291,7 @@ ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_LOGIN_ON_GET = False
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['profile', 'email'],

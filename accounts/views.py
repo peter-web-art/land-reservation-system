@@ -268,19 +268,30 @@ def submit_kyc(request):
     if request.method == 'POST':
         from datetime import date, timedelta
         doc       = request.FILES.get('kyc_document')
+        ownership_doc = request.FILES.get('ownership_proof')
         govt_doc  = request.FILES.get('govt_letter')
         govt_date_str = request.POST.get('govt_letter_date', '').strip()
         allowed = ['image/jpeg','image/png','image/webp','application/pdf']
         errors = []
 
-        # Validate KYC doc
+        # Validate identity document
         if not doc and not request.user.kyc_document:
-            errors.append('Please upload your ID and land ownership document.')
+            errors.append('Please upload your ID document.')
         elif doc:
             if doc.content_type not in allowed:
-                errors.append('KYC doc: use JPG, PNG, WebP, or PDF only.')
+                errors.append('ID document: use JPG, PNG, WebP, or PDF only.')
             elif doc.size > 10 * 1024 * 1024:
-                errors.append('KYC doc must be under 10 MB.')
+                errors.append('ID document must be under 10 MB.')
+
+        # Validate ownership proof. This can be skipped only when the ID upload
+        # already contains the ownership evidence as a combined document.
+        if ownership_doc:
+            if ownership_doc.content_type not in allowed:
+                errors.append('Ownership proof: use JPG, PNG, WebP, or PDF only.')
+            elif ownership_doc.size > 10 * 1024 * 1024:
+                errors.append('Ownership proof must be under 10 MB.')
+        elif not request.user.ownership_proof and not (doc or request.user.kyc_document):
+            errors.append('Please upload a land ownership proof document or include it in your ID upload.')
 
         # Validate Barua ya Serikali
         if not govt_doc and not request.user.govt_letter:
@@ -314,6 +325,8 @@ def submit_kyc(request):
         # Save
         if doc:
             request.user.kyc_document = doc
+        if ownership_doc:
+            request.user.ownership_proof = ownership_doc
         if govt_doc:
             request.user.govt_letter = govt_doc
         if govt_date_str:

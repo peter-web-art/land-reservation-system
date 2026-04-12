@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
@@ -7,12 +8,15 @@ from django.http import JsonResponse
 from django.db.models import Q, F
 from django.conf import settings
 from django.utils.html import strip_tags
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
 import bleach, re
 from datetime import date as date_cls, timedelta
 
 from .models import Land, Reservation, Message, Wishlist, LandImage
 import json
+
+User = get_user_model()
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -46,6 +50,16 @@ def sanitize_text(value, max_length=None):
     if max_length:
         cleaned = cleaned[:max_length]
     return cleaned
+
+
+def safe_redirect(request, target_url, fallback, **kwargs):
+    if target_url and url_has_allowed_host_and_scheme(
+        target_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(target_url)
+    return redirect(fallback, **kwargs)
 
 
 def send_sms_notification(phone_number, message):
@@ -243,21 +257,6 @@ class ReservationForm(forms.ModelForm):
 # ── Views ─────────────────────────────────────────────────────────────────────
 
 def land_list(request):
-    # Hide all listings from anonymous users - they must log in to browse
-    if not request.user.is_authenticated:
-        return render(request, 'lands/land_list.html', {
-            'lands': [], 'page_obj': None, 'paginator': None,
-            'map_pins': '[]', 'wishlisted_ids': [],
-            'tanzania_regions': [
-                'Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma', 'Morogoro', 'Mbeya',
-                'Tanga', 'Kilimanjaro', 'Kagera', 'Kigoma', 'Lindi', 'Mara', 'Mtwara',
-                'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Singida', 'Songwe', 'Tabora',
-                'Simiyu', 'Geita', 'Katavi', 'Njombe', 'Iringa', 'Manyara'
-            ],
-            'current_filters': {},
-            'show_login_prompt': True,
-        })
-
     lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')
     
     # ── Filters from hero search bar & category tabs ──
@@ -410,21 +409,6 @@ def location_autocomplete(request):
 
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)
 def search_lands(request):
-    # Hide all listings from anonymous users
-    if not request.user.is_authenticated:
-        return render(request, 'lands/search_results.html', {
-            'lands': [], 'page_obj': None, 'paginator': None,
-            'form': SearchForm(), 'searched_location': '',
-            'map_pins': '[]',
-            'tanzania_regions': [
-                'Dar es Salaam', 'Arusha', 'Mwanza', 'Dodoma', 'Morogoro', 'Mbeya',
-                'Tanga', 'Kilimanjaro', 'Kagera', 'Kigoma', 'Lindi', 'Mara', 'Mtwara',
-                'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Singida', 'Songwe', 'Tabora',
-                'Simiyu', 'Geita', 'Katavi', 'Njombe', 'Iringa', 'Manyara'
-            ],
-            'show_login_prompt': True,
-        })
-
     form  = SearchForm(request.GET)
     lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')
     
@@ -490,6 +474,9 @@ def search_lands(request):
 
     paginator = Paginator(lands, 12)
     page_obj = paginator.get_page(request.GET.get('page'))
+    wishlisted_ids = []
+    if request.user.is_authenticated:
+        wishlisted_ids = list(Wishlist.objects.filter(user=request.user).values_list('land_id', flat=True))
     
     # Tanzania regions for autocomplete
     tanzania_regions = [
@@ -503,19 +490,13 @@ def search_lands(request):
         'lands': page_obj, 'page_obj': page_obj, 'paginator': paginator,
         'form': form, 'searched_location': request.GET.get('location', ''),
         'map_pins': map_pins, 'tanzania_regions': tanzania_regions,
+        'wishlisted_ids': wishlisted_ids,
         'show_login_prompt': False,
     })
 
 
 def land_detail(request, pk):
     land = get_object_or_404(Land, pk=pk, is_active=True)
-    
-    # Hide land detail from anonymous users
-    if not request.user.is_authenticated:
-        from django.contrib import messages
-        messages.warning(request, 'Please log in to view land details.')
-        return redirect(f'/accounts/login/?next=/lands/{pk}/')
-    
     Land.objects.filter(pk=pk).update(view_count=F('view_count') + 1)
     similar = (Land.objects.filter(is_active=True, location__icontains=land.location.split(',')[0])
                .exclude(pk=pk).select_related('owner')[:4])
@@ -595,16 +576,19 @@ def book_land(request, pk):
     })
 
 
+@ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def check_booking_status(request):
     reservations = None
     if request.method == 'POST':
         email = sanitize_text(request.POST.get('email', ''), 254)
         phone = sanitize_text(request.POST.get('phone', ''), 20)
-        if email or phone:
-            f = Q()
-            if email: f |= Q(customer_email=email) | Q(customer__email=email)
-            if phone: f |= Q(customer_phone=phone) | Q(customer__phone=phone)
-            reservations = Reservation.objects.filter(f).select_related('land')
+        if not email or not phone:
+            messages.error(request, 'Enter both your reservation email and phone number.')
+        else:
+            reservations = Reservation.objects.filter(
+                Q(customer_email=email) | Q(customer__email=email),
+                Q(customer_phone=phone) | Q(customer__phone=phone),
+            ).select_related('land')
     return render(request, 'lands/check_status.html', {'reservations': reservations})
 
 
@@ -687,7 +671,8 @@ def owner_dashboard(request):
     monthly_earnings = Reservation.objects.filter(
         land_id__in=ids,
         status='approved',
-        payment_status='paid'
+        payment_status='paid',
+        booking_date__gte=thirty_days_ago,
     ).aggregate(total=Sum('amount_paid'))['total'] or 0
     
     # Last 7 days earnings
@@ -743,8 +728,8 @@ def add_land(request):
                     is_primary=(i == 0 and not land.image),
                     order=i
                 )
-            
-            messages.success(request, f'✅ "{land.title}" listed successfully!')
+
+            messages.success(request, f'"{land.title}" listed successfully.')
             return redirect('lands:owner_dashboard')
     else:
         form = LandForm()
@@ -846,8 +831,10 @@ def update_reservation_status(request, pk, status):
                 end_date__gt=r.start_date
             ).exclude(pk=r.pk).exists()
             if conflict:
-                messages.error(request,
-                    '⚠️ Cannot approve: another booking already covers those dates.')
+                messages.error(
+                    request,
+                    'Cannot approve this booking because another approved booking already covers those dates.',
+                )
                 return redirect('lands:reservations_management')
 
     r.status = status
@@ -867,9 +854,9 @@ def update_reservation_status(request, pk, status):
         if phone:
             date_info = ''
             if r.start_date and r.end_date:
-                date_info = f' ({r.start_date} → {r.end_date})'
+                date_info = f' ({r.start_date} to {r.end_date})'
             send_sms_notification(phone,
-                f"✅ Your booking for '{r.land.title}'{date_info} is APPROVED! "
+                f"Your booking for '{r.land.title}'{date_info} is approved. "
                 f"Contact owner: {r.land.contact_phone or 'see listing'}.")
         
         # Create notification for customer
@@ -887,7 +874,7 @@ def update_reservation_status(request, pk, status):
         phone = r.customer_phone or (r.customer.phone if r.customer else None)
         if phone:
             send_sms_notification(phone,
-                f"❌ Your booking request for '{r.land.title}' was not approved. "
+                f"Your booking request for '{r.land.title}' was not approved. "
                 f"You may contact the owner or try another listing.")
         
         # Create notification for customer
@@ -916,7 +903,7 @@ def mark_payment(request, pk):
     r.payment_reference = request.POST.get('payment_reference', r.payment_reference or '')
     r.amount_paid       = r.agreed_price or r.land.price   # FIX #3: use agreed_price
     r.save()
-    messages.success(request, '✅ Payment recorded.')
+    messages.success(request, 'Payment recorded.')
     return redirect('lands:reservations_management')
 
 
@@ -956,11 +943,11 @@ def send_message(request):
         body = sanitize_text(request.POST.get('body', ''), 2000)
         if not body:
             messages.error(request, 'Message body cannot be empty.')
-            return redirect(request.META.get('HTTP_REFERER', 'lands:inbox'))
+            return safe_redirect(request, request.META.get('HTTP_REFERER'), 'lands:inbox')
         recipient = get_object_or_404(User, pk=recipient_id)
         if recipient == request.user:
             messages.error(request, 'You cannot message yourself.')
-            return redirect(request.META.get('HTTP_REFERER', 'lands:inbox'))
+            return safe_redirect(request, request.META.get('HTTP_REFERER'), 'lands:inbox')
         land = None
         if land_id:
             land = Land.objects.filter(pk=land_id).first()
@@ -1021,9 +1008,7 @@ def toggle_wishlist(request, pk):
     else:
         messages.success(request, f'Added "{land.title}" to your wishlist.')
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER', '')
-    if next_url:
-        return redirect(next_url)
-    return redirect('lands:land_detail', pk=pk)
+    return safe_redirect(request, next_url, 'lands:land_detail', pk=pk)
 
 
 @login_required
@@ -1119,8 +1104,10 @@ def help_center(request):
         except Exception as e:
             logger.warning(f"Failed to send support email: {e}")
         
-        messages.success(request, 
-            '✅ Thank you for contacting us! We\'ve received your message and will respond within 24 hours.')
+        messages.success(
+            request,
+            "Thank you for contacting us. We've received your message and will respond within 24 hours.",
+        )
         return redirect('lands:help_center')
     
     return render(request, 'lands/help_center.html')
@@ -1148,4 +1135,4 @@ def mark_notification_read(request, notification_id):
     notification.save()
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'status': 'ok'})
-    return redirect(request.META.get('HTTP_REFERER', 'lands:my_notifications'))
+    return safe_redirect(request, request.META.get('HTTP_REFERER'), 'lands:my_notifications')

@@ -188,7 +188,7 @@
     <div class="w-full md:w-3/5 h-full overflow-y-auto border-r border-gray-200">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4" id="landCardsGrid">
         {% for land in lands %}
-        <a href="{% url 'lands:land_detail' land.id %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-[#1a5c38]/30 transition-all block" data-land-id="{{ land.id }}">
+        <a href="{% url 'lands:land_detail' land.id %}" class="land-card group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-[#1a5c38]/30 transition-all block" data-land-id="{{ land.id }}">
           <div class="relative aspect-[4/3] bg-gray-100 overflow-hidden">
             {% with images=land.get_all_images %}
             {% if images %}
@@ -272,7 +272,6 @@
             </div>
             <div class="flex items-baseline gap-1">
               <span class="text-lg font-bold text-[#1a5c38]">{{ land.price_display }}</span>
-              <span class="text-xs text-gray-500">{% if land.listing_type == 'rent' %}/ month{% else %}total{% endif %}</span>
             </div>
           </div>
         </a>
@@ -361,12 +360,20 @@
 // ============================================
 // WISHLIST TOGGLE
 // ============================================
+function getCsrfToken() {
+   const metaToken = document.querySelector('meta[name="csrf-token"]');
+   if (metaToken && metaToken.content && metaToken.content !== 'NOTPROVIDED') {
+     return metaToken.content;
+   }
+   return '';
+}
+
 function toggleWishlist(landId, btn) {
    fetch(`/lands/${landId}/wishlist/`, {
      method: 'POST',
      headers: {
        'Content-Type': 'application/json',
-       'X-CSRFToken': getCookie('csrftoken'),
+       'X-CSRFToken': getCsrfToken(),
        'X-Requested-With': 'XMLHttpRequest'
      },
      body: JSON.stringify({land_id: landId})
@@ -384,21 +391,6 @@ function toggleWishlist(landId, btn) {
      }
    })
    .catch(err => console.error('Error:', err));
-}
-
-function getCookie(name) {
-   let cookieValue = null;
-   if (document.cookie && document.cookie !== '') {
-     const cookies = document.cookie.split(';');
-     for (let i = 0; i < cookies.length; i++) {
-       const cookie = cookies[i].trim();
-       if (cookie.substring(0, name.length + 1) === (name + '=')) {
-         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-         break;
-       }
-     }
-   }
-   return cookieValue;
 }
 
 // ============================================

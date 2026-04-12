@@ -3,7 +3,9 @@
 from functools import wraps
 from django.shortcuts import redirect
 from django.contrib import messages
-from .models import User
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 def admin_required(view_func):
@@ -25,7 +27,7 @@ def owner_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             messages.warning(request, 'Please log in to access this page.')
-            return redirect('accounts:login')
+            return redirect('login')
         if not (request.user.is_owner or request.user.role == User.ROLE_OWNER):
             messages.error(request, 'Only land owners can access this page.')
             return redirect('lands:land_list')
@@ -39,7 +41,7 @@ def customer_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             messages.warning(request, 'Please log in to access this page.')
-            return redirect('accounts:login')
+            return redirect('login')
         if request.user.is_owner or request.user.role == User.ROLE_OWNER:
             messages.info(request, 'This feature is for customers. Switch to customer mode.')
             return redirect('lands:land_list')

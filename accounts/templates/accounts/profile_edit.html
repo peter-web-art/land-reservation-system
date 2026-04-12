@@ -30,14 +30,14 @@
       </div>
 
       <nav class="flex flex-col gap-1">
-        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full bg-gray-50" onclick="showSection('personal', this)">
+        <button class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full bg-gray-50" onclick="showSection('personal', this)">
           <i class="bi bi-person text-lg w-6 text-center text-gray-500"></i> Personal Info
         </button>
-        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('security', this)">
+        <button class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('security', this)">
           <i class="bi bi-shield-lock text-lg w-6 text-center text-gray-500"></i> Login &amp; Security
         </button>
         {% if request.user.role == 'owner' or request.user.is_owner %}
-        <button class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('verification', this)">
+        <button class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors text-left w-full" onclick="showSection('verification', this)">
           <i class="bi bi-patch-check text-lg w-6 text-center text-gray-500"></i> Verification
           {% if request.user.kyc_status == 'approved' %}
             <span class="ml-auto px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Verified</span>
@@ -133,7 +133,7 @@
             <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
               <i class="bi bi-check-lg"></i> Save Changes
             </button>
-            <a href="{% url 'lands:customer_dashboard' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
+            <a href="{% if request.user.role == 'owner' or request.user.is_owner %}{% url 'lands:owner_dashboard' %}{% else %}{% url 'lands:customer_dashboard' %}{% endif %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
           </div>
         </form>
       </div>
