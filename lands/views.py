@@ -559,7 +559,7 @@ def book_land(request, pk):
             messages.success(request,
                 '✅ Booking request submitted! The owner will review it shortly.')
             return redirect('lands:my_reservations') if request.user.is_authenticated \
-                else redirect('lands:check_booking_status')
+                else redirect('lands:land_detail', pk=land.pk)
     else:
         form = ReservationForm(user=request.user, land=land, initial=initial)
 
@@ -574,22 +574,6 @@ def book_land(request, pk):
         'min_days': land.min_duration_days,
         'max_days': land.max_duration_days or 'null',
     })
-
-
-@ratelimit(key='ip', rate='5/m', method='POST', block=True)
-def check_booking_status(request):
-    reservations = None
-    if request.method == 'POST':
-        email = sanitize_text(request.POST.get('email', ''), 254)
-        phone = sanitize_text(request.POST.get('phone', ''), 20)
-        if not email or not phone:
-            messages.error(request, 'Enter both your reservation email and phone number.')
-        else:
-            reservations = Reservation.objects.filter(
-                Q(customer_email=email) | Q(customer__email=email),
-                Q(customer_phone=phone) | Q(customer__phone=phone),
-            ).select_related('land')
-    return render(request, 'lands/check_status.html', {'reservations': reservations})
 
 
 @login_required

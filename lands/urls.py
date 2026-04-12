@@ -9,7 +9,6 @@ urlpatterns = [
     path('api/location-autocomplete/',                  views.location_autocomplete,     name='location_autocomplete'),
     path('<int:pk>/',                                   views.land_detail,               name='land_detail'),
     path('<int:pk>/book/',                              views.book_land,                 name='book_land'),
-    path('check-status/',                               views.check_booking_status,      name='check_booking_status'),
     # Customer
     path('dashboard/customer/',                         views.customer_dashboard,        name='customer_dashboard'),
     path('reservations/',                               views.my_reservations,           name='my_reservations'),

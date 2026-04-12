@@ -9,7 +9,7 @@ The system is an active Django marketplace for land discovery, reservations, own
 - Public users can browse the homepage, search results, and listing detail pages.
 - The homepage hero and primary search entry are more polished and marketplace-focused.
 - Redirect handling was tightened to avoid unsafe external referer redirects.
-- Reservation status checks now require both email and phone and are rate-limited.
+- Guest reservation requests now resolve back into the listing flow instead of a separate status-check page.
 - Logout now uses a proper POST request.
 - KYC submission now stores ownership proof uploads.
 - Wishlist actions work correctly with CSRF protection and better guest handling.
@@ -37,7 +37,6 @@ The system is an active Django marketplace for land discovery, reservations, own
 - `/lands/<pk>/`
 - `/lands/<pk>/book/`
 - `/lands/<pk>/wishlist/`
-- `/lands/check-status/`
 - `/lands/dashboard/`
 - `/lands/dashboard/customer/`
 - `/lands/reservations/`

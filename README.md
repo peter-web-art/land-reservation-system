@@ -32,7 +32,7 @@ Archived and unused material has been moved to:
 - Owner dashboards, listing management, and reservation management
 - KYC submission and admin review
 - Google OAuth support through Django Allauth
-- Security hardening for redirects, CSRF handling, and rate-limited status checks
+- Security hardening for redirects, CSRF handling, and rate limiting
 
 ## Tech Stack
 
@@ -74,8 +74,8 @@ If `DEBUG=False`, you must provide a real `SECRET_KEY`.
 - `/` landing page and listing discovery
 - `/health/` application health check
 - `/admin/` Django admin
-- `/accounts/register/` registration
-- `/accounts/login/` authentication
+- `/accounts/register/` modal-first registration entry
+- `/accounts/login/` modal-first authentication entry
 - `/accounts/profile/edit/` profile and KYC updates
 - `/lands/` listing index
 - `/lands/search/` filtered results

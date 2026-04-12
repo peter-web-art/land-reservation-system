@@ -1,4 +1,3 @@
-from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
 
@@ -42,26 +41,6 @@ class LandAccessTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Ocean View Plot')
-
-    def test_check_booking_status_requires_email_and_phone(self):
-        Reservation.objects.create(
-            land=self.land,
-            customer=self.customer,
-            customer_name='Customer',
-            customer_email='customer@example.com',
-            customer_phone='+255700000000',
-            status='pending',
-        )
-
-        response = self.client.post(
-            reverse('lands:check_booking_status'),
-            {'email': 'customer@example.com'},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        messages = [message.message for message in get_messages(response.wsgi_request)]
-        self.assertIn('Enter both your reservation email and phone number.', messages)
-        self.assertIsNone(response.context['reservations'])
 
     def test_send_message_ignores_external_referer_redirect(self):
         self.client.force_login(self.customer)

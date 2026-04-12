@@ -6,13 +6,13 @@
 <style>
   .hero-shell {
     background:
-      radial-gradient(circle at top left, rgba(255,255,255,0.16), transparent 28%),
-      radial-gradient(circle at 85% 18%, rgba(248, 210, 138, 0.22), transparent 18%),
-      linear-gradient(135deg, #0f2c1b 0%, #1a5c38 45%, #8f4a24 100%);
+      radial-gradient(circle at top left, rgba(255,255,255,0.88), transparent 26%),
+      radial-gradient(circle at 88% 12%, rgba(212, 241, 226, 0.95), transparent 20%),
+      linear-gradient(135deg, #f7f2eb 0%, #fbfaf8 42%, #eef6f1 100%);
   }
 
   .hero-search-shell {
-    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.14);
   }
 
   .hero-segment + .hero-segment {
@@ -20,13 +20,17 @@
   }
 
   .hero-tab.active {
-    background: #111827;
+    background: #1a5c38;
     color: #ffffff;
-    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18);
+    box-shadow: 0 14px 30px rgba(26, 92, 56, 0.24);
   }
 
   .hero-search-submit {
     box-shadow: 0 14px 30px rgba(26, 92, 56, 0.32);
+  }
+
+  .hero-metric-card {
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
   }
 
   @media (max-width: 767px) {
@@ -39,78 +43,78 @@
 {% endblock %}
 
 {% block hero %}
-<section class="hero-shell relative overflow-hidden px-4 pb-14 pt-10 md:px-6 md:pb-20 md:pt-16">
-  <div class="absolute inset-0 opacity-20">
-    <div class="absolute -left-16 top-16 h-52 w-52 rounded-full bg-white/20 blur-3xl"></div>
-    <div class="absolute right-0 top-0 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl"></div>
-    <div class="absolute bottom-10 right-20 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl"></div>
+<section class="hero-shell relative overflow-hidden px-4 pb-12 pt-8 md:px-6 md:pb-16 md:pt-12">
+  <div class="absolute inset-0 opacity-70">
+    <div class="absolute -left-10 top-8 h-48 w-48 rounded-full bg-white blur-3xl"></div>
+    <div class="absolute right-6 top-6 h-64 w-64 rounded-full bg-emerald-100 blur-3xl"></div>
+    <div class="absolute bottom-8 right-24 h-44 w-44 rounded-full bg-amber-100 blur-3xl"></div>
   </div>
 
   <div class="container relative z-10 mx-auto">
     <div class="mx-auto max-w-6xl">
-      <div class="mb-8 flex justify-center">
-        <div class="inline-flex rounded-full border border-white/15 bg-white/10 p-1 backdrop-blur">
-          <button type="button" class="hero-tab active rounded-full px-4 py-2 text-sm font-semibold transition-all" data-type-value="">All stays</button>
-          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-white/80 transition-all hover:text-white" data-type-value="rent">Rent land</button>
-          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-white/80 transition-all hover:text-white" data-type-value="sale">Buy land</button>
+      <div class="mb-6 flex justify-center">
+        <div class="inline-flex rounded-full border border-white/70 bg-white/80 p-1 shadow-sm backdrop-blur">
+          <button type="button" class="hero-tab active rounded-full px-4 py-2 text-sm font-semibold text-gray-700 transition-all" data-type-value="">All stays</button>
+          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-all hover:text-gray-900" data-type-value="rent">Rent land</button>
+          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-all hover:text-gray-900" data-type-value="sale">Buy land</button>
         </div>
       </div>
 
-      <div class="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_380px] lg:items-end">
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_380px] lg:items-center">
         <div class="max-w-3xl">
-          <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 backdrop-blur">
+          <span class="inline-flex items-center gap-2 rounded-full border border-[#1a5c38]/10 bg-white/85 px-4 py-2 text-sm font-medium text-[#1a5c38] backdrop-blur">
             <i class="bi bi-stars"></i>
             Trusted land discovery across Tanzania
           </span>
-          <h1 class="mt-6 text-4xl font-bold tracking-tight text-white md:text-6xl md:leading-[1.02]">
-            Find land that feels right before you ever make the call.
+          <h1 class="mt-6 max-w-4xl text-4xl font-bold tracking-tight text-gray-900 md:text-6xl md:leading-[1.02]">
+            A calmer way to search, compare, and book land online.
           </h1>
-          <p class="mt-5 max-w-2xl text-base leading-7 text-white/82 md:text-lg">
-            Search verified listings for rent or sale, compare pricing faster, and move from discovery to booking with a calmer, more trustworthy experience.
+          <p class="mt-5 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
+            Browse verified listings for rent or sale, narrow the search before you contact anyone, and move into booking with a flow that feels clear on both desktop and mobile.
           </p>
 
           {% if paginator.count %}
           <div class="mt-8 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 backdrop-blur">
-              <div class="text-2xl font-bold text-white">{{ paginator.count }}</div>
-              <div class="mt-1 text-sm text-white/75">Active listings to explore</div>
+            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
+              <div class="text-2xl font-bold text-gray-900">{{ paginator.count }}</div>
+              <div class="mt-1 text-sm text-gray-500">Active listings to explore</div>
             </div>
-            <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 backdrop-blur">
-              <div class="text-2xl font-bold text-white">Map-first</div>
-              <div class="mt-1 text-sm text-white/75">Browse visually before you commit</div>
+            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
+              <div class="text-2xl font-bold text-gray-900">Map-first</div>
+              <div class="mt-1 text-sm text-gray-500">Compare areas visually before you commit</div>
             </div>
-            <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-4 backdrop-blur">
-              <div class="text-2xl font-bold text-white">Verified owners</div>
-              <div class="mt-1 text-sm text-white/75">Built to reduce booking uncertainty</div>
+            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
+              <div class="text-2xl font-bold text-gray-900">Verified owners</div>
+              <div class="mt-1 text-sm text-gray-500">Built to reduce booking uncertainty</div>
             </div>
           </div>
           {% else %}
-          <div class="mt-8 rounded-[28px] border border-white/15 bg-white/10 p-5 text-white/90 backdrop-blur">
-            <p class="text-xs uppercase tracking-[0.24em] text-white/60">Fresh start</p>
-            <h2 class="mt-2 text-2xl font-semibold text-white">Your marketplace is live, but there are no public land listings yet.</h2>
-            <p class="mt-3 max-w-2xl text-sm leading-6 text-white/75">Add your first owner listing to turn this landing page into a real discovery experience. Until then, guests should see a clear launch message instead of empty space.</p>
+          <div class="hero-metric-card mt-8 rounded-[28px] border border-white bg-white/95 p-6 text-gray-700">
+            <p class="text-xs uppercase tracking-[0.24em] text-gray-400">Fresh start</p>
+            <h2 class="mt-2 text-2xl font-semibold text-gray-900">Your marketplace is live, but there are no public land listings yet.</h2>
+            <p class="mt-3 max-w-2xl text-sm leading-6 text-gray-500">The landing page now explains the empty state clearly and keeps the search ready for launch instead of leaving a large blank block on screen.</p>
           </div>
           {% endif %}
         </div>
 
         <div class="hidden lg:block">
-          <div class="rounded-[32px] border border-white/15 bg-white/10 p-4 backdrop-blur-xl">
+          <div class="hero-metric-card rounded-[32px] border border-white bg-white/90 p-4 backdrop-blur-xl">
             <div class="grid gap-4">
-              <div class="overflow-hidden rounded-[28px] bg-white/95 p-5 shadow-2xl">
+              <div class="overflow-hidden rounded-[28px] bg-[#173c2a] p-5 text-white shadow-2xl">
                 <div class="mb-4 flex items-center justify-between">
                   <div>
-                    <p class="text-xs uppercase tracking-[0.24em] text-gray-400">Featured Search</p>
-                    <h3 class="mt-1 text-lg font-semibold text-gray-900">Coastal residential land</h3>
+                    <p class="text-xs uppercase tracking-[0.24em] text-white/55">Featured Search</p>
+                    <h3 class="mt-1 text-lg font-semibold text-white">Coastal residential land</h3>
                   </div>
-                  <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Ready to book</span>
+                  <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">Ready to book</span>
                 </div>
-                <div class="rounded-2xl bg-gradient-to-br from-[#f2f8f2] to-[#f7efe7] p-4">
+                <div class="rounded-2xl bg-white/10 p-4">
                   <div class="flex items-end justify-between">
                     <div>
-                      <p class="text-sm text-gray-500">Dar es Salaam</p>
-                      <p class="mt-1 text-xl font-bold text-gray-900">$1,200/month</p>
+                      <p class="text-sm text-white/70">Dar es Salaam</p>
+                      <p class="mt-1 text-xl font-bold text-white">TZS 1,200,000 / month</p>
                     </div>
-                    <div class="rounded-2xl bg-[#1a5c38] px-3 py-2 text-xs font-semibold text-white">12 nearby matches</div>
+                    <div class="rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-[#173c2a]">12 nearby matches</div>
                   </div>
                 </div>
               </div>
@@ -131,7 +135,7 @@
         </div>
       </div>
 
-      <div class="hero-search-shell relative z-20 mx-auto mt-10 max-w-6xl rounded-[32px] bg-white p-3 md:mt-12 md:p-4">
+      <div class="hero-search-shell relative z-20 mx-auto mt-10 max-w-6xl rounded-[32px] border border-white/80 bg-white p-3 md:mt-12 md:p-4">
         <form method="GET" action="{% url 'lands:land_list' %}" id="heroSearchForm" class="space-y-3">
           <input type="hidden" name="type" id="heroTypeInput" value="{{ request.GET.type|default:'' }}">
 
@@ -163,7 +167,7 @@
             </div>
 
             <div class="flex items-center justify-end px-2 pb-2 pt-1 md:px-0 md:pb-0 md:pt-0">
-              <button type="submit" class="hero-search-submit inline-flex h-16 w-full items-center justify-center gap-3 rounded-[24px] bg-[#1a5c38] px-7 text-base font-semibold text-white transition-colors hover:bg-[#134428] md:w-auto">
+              <button type="submit" class="hero-search-submit inline-flex h-16 w-full items-center justify-center gap-3 rounded-[24px] bg-[#d2415a] px-7 text-base font-semibold text-white transition-colors hover:bg-[#b9344b] md:w-auto">
                 <i class="bi bi-search text-lg"></i>
                 Search
               </button>
@@ -565,7 +569,8 @@ function syncHeroTypeButtons(value) {
   document.querySelectorAll('.hero-tab').forEach((button) => {
     const isActive = button.dataset.typeValue === value;
     button.classList.toggle('active', isActive);
-    button.classList.toggle('text-white/80', !isActive);
+    button.classList.toggle('text-gray-500', !isActive);
+    button.classList.toggle('text-gray-700', isActive);
   });
 
   document.querySelectorAll('.hero-purpose-btn').forEach((button) => {
