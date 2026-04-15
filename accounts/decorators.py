@@ -13,7 +13,7 @@ def admin_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('accounts:admin_login')
         if not (request.user.is_staff or request.user.role == User.ROLE_ADMIN):
             messages.error(request, 'Access denied — Admin only.')
             return redirect('lands:land_list')

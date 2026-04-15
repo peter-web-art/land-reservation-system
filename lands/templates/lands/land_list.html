@@ -1,1009 +1,261 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% load static %}
-{% block title %}Find Your Perfect Land - LandReserve{% endblock %}
+{% block title %}Reserve Prime Land Across Tanzania | LandReserve{% endblock %}
 
 {% block extra_css %}
 <style>
-  .hero-shell {
-    background:
-      radial-gradient(circle at top left, rgba(255,255,255,0.88), transparent 26%),
-      radial-gradient(circle at 88% 12%, rgba(212, 241, 226, 0.95), transparent 20%),
-      linear-gradient(135deg, #f7f2eb 0%, #fbfaf8 42%, #eef6f1 100%);
+  .landing-hero {
+    background-image:
+      linear-gradient(180deg, rgba(10, 35, 19, 0.94), rgba(9, 53, 32, 0.95) 42%, rgba(13, 71, 45, 0.88)),
+      radial-gradient(circle at 15% 15%, rgba(255,255,255,0.14), transparent 22%),
+      radial-gradient(circle at 85% 18%, rgba(132,204,22,0.16), transparent 24%);
   }
-
-  .hero-search-shell {
-    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.14);
+  .landing-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.12), transparent 20%),
+                radial-gradient(circle at 20% 70%, rgba(16,185,129,0.14), transparent 18%);
+    pointer-events: none;
   }
-
-  .hero-segment + .hero-segment {
-    border-left: 1px solid rgba(229, 231, 235, 0.9);
+  .landing-hero .hero-backdrop {
+    position: absolute;
+    inset: 0;
+    background: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    opacity: 0.22;
+    filter: saturate(0.5) blur(0.8px);
   }
-
-  .hero-tab.active {
-    background: #1a5c38;
-    color: #ffffff;
-    box-shadow: 0 14px 30px rgba(26, 92, 56, 0.24);
+  .landing-hero .hero-inner {
+    position: relative;
+    z-index: 1;
   }
-
-  .hero-search-submit {
-    box-shadow: 0 14px 30px rgba(26, 92, 56, 0.32);
+  .feature-card,
+  .access-card,
+  .system-step-card {
+    border-radius: 1.75rem;
+    border: 1px solid rgba(212,232,218,0.18);
+    backdrop-filter: blur(18px);
   }
-
-  .hero-metric-card {
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  .feature-card {
+    background: rgba(255,255,255,0.08);
   }
-
-  @media (max-width: 767px) {
-    .hero-segment + .hero-segment {
-      border-left: none;
-      border-top: 1px solid rgba(229, 231, 235, 0.9);
-    }
+  .system-step-card {
+    background: rgba(229,244,226,0.95);
+    border-color: rgba(26,92,56,0.18);
+  }
+  .system-step-card h3 {
+    color: #0f2f1d;
+  }
+  .system-step-card p {
+    color: #28432c;
+  }
+  .access-card {
+    background: rgba(15,47,29,0.65);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .access-card h3 {
+    color: #f8fafc;
+  }
+  .access-card li {
+    color: rgba(248,250,252,0.92);
+  }
+  .section-heading {
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #a7f3d0;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .featured-card {
+    border-radius: 2rem;
+    overflow: hidden;
+  }
+  .featured-card .featured-image-wrap {
+    overflow: hidden;
+    border-top-left-radius: 2rem;
+    border-top-right-radius: 2rem;
+  }
+  .featured-card .featured-image-wrap img {
+    border-top-left-radius: 2rem;
+    border-top-right-radius: 2rem;
   }
 </style>
 {% endblock %}
 
 {% block hero %}
-<section class="hero-shell relative overflow-hidden px-4 pb-8 pt-6 md:px-6 md:pb-10 md:pt-8">
-  <div class="absolute inset-0 opacity-70">
-    <div class="absolute -left-10 top-8 h-48 w-48 rounded-full bg-white blur-3xl"></div>
-    <div class="absolute right-6 top-6 h-64 w-64 rounded-full bg-emerald-100 blur-3xl"></div>
-    <div class="absolute bottom-8 right-24 h-44 w-44 rounded-full bg-amber-100 blur-3xl"></div>
-  </div>
-
-  <div class="container relative z-10 mx-auto">
-    <div class="mx-auto max-w-6xl">
-      <div class="mb-6 flex justify-center">
-        <div class="inline-flex rounded-full border border-white/70 bg-white/80 p-1 shadow-sm backdrop-blur">
-          <button type="button" class="hero-tab active rounded-full px-4 py-2 text-sm font-semibold text-gray-700 transition-all" data-type-value="">All stays</button>
-          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-all hover:text-gray-900" data-type-value="rent">Rent land</button>
-          <button type="button" class="hero-tab rounded-full px-4 py-2 text-sm font-semibold text-gray-500 transition-all hover:text-gray-900" data-type-value="sale">Buy land</button>
-        </div>
-      </div>
-
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_360px] lg:items-center">
-        <div class="max-w-3xl">
-          <span class="inline-flex items-center gap-2 rounded-full border border-[#1a5c38]/10 bg-white/85 px-4 py-2 text-sm font-medium text-[#1a5c38] backdrop-blur">
-            <i class="bi bi-stars"></i>
-            Trusted land discovery across Tanzania
-          </span>
-          <h1 class="mt-4 max-w-4xl text-3xl font-bold tracking-tight text-gray-900 md:text-5xl md:leading-[1.04]">
-            A calmer way to search, compare, and book land online.
-          </h1>
-          <p class="mt-4 max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
-            Browse verified listings for rent or sale, narrow the search before you contact anyone, and move into booking with a flow that feels clear on both desktop and mobile.
-          </p>
-
-          {% if paginator.count %}
-          <div class="mt-8 grid gap-3 sm:grid-cols-3">
-            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
-              <div class="text-2xl font-bold text-gray-900">{{ paginator.count }}</div>
-              <div class="mt-1 text-sm text-gray-500">Active listings to explore</div>
-            </div>
-            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
-              <div class="text-2xl font-bold text-gray-900">Map-first</div>
-              <div class="mt-1 text-sm text-gray-500">Compare areas visually before you commit</div>
-            </div>
-            <div class="hero-metric-card rounded-[24px] border border-white bg-white/95 px-5 py-5">
-              <div class="text-2xl font-bold text-gray-900">Verified owners</div>
-              <div class="mt-1 text-sm text-gray-500">Built to reduce booking uncertainty</div>
-            </div>
-          </div>
-          {% else %}
-          <div class="hero-metric-card mt-6 max-w-2xl rounded-[28px] border border-white bg-white/95 p-5 text-gray-700">
-            <p class="text-xs uppercase tracking-[0.24em] text-gray-400">Fresh start</p>
-            <h2 class="mt-2 text-xl font-semibold text-gray-900 md:text-2xl">Your marketplace is live, but there are no public land listings yet.</h2>
-            <p class="mt-3 max-w-2xl text-sm leading-6 text-gray-500">The landing page now explains the empty state clearly and keeps the search ready for launch instead of leaving a large blank block on screen.</p>
-          </div>
-          {% endif %}
-        </div>
-
-        {% if paginator.count %}
-        <div class="hidden lg:block">
-          <div class="hero-metric-card rounded-[32px] border border-white bg-white/90 p-4 backdrop-blur-xl">
-            <div class="grid gap-4">
-              <div class="overflow-hidden rounded-[28px] bg-[#173c2a] p-5 text-white shadow-2xl">
-                <div class="mb-4 flex items-center justify-between">
-                  <div>
-                    <p class="text-xs uppercase tracking-[0.24em] text-white/55">Featured Search</p>
-                    <h3 class="mt-1 text-lg font-semibold text-white">Coastal residential land</h3>
-                  </div>
-                  <span class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white">Ready to book</span>
-                </div>
-                <div class="rounded-2xl bg-white/10 p-4">
-                  <div class="flex items-end justify-between">
-                    <div>
-                      <p class="text-sm text-white/70">Dar es Salaam</p>
-                      <p class="mt-1 text-xl font-bold text-white">TZS 1,200,000 / month</p>
-                    </div>
-                    <div class="rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-[#173c2a]">12 nearby matches</div>
-                  </div>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div class="rounded-[24px] bg-[#f7efe7] p-5 text-gray-900 shadow-xl">
-                  <div class="text-xs uppercase tracking-[0.24em] text-gray-500">Use</div>
-                  <div class="mt-2 text-lg font-semibold">Residential</div>
-                  <div class="mt-6 flex items-center gap-2 text-sm text-gray-500"><i class="bi bi-house-door"></i> Easy comparison</div>
-                </div>
-                <div class="rounded-[24px] bg-[#f2f7f3] p-5 text-gray-900 shadow-xl">
-                  <div class="text-xs uppercase tracking-[0.24em] text-gray-500">Trust</div>
-                  <div class="mt-2 text-lg font-semibold">Owner verified</div>
-                  <div class="mt-6 flex items-center gap-2 text-sm text-gray-500"><i class="bi bi-patch-check"></i> Safer first contact</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-
-      <div class="hero-search-shell relative z-20 mx-auto mt-6 max-w-6xl rounded-[32px] border border-white/80 bg-white p-3 md:mt-8 md:p-3">
-        <form method="GET" action="{% url 'lands:land_list' %}" id="heroSearchForm" class="space-y-3">
-          <input type="hidden" name="type" id="heroTypeInput" value="{{ request.GET.type|default:'' }}">
-
-          <div class="grid gap-2 md:grid-cols-[1.6fr_1.05fr_1fr_auto]">
-            <div class="hero-segment relative rounded-[24px] px-4 py-3 md:px-5">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">Where</label>
-              <input type="text" name="location" id="locationInput" class="w-full border-none bg-transparent p-0 text-sm font-medium text-gray-900 outline-none placeholder:text-gray-400" placeholder="Search by city, region, or district" value="{{ request.GET.location|default:'' }}" autocomplete="off">
-              <p class="mt-1 text-xs text-gray-500">Search destinations the way Airbnb starts with location.</p>
-              <div id="locationDropdown" class="hidden absolute left-0 right-0 top-full z-50 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-xl"></div>
-            </div>
-
-            <div class="hero-segment rounded-[24px] px-4 py-3 md:px-5">
-              <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">What for</label>
-              <div class="flex flex-wrap gap-2">
-                <button type="button" class="hero-purpose-btn rounded-full border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-[#1a5c38] hover:text-[#1a5c38]" data-type-value="">Any</button>
-                <button type="button" class="hero-purpose-btn rounded-full border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-[#1a5c38] hover:text-[#1a5c38]" data-type-value="rent">Rent</button>
-                <button type="button" class="hero-purpose-btn rounded-full border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-[#1a5c38] hover:text-[#1a5c38]" data-type-value="sale">Buy</button>
-              </div>
-              <p class="mt-2 text-xs text-gray-500">Switch your intent before you search.</p>
-            </div>
-
-            <div class="hero-segment rounded-[24px] px-4 py-3 md:px-5">
-              <label class="mb-1 block text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">Budget</label>
-              <div class="grid grid-cols-2 gap-2">
-                <input type="number" name="min_price" class="rounded-2xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900 outline-none transition-colors focus:border-[#1a5c38]" placeholder="Min" value="{{ request.GET.min_price|default:'' }}" min="0">
-                <input type="number" name="max_price" class="rounded-2xl border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900 outline-none transition-colors focus:border-[#1a5c38]" placeholder="Max" value="{{ request.GET.max_price|default:'' }}" min="0">
-              </div>
-              <p class="mt-2 text-xs text-gray-500">Filter faster before opening listings.</p>
-            </div>
-
-            <div class="flex items-center justify-end px-2 pb-2 pt-1 md:px-0 md:pb-0 md:pt-0">
-              <button type="submit" class="hero-search-submit inline-flex h-14 w-full items-center justify-center gap-3 rounded-[24px] bg-[#d2415a] px-7 text-base font-semibold text-white transition-colors hover:bg-[#b9344b] md:w-auto">
-                <i class="bi bi-search text-lg"></i>
-                Search
-              </button>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2 px-2 pt-1 text-sm text-gray-500">
-            <span class="font-medium text-gray-700">Popular:</span>
-            <a href="{% url 'lands:land_list' %}?location=Dar%20es%20Salaam&type=rent" class="rounded-full bg-gray-100 px-3 py-1.5 transition-colors hover:bg-gray-200">Dar es Salaam rent</a>
-            <a href="{% url 'lands:land_list' %}?use=residential&type=sale" class="rounded-full bg-gray-100 px-3 py-1.5 transition-colors hover:bg-gray-200">Residential for sale</a>
-            <a href="{% url 'lands:land_list' %}?use=agricultural" class="rounded-full bg-gray-100 px-3 py-1.5 transition-colors hover:bg-gray-200">Agricultural land</a>
-          </div>
-        </form>
+<section class="landing-hero relative overflow-hidden text-white">
+  <div class="hero-backdrop"></div>
+  <div class="hero-inner container mx-auto px-4 py-24 sm:py-28 lg:py-32">
+    <div class="mx-auto max-w-4xl text-center">
+      <p class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d4e8da] shadow-sm">Tanzania agricultural land reservations</p>
+      <h1 class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">Reserve Prime Land Across Tanzania</h1>
+      <p class="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#d4e8da] sm:text-lg">Browse, book, and manage agricultural land across Tanzania with ease. Whether you’re a smallholder or a commercial farmer, find the right land today.</p>
+      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+        <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center rounded-full bg-green px-8 py-4 text-sm font-semibold text-[#0f2618] shadow-xl shadow-[#1a5c38]/20 transition hover:bg-slate-100">Browse Listings</a>
+        <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/20">Create Account</a>
       </div>
     </div>
   </div>
 </section>
 {% endblock %}
 
-{% block main_class %}flex flex-col flex-1 overflow-hidden min-h-screen{% endblock %}
+{% block main_class %}flex flex-col flex-1 overflow-hidden bg-[#f3faf3] text-[#0f2f1d]{% endblock %}
 
 {% block content %}
-{% if show_login_prompt %}
-<!-- LOGIN PROMPT (shown to anonymous users) -->
-<div class="flex flex-1 items-center justify-center min-h-[60vh] bg-gray-50">
-  <div class="text-center max-w-md mx-auto px-4">
-    <div class="w-20 h-20 bg-[#1a5c38]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-      <i class="bi bi-lock text-4xl text-[#1a5c38]"></i>
-    </div>
-    <h2 class="text-2xl font-bold text-gray-900 mb-2">Log in to browse lands</h2>
-    <p class="text-gray-500 mb-6">You need to be logged in to view and search available land listings.</p>
-    <div class="flex flex-col sm:flex-row gap-3 justify-center">
-      <button type="button" onclick="openModal('login')" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">Log In</button>
-      <button type="button" onclick="openModal('register')" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">Create Account</button>
-    </div>
-  </div>
-</div>
-{% else %}
-<!-- FULL-HEIGHT SPLIT VIEW -->
-<div class="flex flex-1 {% if paginator.count %}overflow-hidden min-h-0{% else %}pb-10{% endif %}">
-
-  <!-- LEFT PANEL: 60% — Listings -->
-  <div class="w-full {% if paginator.count %}md:w-3/5 h-full overflow-y-auto border-r border-gray-200{% else %}max-w-6xl mx-auto{% endif %}" id="listingsPanel">
-    
-    <!-- Top bar: count + sort -->
-    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white flex-shrink-0">
-      <p class="text-sm font-medium text-gray-700">
-        <strong class="text-[#1a5c38] font-bold">{{ paginator.count }}</strong> lands found
-        {% if request.GET.location %} in {{ request.GET.location }}{% endif %}
-      </p>
-      <div class="relative">
-        <select onchange="window.location.href=this.value" class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] cursor-pointer">
-          <option value="?sort=newest{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Newest</option>
-          <option value="?sort=price_low{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
-          <option value="?sort=price_high{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
-          <option value="?sort=size_large{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.use %}&use={{ request.GET.use }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.min_price %}&min_price={{ request.GET.min_price }}{% endif %}{% if request.GET.max_price %}&max_price={{ request.GET.max_price }}{% endif %}{% if request.GET.min_size %}&min_size={{ request.GET.min_size }}{% endif %}{% if request.GET.max_size %}&max_size={{ request.GET.max_size }}{% endif %}{% if request.GET.availability %}&availability={{ request.GET.availability }}{% endif %}" {% if request.GET.sort == 'size_large' %}selected{% endif %}>Size: Largest</option>
-        </select>
-        <i class="bi bi-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+<section class="bg-[#1a5c38] py-16 text-white">
+  <div class="container mx-auto px-4">
+    <div class="mx-auto max-w-6xl">
+      <div class="text-center">
+        <p class="section-heading">Built for Tanzania Land Reservations</p>
+        <h2 class="mt-4 text-3xl font-semibold text-white sm:text-4xl">A public landing page for visitors first, then a protected system for owners, customers, and admin after account creation.</h2>
+      </div>
+      <div class="mt-10 grid gap-6 lg:grid-cols-4">
+        <div class="feature-card p-6">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🌿</div>
+          <h3 class="mt-5 text-xl font-semibold">Premium Locations</h3>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Discover agricultural plots across Tanzania with verified land data and owner details.</p>
+        </div>
+        <div class="feature-card p-6">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">⚡</div>
+          <h3 class="mt-5 text-xl font-semibold">Easy Booking</h3>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Reserve land with clear request flows and faster owner approval once you sign in.</p>
+        </div>
+        <div class="feature-card p-6">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🔒</div>
+          <h3 class="mt-5 text-xl font-semibold">Secure Reservations</h3>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Your bookings are confirmed and managed securely with admin and owner oversight.</p>
+        </div>
+        <div class="feature-card p-6">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🌾</div>
+          <h3 class="mt-5 text-xl font-semibold">Streamlined Farmland</h3>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Find quality farm land with the right details so you can plan the next growing season fast.</p>
+        </div>
       </div>
     </div>
+  </div>
+</section>
 
-    <!-- Active Filter Chips -->
-    {% with cf=current_filters %}
-    {% if cf.listing_type or cf.land_use or cf.location or cf.keyword or cf.min_price or cf.max_price or cf.min_size or cf.max_size or cf.availability %}
-    <div class="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 overflow-x-auto flex-shrink-0">
-      {% if cf.listing_type %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        {% if cf.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'type' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      {% if cf.land_use %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        {{ cf.land_use|title }}
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'use' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      {% if cf.location %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        <i class="bi bi-geo-alt"></i> {{ cf.location }}
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'location' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      {% if cf.min_price or cf.max_price %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        <i class="bi bi-currency-dollar"></i>
-        {% if cf.min_price and cf.max_price %}{{ cf.min_price }} - {{ cf.max_price }}
-        {% elif cf.min_price %}>& {{ cf.min_price }}
-        {% else %}< {{ cf.max_price }}{% endif %}
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'min_price' and k != 'max_price' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      {% if cf.min_size or cf.max_size %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        <i class="bi bi-rulers"></i>
-        {% if cf.min_size and cf.max_size %}{{ cf.min_size }} - {{ cf.max_size }}
-        {% elif cf.min_size %}>& {{ cf.min_size }}
-        {% else %}< {{ cf.max_size }}{% endif %} acres
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'min_size' and k != 'max_size' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      {% if cf.availability %}
-      <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold shrink-0">
-        {{ cf.availability|title }}
-        <a href="?{% for k,v in request.GET.items %}{% if k != 'availability' and k != 'page' %}{{ k }}={{ v }}&{% endif %}{% endfor %}" class="ml-1 hover:text-[#134428]">&times;</a>
-      </span>
-      {% endif %}
-      <a href="{% url 'lands:land_list' %}" class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1a5c38] shrink-0">
-        <i class="bi bi-x-circle"></i> Clear all
-      </a>
+<section class="bg-[#e3f1e0] py-16 text-[#0f2f1d]">
+  <div class="container mx-auto px-4">
+    <div class="mx-auto max-w-6xl">
+      <div class="text-center">
+        <p class="section-heading">How the System Works</p>
+        <h2 class="mt-4 text-3xl font-semibold text-[#0f2f1d] sm:text-4xl">Every protected action starts with account creation. After that, each role gets the right interface and permissions.</h2>
+      </div>
+      <div class="mt-10 grid gap-6 lg:grid-cols-3">
+        <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">01</div>
+          <h3 class="mt-6 text-xl font-semibold">Create an Account</h3>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Start from the landing page, create your account, then choose whether you are an owner or a customer.</p>
+        </div>
+        <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">02</div>
+          <h3 class="mt-6 text-xl font-semibold">Owners Submit Verified Land</h3>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Owners upload land details, government verification, images, and request approvals for admin review.</p>
+        </div>
+        <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">03</div>
+          <h3 class="mt-6 text-xl font-semibold">Customers Book Farmland</h3>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Customers browse approved posts, request bookings, and track pending and approved farmland handover periods.</p>
+        </div>
+      </div>
     </div>
-    {% endif %}
-    {% endwith %}
+  </div>
+</section>
 
-    <!-- Land Cards Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4" id="landCardsGrid">
-      {% for land in lands %}
-      <a href="{% url 'lands:land_detail' land.pk %}" class="land-card group bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md hover:border-[#1a5c38]/30 transition-all block" data-land-id="{{ land.pk }}">
-        <div class="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-          {% with images=land.get_all_images %}
-          {% if images %}
-          <div class="land-card__carousel" data-land-id="{{ land.pk }}">
-            <div class="land-card__carousel-track flex h-full transition-transform duration-300" style="transform: translateX(0);">
-              {% for img in images %}
-              <div class="land-card__carousel-slide w-full h-full flex-shrink-0">
-                <img src="{{ img.url }}" alt="{{ land.title }}" loading="lazy" class="w-full h-full object-cover">
-              </div>
-              {% endfor %}
-            </div>
-            {% if images|length > 1 %}
-            <button class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors" onclick="event.preventDefault(); event.stopPropagation(); moveCarousel({{ land.pk }}, -1)">
-              <i class="bi bi-chevron-left text-gray-600"></i>
-            </button>
-            <button class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white transition-colors" onclick="event.preventDefault(); event.stopPropagation(); moveCarousel({{ land.pk }}, 1)">
-              <i class="bi bi-chevron-right text-gray-600"></i>
-            </button>
-            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {% for img in images %}
-              <button class="land-card__carousel-dot w-2 h-2 rounded-full bg-white/70 hover:bg-white transition-colors {% if forloop.first %}bg-white{% endif %}" onclick="event.preventDefault(); event.stopPropagation(); goToSlide({{ land.pk }}, {{ forloop.counter0 }})"></button>
-              {% endfor %}
-            </div>
-            {% endif %}
-          </div>
-          {% else %}
-          <div class="w-full h-full flex items-center justify-center text-gray-300">
-            <i class="bi bi-image text-5xl"></i>
-          </div>
-          {% endif %}
-          {% endwith %}
-          
-          <!-- Badges -->
-          <div class="absolute top-3 left-3 flex gap-2">
-            {% if land.listing_type == 'rent' %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-500 text-white rounded-full text-xs font-semibold">Rent</span>
+<section class="bg-[#e8f4ea] py-16 text-[#0f2f1d]">
+  <div class="container mx-auto px-4">
+    <div class="mx-auto max-w-6xl">
+      <div class="text-center">
+        <p class="section-heading">Role-Based Access</p>
+        <h2 class="mt-4 text-3xl font-semibold text-black sm:text-4xl">The system changes after sign-in so each user sees only the tools relevant to their responsibilities.</h2>
+      </div>
+      <div class="mt-10 grid gap-6 lg:grid-cols-3">
+        <div class="access-card p-8">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🧑‍🌾</div>
+          <h3 class="mt-6 text-xl font-semibold">For Land Owners</h3>
+          <ul class="mt-5 space-y-3 text-sm leading-7">
+            <li>Add land with specification and images.</li>
+            <li>Submit listings for admin approval and verification.</li>
+            <li>Approve or decline incoming bookings.</li>
+          </ul>
+        </div>
+        <div class="access-card p-8">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🧑‍🤝‍🧑</div>
+          <h3 class="mt-6 text-xl font-semibold">For Customers</h3>
+          <ul class="mt-5 space-y-3 text-sm leading-7">
+            <li>Browse approved farmland posts across Tanzania.</li>
+            <li>Make booking requests with your account.</li>
+            <li>Track pending and approved handover periods.</li>
+          </ul>
+        </div>
+        <div class="access-card p-8">
+          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🛡️</div>
+          <h3 class="mt-6 text-xl font-semibold">For Administrators</h3>
+          <ul class="mt-5 space-y-3 text-sm leading-7">
+            <li>Review land submissions and verification status.</li>
+            <li>Approve or reject listings before they go live.</li>
+            <li>Monitor bookings and platform activity.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bg-[#1a5c38] py-16 text-white">
+  <div class="container mx-auto px-4">
+    <div class="mx-auto max-w-6xl">
+      <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div class="max-w-3xl">
+          <p class="section-heading">Featured Listings</p>
+          <h2 class="mt-3 text-3xl font-semibold text-white sm:text-4xl">Latest approved land listings available across Tanzania.</h2>
+        </div>
+        <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/15">Create an account</a>
+      </div>
+
+      <div class="mt-10 grid gap-6 lg:grid-cols-3">
+        {% for land in featured_lands %}
+        <article class="featured-card border border-[#d4e8da]/70 bg-white p-6 shadow-lg transition duration-200 hover:border-[#1a5c38] hover:bg-[#f2faf2] hover:shadow-xl">
+          <div class="featured-image-wrap bg-[#134428]">
+            {% if land.primary_image %}
+            <img src="{{ land.primary_image.url }}" alt="{{ land.title }}" class="h-56 w-full object-cover transition duration-500 hover:scale-105">
             {% else %}
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#1a5c38] text-white rounded-full text-xs font-semibold">Sale</span>
+            <div class="flex h-56 items-center justify-center bg-[#0f2f1d] text-[#d4e8da]">No image available</div>
             {% endif %}
           </div>
-
-          <!-- Verified badge -->
-          {% if land.owner.is_verified %}
-          <div class="absolute top-3 right-12 inline-flex items-center gap-1 px-2 py-1 bg-white/90 rounded-full text-xs font-semibold text-[#1a5c38]">
-            <i class="bi bi-patch-check-fill"></i> Verified
-          </div>
-          {% endif %}
-          
-          <!-- Wishlist -->
-          {% if user.is_authenticated and land.pk in wishlisted_ids %}
-          <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-red-500 transition-colors" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ land.pk }}, this)"><i class="bi bi-heart-fill"></i></button>
-          {% elif user.is_authenticated %}
-          <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-gray-400 hover:text-red-500 transition-colors" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist({{ land.pk }}, this)"><i class="bi bi-heart"></i></button>
-          {% else %}
-          <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow hover:bg-white text-gray-400 hover:text-red-500 transition-colors" onclick="event.preventDefault(); event.stopPropagation(); promptLoginForWishlist()"><i class="bi bi-heart"></i></button>
-          {% endif %}
-        </div>
-        <div class="p-4">
-          <!-- Status + Posted -->
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-1.5">
-              {% if land.is_available %}
-              <span class="w-2 h-2 rounded-full bg-green-500"></span>
-              <span class="text-xs font-medium text-green-600">Available</span>
-              {% else %}
-              <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span class="text-xs font-medium text-amber-600">Reserved</span>
-              {% endif %}
+          <div class="mt-5">
+            <span class="inline-flex rounded-full bg-[#d4e8da]/30 px-3 py-1 text-xs font-semibold text-[#1a5c38]">{% if land.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}</span>
+            <h3 class="mt-4 text-xl font-semibold text-[#0f2f1d]">{{ land.title }}</h3>
+            <p class="mt-3 text-sm leading-7 text-slate-700">{{ land.description|truncatechars:110 }}</p>
+            <div class="mt-5 flex flex-col gap-2 text-sm text-slate-700">
+              <span><strong class="text-[#0f2f1d]">Location:</strong> {{ land.location }}</span>
+              {% if land.size %}<span><strong class="text-[#0f2f1d]">Size:</strong> {{ land.size }} {{ land.get_size_unit_display }}</span>{% endif %}
+              <span><strong class="text-[#0f2f1d]">Price:</strong> {{ land.price_display }}</span>
             </div>
           </div>
-
-          <h3 class="text-base font-semibold text-gray-900 mb-1 truncate group-hover:text-[#1a5c38] transition-colors">{{ land.title }}</h3>
-          <p class="text-sm text-gray-500 mb-2 flex items-center gap-1 truncate"><i class="bi bi-geo-alt"></i> {{ land.location }}</p>
-          <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
-            {% if land.size %}
-            <span class="flex items-center gap-1"><i class="bi bi-rulers"></i> {{ land.size }} {{ land.get_size_unit_display }}</span>
-            {% endif %}
-            {% if land.land_use %}
-            <span>{{ land.get_land_use_display }}</span>
-            {% endif %}
-          </div>
-          <div class="flex items-baseline gap-1">
-            <span class="text-lg font-bold text-[#1a5c38]">{{ land.price_display }}</span>
-          </div>
+        </article>
+        {% empty %}
+        <div class="rounded-[2rem] border border-white/10 bg-white/5 p-10 text-center text-slate-600">
+          <p class="text-sm uppercase tracking-[0.3em] text-[#0f2f1d]">No listings available yet</p>
+          <h3 class="mt-4 text-2xl font-semibold text-[#0f2f1d]">Check back soon!</h3>
+          <p class="mt-3 text-sm leading-7 text-slate-600">When owners publish their land, this section will show the latest opportunities across Tanzania.</p>
         </div>
-      </a>
-      {% empty %}
-      <div class="col-span-full py-8">
-        <div class="mx-auto grid max-w-4xl gap-5 rounded-[32px] border border-gray-200 bg-white p-6 shadow-sm lg:grid-cols-[1.15fr_0.85fr]">
-          <div>
-            <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1a5c38]/8 text-[#1a5c38]">
-              <i class="bi bi-search text-2xl"></i>
-            </div>
-            <h3 class="text-2xl font-semibold text-gray-900">No lands found</h3>
-            <p class="mt-3 max-w-xl text-sm leading-6 text-gray-500">There are no active listings matching this view yet. Clear the filters or add the first land listing so the homepage feels complete instead of empty.</p>
-            <div class="mt-5 flex flex-wrap items-center gap-3">
-              <a href="{% url 'lands:land_list' %}" class="rounded-full bg-[#1a5c38] px-6 py-3 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#134428]">Browse all lands</a>
-              {% if user.is_authenticated %}
-              <a href="{% url 'lands:add_land' %}" class="rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 no-underline transition-colors hover:border-gray-400 hover:bg-gray-50">Add the first listing</a>
-              {% else %}
-              <button type="button" onclick="openModal('register')" class="rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50">Add the first listing</button>
-              {% endif %}
-            </div>
-          </div>
-          <div class="rounded-[28px] bg-[#f7f4ef] p-5">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">Next step</p>
-            <h4 class="mt-3 text-lg font-semibold text-gray-900">Launch the first host-ready listing</h4>
-            <div class="mt-4 space-y-3 text-sm text-gray-600">
-              <p class="rounded-2xl bg-white px-4 py-3">Add a clear title, price, and verified location.</p>
-              <p class="rounded-2xl bg-white px-4 py-3">Upload a strong cover image so the homepage grid looks alive.</p>
-              <p class="rounded-2xl bg-white px-4 py-3">Use rent or sale intent so the search bar has real results to filter.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <div class="px-4 py-6 border-t border-gray-200">
-      <div class="flex items-center justify-between">
-        {% if page_obj.has_previous %}
-          <a href="?page={{ page_obj.previous_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
-            <i class="bi bi-chevron-left"></i> Previous
-          </a>
-        {% else %}
-          <span class="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-300 cursor-not-allowed">
-            <i class="bi bi-chevron-left"></i> Previous
-          </span>
-        {% endif %}
-        
-        <div class="flex items-center gap-1">
-          {% for num in paginator.page_range %}
-            {% if num == page_obj.number %}
-              <span class="w-10 h-10 flex items-center justify-center bg-[#1a5c38] text-white rounded-lg text-sm font-semibold">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-              <a href="?page={{ num }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">{{ num }}</a>
-            {% endif %}
-          {% endfor %}
-        </div>
-        
-        {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}{% for k,v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="flex items-center gap-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
-            Next <i class="bi bi-chevron-right"></i>
-          </a>
-        {% else %}
-          <span class="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-300 cursor-not-allowed">
-            Next <i class="bi bi-chevron-right"></i>
-          </span>
-        {% endif %}
+        {% endfor %}
       </div>
     </div>
-    {% endif %}
   </div>
+</section>
 
-  <!-- RIGHT PANEL: 40% — Map (desktop) -->
-  {% if paginator.count %}
-  <div class="hidden md:block w-2/5 h-full relative" id="mapPanel">
-    {% if lands %}
-    <div id="map" class="w-full h-full"></div>
-    
-    <!-- Map Controls -->
-    <div class="absolute top-4 right-4 flex flex-col gap-2 z-[400]">
-      <!-- Satellite / Street toggle -->
-      <div class="flex bg-white rounded-lg shadow-md overflow-hidden">
-        <button class="px-3 py-1.5 text-xs font-medium bg-[#1a5c38] text-white" id="streetLayerBtn">
-          <i class="bi bi-map"></i> Street
-        </button>
-        <button class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50" id="satelliteLayerBtn">
-          <i class="bi bi-layers"></i> Satellite
-        </button>
+<section class="bg-[#1a5c38] py-16 text-slate-950">
+  <div class="container mx-auto px-4">
+    <div class="mx-auto flex flex-col items-center justify-between gap-6 rounded-[2rem] bg-[#d4e8da]/20 border border-[#d4e8da]/30 p-10 sm:flex-row">
+      <div class="max-w-3xl text-center sm:text-left">
+        <h2 class="text-3xl font-semibold">Create Your Account Before Using the System</h2>
+        <p class="mt-3 text-sm leading-7 text-slate-900/80">Browse publicly from the landing page, then create an account to book land, submit listings, manage approvals, and access your role-based dashboard.</p>
       </div>
-      <!-- Draw to search -->
-      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="drawPolygon" title="Draw to Search">
-        <i class="bi bi-bezier2"></i>
-      </button>
-      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all hidden" id="clearDraw" title="Clear Drawing">
-        <i class="bi bi-x"></i>
-      </button>
-      <!-- Zoom -->
-      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="zoomIn" title="Zoom In">
-        <i class="bi bi-plus"></i>
-      </button>
-      <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38] hover:shadow-md transition-all" id="zoomOut" title="Zoom Out">
-        <i class="bi bi-dash"></i>
-      </button>
+      <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full bg-slate-950 px-8 py-4 text-sm font-semibold text-white transition hover:bg-slate-900">Browse Public Posts</a>
     </div>
-
-    <!-- Draw tools bar -->
-    <div class="absolute bottom-4 left-4 right-4 flex items-center gap-2 p-3 bg-white rounded-lg shadow-md hidden" id="drawTools">
-      <span class="text-xs font-medium text-gray-600">Click map to draw area</span>
-      <button class="ml-auto px-3 py-1.5 bg-[#1a5c38] text-white rounded text-xs font-medium" id="startDraw">
-        <i class="bi bi-pencil"></i> Draw
-      </button>
-    </div>
-    {% else %}
-    <div class="flex h-full items-center justify-center bg-gradient-to-br from-[#f3f8f3] to-[#f8efe7] p-8">
-      <div class="max-w-sm rounded-[28px] border border-white/70 bg-white/90 p-8 shadow-xl">
-        <p class="text-xs uppercase tracking-[0.24em] text-gray-400">Preview</p>
-        <h3 class="mt-3 text-2xl font-semibold text-gray-900">Add your first listing to unlock the map view.</h3>
-        <p class="mt-3 text-sm leading-6 text-gray-500">Once a land has coordinates and is active, this side panel becomes your discovery map for desktop visitors.</p>
-        <div class="mt-6 flex flex-wrap gap-3">
-          {% if user.is_authenticated %}
-          <a href="{% url 'lands:add_land' %}" class="rounded-full bg-[#1a5c38] px-4 py-2 text-sm font-semibold text-white no-underline">Add listing</a>
-          {% else %}
-          <button type="button" onclick="openModal('register')" class="rounded-full bg-[#1a5c38] px-4 py-2 text-sm font-semibold text-white">Add listing</button>
-          {% endif %}
-          <a href="{% url 'lands:help_center' %}" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 no-underline">Get help</a>
-        </div>
-      </div>
-    </div>
-    {% endif %}
   </div>
-  {% endif %}
-
-</div>
-
-<!-- MOBILE: Map Panel (hidden on desktop) -->
-<div class="fixed inset-0 z-20 bg-white hidden" id="mobileMapPanel">
-  <div id="mobileMap" class="w-full h-full"></div>
-  <div class="absolute top-4 right-4 flex gap-2 z-[400]">
-    <div class="flex bg-white rounded-lg shadow-md overflow-hidden">
-      <button class="px-3 py-1.5 text-xs font-medium bg-[#1a5c38] text-white" id="mobileStreetBtn">Street</button>
-      <button class="px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50" id="mobileSatelliteBtn">Satellite</button>
-    </div>
-    <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38]" id="mobileZoomIn"><i class="bi bi-plus"></i></button>
-    <button class="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center text-gray-600 hover:text-[#1a5c38]" id="mobileZoomOut"><i class="bi bi-dash"></i></button>
-  </div>
-</div>
-
-<!-- MOBILE: Toggle Button -->
-<div class="fixed bottom-6 right-6 z-30 md:hidden">
-  <button onclick="toggleMobileView()" class="w-14 h-14 bg-[#1a5c38] text-white rounded-full shadow-lg flex items-center justify-center gap-2 hover:bg-[#134428] transition-colors">
-    <i class="bi bi-map text-xl" id="mobileToggleIcon"></i>
-  </button>
-</div>
-{% endif %}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// ============================================
-// WISHLIST TOGGLE
-// ============================================
-function getCsrfToken() {
-   const metaToken = document.querySelector('meta[name="csrf-token"]');
-   if (metaToken && metaToken.content && metaToken.content !== 'NOTPROVIDED') {
-     return metaToken.content;
-   }
-   return '';
-}
-
-function promptLoginForWishlist() {
-   if (typeof openModal === 'function') {
-     openModal('login');
-     return;
-   }
-   window.location.href = '/?auth=login&next=' + encodeURIComponent(window.location.pathname + window.location.search);
-}
-
-function toggleWishlist(landId, btn) {
-   fetch(`/lands/${landId}/wishlist/`, {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/json',
-       'X-CSRFToken': getCsrfToken(),
-       'X-Requested-With': 'XMLHttpRequest'
-     },
-     body: JSON.stringify({land_id: landId})
-   })
-   .then(response => response.json())
-   .then(data => {
-     if (data.status === 'added') {
-       btn.classList.add('text-red-500');
-       btn.classList.remove('text-gray-400');
-       btn.innerHTML = '<i class="bi bi-heart-fill"></i>';
-     } else {
-       btn.classList.remove('text-red-500');
-       btn.classList.add('text-gray-400');
-       btn.innerHTML = '<i class="bi bi-heart"></i>';
-     }
-   })
-   .catch(err => console.error('Error:', err));
-}
-
-// ============================================
-// IMAGE CAROUSEL
-// ============================================
-const carouselState = {};
-
-// ============================================
-// HERO SEARCH
-// ============================================
-function syncHeroTypeButtons(value) {
-  document.querySelectorAll('.hero-tab').forEach((button) => {
-    const isActive = button.dataset.typeValue === value;
-    button.classList.toggle('active', isActive);
-    button.classList.toggle('text-gray-500', !isActive);
-    button.classList.toggle('text-gray-700', isActive);
-  });
-
-  document.querySelectorAll('.hero-purpose-btn').forEach((button) => {
-    const isActive = button.dataset.typeValue === value;
-    button.classList.toggle('bg-[#1a5c38]', isActive);
-    button.classList.toggle('border-[#1a5c38]', isActive);
-    button.classList.toggle('text-white', isActive);
-    button.classList.toggle('text-gray-700', !isActive);
-  });
-}
-
-document.querySelectorAll('.hero-tab, .hero-purpose-btn').forEach((button) => {
-  button.addEventListener('click', function() {
-    const value = this.dataset.typeValue || '';
-    const typeInput = document.getElementById('heroTypeInput');
-    if (typeInput) {
-      typeInput.value = value;
-    }
-    syncHeroTypeButtons(value);
-  });
-});
-
-syncHeroTypeButtons(document.getElementById('heroTypeInput')?.value || '');
-
-function moveCarousel(landId, direction) {
-  const carousel = document.querySelector(`.land-card__carousel[data-land-id="${landId}"]`);
-  if (!carousel) return;
-  
-  const track = carousel.querySelector('.land-card__carousel-track');
-  const slides = carousel.querySelectorAll('.land-card__carousel-slide');
-  const dots = carousel.querySelectorAll('.land-card__carousel-dot');
-  
-  if (!carouselState[landId]) carouselState[landId] = 0;
-  
-  carouselState[landId] += direction;
-  
-  if (carouselState[landId] < 0) carouselState[landId] = slides.length - 1;
-  if (carouselState[landId] >= slides.length) carouselState[landId] = 0;
-  
-  track.style.transform = `translateX(-${carouselState[landId] * 100}%)`;
-  
-  dots.forEach((dot, i) => {
-    dot.classList.toggle('bg-white', i === carouselState[landId]);
-    dot.classList.toggle('bg-white/70', i !== carouselState[landId]);
-  });
-}
-
-function goToSlide(landId, index) {
-  const carousel = document.querySelector(`.land-card__carousel[data-land-id="${landId}"]`);
-  if (!carousel) return;
-  
-  const track = carousel.querySelector('.land-card__carousel-track');
-  const dots = carousel.querySelectorAll('.land-card__carousel-dot');
-  
-  carouselState[landId] = index;
-  track.style.transform = `translateX(-${index * 100}%)`;
-  
-  dots.forEach((dot, i) => {
-    dot.classList.toggle('bg-white', i === index);
-    dot.classList.toggle('bg-white/70', i !== index);
-  });
-}
-
-// ============================================
-// LOCATION AUTOCOMPLETE
-// ============================================
-const locationInput = document.getElementById('locationInput');
-const locationDropdown = document.getElementById('locationDropdown');
-let autocompleteTimeout;
-
-if (locationInput) {
-  locationInput.addEventListener('input', function() {
-    clearTimeout(autocompleteTimeout);
-    const query = this.value.trim();
-    
-    if (query.length < 2) {
-      locationDropdown.classList.add('hidden');
-      return;
-    }
-    
-    autocompleteTimeout = setTimeout(() => {
-      fetch(`/lands/api/location-autocomplete/?q=${encodeURIComponent(query)}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.suggestions.length > 0) {
-            locationDropdown.innerHTML = data.suggestions.map(s => 
-              `<div class="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2" data-value="${s.value}">
-                <i class="bi bi-${s.type === 'region' ? 'globe' : 'geo-alt'}"></i>
-                ${s.value}
-              </div>`
-            ).join('');
-            locationDropdown.classList.remove('hidden');
-          } else {
-            locationDropdown.classList.add('hidden');
-          }
-        });
-    }, 300);
-  });
-  
-  locationInput.addEventListener('blur', function() {
-    setTimeout(() => locationDropdown.classList.add('hidden'), 200);
-  });
-  
-  locationDropdown.addEventListener('click', function(e) {
-    const item = e.target.closest('[data-value]');
-    if (item) {
-      locationInput.value = item.dataset.value;
-      locationDropdown.classList.add('hidden');
-      document.getElementById('heroSearchForm').submit();
-    }
-  });
-}
-
-// ============================================
-// MOBILE VIEW TOGGLE
-// ============================================
-let mobileView = 'list';
-
-function toggleMobileView() {
-  const listingsPanel = document.getElementById('listingsPanel');
-  const mobileMapPanel = document.getElementById('mobileMapPanel');
-  const toggleIcon = document.getElementById('mobileToggleIcon');
-  const toggleBtn = document.querySelector('.fixed.bottom-6 button');
-
-  if (mobileView === 'list') {
-    mobileView = 'map';
-    listingsPanel.classList.add('hidden');
-    mobileMapPanel.classList.remove('hidden');
-    toggleIcon.className = 'bi bi-list text-xl';
-    if (window.mobileMap) window.mobileMap.invalidateSize();
-  } else {
-    mobileView = 'list';
-    listingsPanel.classList.remove('hidden');
-    mobileMapPanel.classList.add('hidden');
-    toggleIcon.className = 'bi bi-map text-xl';
-  }
-}
-
-// ============================================
-// MAP INITIALIZATION (Desktop)
-// ============================================
-document.addEventListener('DOMContentLoaded', function() {
-  const mapElement = document.getElementById('map');
-  if (!mapElement || typeof L === 'undefined') return;
-  
-  // Initialize desktop map
-  const map = L.map('map', {
-    zoomControl: false
-  }).setView([-6.5, 35.5], 6);
-  
-  // Base layers
-  const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 18
-  });
-  
-  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: '&copy; Esri',
-    maxZoom: 18
-  });
-  
-  streetLayer.addTo(map);
-  
-  // Parse pins
-  const pins = JSON.parse('{{ map_pins|safe }}');
-  const markers = [];
-  const markerMap = {};
-  
-  // Custom price marker icon
-  function createPriceMarker(price, status) {
-    const color = status === 'available' ? '#1a5c38' : '#f59e0b';
-    return L.divIcon({
-      className: 'custom-marker-wrapper',
-      html: `<div class="custom-marker" style="border-color: ${color}; color: ${color};">
-        ${price}
-        <span class="custom-marker__tail" style="border-top-color: ${color};"></span>
-      </div>`,
-      iconSize: [80, 36],
-      iconAnchor: [40, 36]
-    });
-  }
-  
-  // Add markers
-  pins.forEach(pin => {
-    if (!pin.lat || !pin.lng) return;
-    
-    const marker = L.marker([pin.lat, pin.lng], {
-      icon: createPriceMarker(pin.price, pin.status)
-    }).addTo(map);
-    
-    marker.bindPopup(`
-      <div style="min-width:200px">
-        <strong>${pin.title}</strong><br>
-        <span style="color:#717171"><i class="bi bi-geo-alt"></i> ${pin.location}</span><br>
-        <strong style="color:#1a5c38">${pin.price}</strong><br>
-        <span style="font-size:12px;color:${pin.status === 'available' ? '#059669' : '#f59e0b'};">
-          ${pin.status === 'available' ? 'Available' : 'Reserved'}
-        </span><br>
-        <a href="/lands/${pin.id}/" style="color:#1a5c38;font-weight:600;font-size:13px;">View Details &rarr;</a>
-      </div>
-    `, { maxWidth: 250 });
-    
-    marker.landId = pin.id;
-    markers.push(marker);
-    markerMap[pin.id] = marker;
-  });
-  
-  // Fit bounds
-  if (markers.length > 0) {
-    const bounds = L.latLngBounds(pins.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]));
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
-  }
-  
-  // Zoom controls
-  document.getElementById('zoomIn')?.addEventListener('click', () => map.zoomIn());
-  document.getElementById('zoomOut')?.addEventListener('click', () => map.zoomOut());
-  
-  // Layer toggle
-  document.getElementById('streetLayerBtn')?.addEventListener('click', function() {
-    if (map.hasLayer(satelliteLayer)) {
-      map.removeLayer(satelliteLayer);
-      streetLayer.addTo(map);
-    }
-    document.getElementById('streetLayerBtn')?.classList.add('bg-[#1a5c38]', 'text-white');
-    document.getElementById('streetLayerBtn')?.classList.remove('text-gray-600');
-    document.getElementById('satelliteLayerBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
-    document.getElementById('satelliteLayerBtn')?.classList.add('text-gray-600');
-  });
-  
-  document.getElementById('satelliteLayerBtn')?.addEventListener('click', function() {
-    if (map.hasLayer(streetLayer)) {
-      map.removeLayer(streetLayer);
-      satelliteLayer.addTo(map);
-    }
-    document.getElementById('satelliteLayerBtn')?.classList.add('bg-[#1a5c38]', 'text-white');
-    document.getElementById('satelliteLayerBtn')?.classList.remove('text-gray-600');
-    document.getElementById('streetLayerBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
-    document.getElementById('streetLayerBtn')?.classList.add('text-gray-600');
-  });
-  
-  // Card-marker cross-highlight
-  document.querySelectorAll('.land-card').forEach(card => {
-    const landId = card.dataset.landId;
-    
-    card.addEventListener('mouseenter', () => {
-      if (markerMap[landId]) {
-        markerMap[landId].openPopup();
-        const el = markerMap[landId].getElement();
-        if (el) el.querySelector('.custom-marker')?.classList.add('highlighted');
-      }
-    });
-    
-    card.addEventListener('mouseleave', () => {
-      if (markerMap[landId]) {
-        markerMap[landId].closePopup();
-        const el = markerMap[landId].getElement();
-        if (el) el.querySelector('.custom-marker')?.classList.remove('highlighted');
-      }
-    });
-  });
-  
-  // Marker hover highlights card
-  markers.forEach(marker => {
-    marker.on('mouseover', () => {
-      const card = document.querySelector(`.land-card[data-land-id="${marker.landId}"]`);
-      if (card) card.classList.add('highlighted');
-    });
-    
-    marker.on('mouseout', () => {
-      const card = document.querySelector(`.land-card[data-land-id="${marker.landId}"]`);
-      if (card) card.classList.remove('highlighted');
-    });
-  });
-  
-  // Draw polygon functionality
-  let drawControl = null;
-  let drawnItems = new L.FeatureGroup();
-  map.addLayer(drawnItems);
-  let isDrawing = false;
-  
-  function isPointInPolygon(point, polygon) {
-    let inside = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const xi = polygon[i].lat, yi = polygon[i].lng;
-      const xj = polygon[j].lat, yj = polygon[j].lng;
-      if (((yi > point.lng) !== (yj > point.lng)) &&
-          (point.lat < (xj - xi) * (point.lng - yi) / (yj - yi) + xi)) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  }
-  
-  document.getElementById('drawPolygon')?.addEventListener('click', function() {
-    document.getElementById('drawTools').classList.remove('hidden');
-    document.getElementById('drawTools').style.display = 'flex';
-    this.classList.add('bg-[#1a5c38]', 'text-white');
-    this.classList.remove('text-gray-600');
-    isDrawing = true;
-    map.getContainer().style.cursor = 'crosshair';
-  });
-  
-  document.getElementById('clearDraw')?.addEventListener('click', function() {
-    drawnItems.clearLayers();
-    markers.forEach(m => m.setOpacity(1));
-    this.classList.add('hidden');
-    document.getElementById('drawPolygon')?.classList.remove('bg-[#1a5c38]', 'text-white');
-    document.getElementById('drawPolygon')?.classList.add('text-gray-600');
-    document.getElementById('drawTools').classList.add('hidden');
-    isDrawing = false;
-    map.getContainer().style.cursor = '';
-  });
-  
-  document.getElementById('startDraw')?.addEventListener('click', function() {
-    this.classList.add('bg-[#1a5c38]', 'text-white');
-    this.classList.remove('text-gray-600');
-    isDrawing = true;
-  });
-  
-  map.on('click', function(e) {
-    if (!isDrawing) return;
-    const latlng = e.latlng;
-    
-    // Simple rectangle draw on click
-    if (!window.drawStart) {
-      window.drawStart = latlng;
-      return;
-    }
-    
-    const rect = L.rectangle([window.drawStart, latlng], {
-      color: '#1a5c38',
-      fillColor: '#1a5c38',
-      fillOpacity: 0.1,
-      weight: 2
-    });
-    drawnItems.addLayer(rect);
-    
-    const latlngs = [window.drawStart, { lat: window.drawStart.lat, lng: latlng.lng }, latlng, { lat: latlng.lat, lng: window.drawStart.lng }];
-    
-    markers.forEach(marker => {
-      const point = marker.getLatLng();
-      if (isPointInPolygon(point, latlngs)) {
-        marker.setOpacity(1);
-      } else {
-        marker.setOpacity(0.3);
-      }
-    });
-    
-    window.drawStart = null;
-    document.getElementById('clearDraw').classList.remove('hidden');
-    isDrawing = false;
-    map.getContainer().style.cursor = '';
-  });
-  
-  // Fix map size on load
-  setTimeout(() => map.invalidateSize(), 200);
-  
-  // ============================================
-  // MOBILE MAP (init on first show)
-  // ============================================
-  window.mobileMap = null;
-  
-  const mobileMapEl = document.getElementById('mobileMap');
-  if (mobileMapEl && typeof L !== 'undefined') {
-    const mobileMap = L.map('mobileMap', { zoomControl: false }).setView([-6.5, 35.5], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors', maxZoom: 18
-    }).addTo(mobileMap);
-    
-    window.mobileMap = mobileMap;
-    
-    pins.forEach(pin => {
-      if (!pin.lat || !pin.lng) return;
-      L.marker([pin.lat, pin.lng], {
-        icon: createPriceMarker(pin.price, pin.status)
-      }).addTo(mobileMap);
-    });
-    
-    if (markers.length > 0) {
-      const bounds = L.latLngBounds(pins.filter(p => p.lat && p.lng).map(p => [p.lat, p.lng]));
-      if (bounds.isValid()) mobileMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
-    }
-    
-    document.getElementById('mobileZoomIn')?.addEventListener('click', () => mobileMap.zoomIn());
-    document.getElementById('mobileZoomOut')?.addEventListener('click', () => mobileMap.zoomOut());
-    
-    const mobileStreetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '', maxZoom: 18 });
-    const mobileSatelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '', maxZoom: 18 });
-    
-    document.getElementById('mobileStreetBtn')?.addEventListener('click', function() {
-      mobileMap.removeLayer(mobileSatelliteLayer);
-      mobileStreetLayer.addTo(mobileMap);
-      this.classList.add('bg-[#1a5c38]', 'text-white');
-      this.classList.remove('text-gray-600');
-      document.getElementById('mobileSatelliteBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
-      document.getElementById('mobileSatelliteBtn')?.classList.add('text-gray-600');
-    });
-    
-    document.getElementById('mobileSatelliteBtn')?.addEventListener('click', function() {
-      mobileMap.removeLayer(mobileStreetLayer);
-      mobileSatelliteLayer.addTo(mobileMap);
-      this.classList.add('bg-[#1a5c38]', 'text-white');
-      this.classList.remove('text-gray-600');
-      document.getElementById('mobileStreetBtn')?.classList.remove('bg-[#1a5c38]', 'text-white');
-      document.getElementById('mobileStreetBtn')?.classList.add('text-gray-600');
-    });
-  }
-});
-
-// ============================================
-// CLOSE DROPDOWNS ON OUTSIDE CLICK
-// ============================================
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.relative') || !e.target.closest('#locationInput')) {
-    document.getElementById('locationDropdown')?.classList.add('hidden');
-  }
-});
-</script>
+</section>
 {% endblock %}

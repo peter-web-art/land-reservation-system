@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}LandReserve | Discover Land With Confidence{% endblock %}
+
+{% block hero %}
+<section class="relative overflow-hidden bg-[linear-gradient(135deg,_#f8fcf8_0%,_#edf7ef_46%,_#fff8ea_100%)]">
+  <div class="absolute inset-0">
+    <div class="absolute left-[-4rem] top-[-2rem] h-56 w-56 rounded-full bg-[#1a5c38]/10 blur-3xl"></div>
+    <div class="absolute right-[-4rem] top-16 h-72 w-72 rounded-full bg-amber-200/30 blur-3xl"></div>
+    <div class="absolute bottom-[-4rem] left-1/3 h-44 w-44 rounded-full bg-slate-900/5 blur-3xl"></div>
+  </div>
+
+  <div class="container relative z-10 mx-auto px-4 py-16 md:py-24">
+    <div class="grid gap-10 xl:grid-cols-[1.08fr_0.92fr] xl:items-center">
+      <div class="max-w-3xl">
+        <span class="inline-flex items-center gap-2 rounded-full border border-[#1a5c38]/15 bg-white/85 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-[#1a5c38] shadow-sm">
+          Trusted land discovery for Tanzania
+        </span>
+        <h1 class="mt-6 text-4xl font-black leading-tight tracking-tight text-slate-900 md:text-6xl">
+          Find attractive land opportunities in a cleaner, safer way.
+        </h1>
+        <p class="mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
+          Browse beautiful public previews from real owner posts, understand the value of the platform quickly, and then sign in to unlock full listing access, owner contact, reservations, and saved items.
+        </p>
+
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+          <a href="/accounts/register/" class="inline-flex items-center justify-center rounded-full bg-[#1a5c38] px-7 py-3.5 text-sm font-semibold text-white no-underline shadow-lg shadow-[#1a5c38]/20 transition hover:bg-[#134428]">
+            Create account
+          </a>
+          <a href="/accounts/login/" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-slate-800 no-underline transition hover:border-slate-400 hover:bg-slate-50">
+            Sign in
+          </a>
+        </div>
+
+        <div class="mt-10 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browse better</p>
+            <p class="mt-2 text-lg font-bold text-slate-900">Real listing previews</p>
+          </div>
+          <div class="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Move faster</p>
+            <p class="mt-2 text-lg font-bold text-slate-900">Messaging and booking</p>
+          </div>
+          <div class="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Feel safer</p>
+            <p class="mt-2 text-lg font-bold text-slate-900">Verified owner workflows</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-300/30">
+          <div class="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
+            <div class="rounded-[1.5rem] bg-[linear-gradient(160deg,_#163824,_#205f3b_58%,_#dab663_150%)] p-6 text-white">
+              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">Platform preview</p>
+              <h2 class="mt-3 text-3xl font-black leading-tight">See land. Compare options. Take action after sign-in.</h2>
+              <p class="mt-4 text-sm leading-7 text-black/90">
+                The public page gives visitors a strong first impression. The full experience starts after authentication.
+              </p>
+              <div class="mt-6 space-y-3">
+                <div class="rounded-2xl bg-black/20 p-4">
+                  <p class="text-sm font-semibold">Browse live owner listings</p>
+                  <p class="mt-1 text-sm leading-7 text-black/85">Search by location, price, size, type, and availability.</p>
+                </div>
+                <div class="rounded-2xl bg-black/20 p-4">
+                  <p class="text-sm font-semibold">Reserve or contact owners</p>
+                  <p class="mt-1 text-sm leading-7 text-white/85">Messaging, booking requests, and owner approvals stay in one flow.</p>
+                </div>
+              </div>
+            </div>
+        
+            <!-- CHANGE HERE-->
+            <div class="flex flex-col gap-4">
+              <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Popular regions</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  {% for region in featured_regions %}
+                  <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">{{ region }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="rounded-[1.5rem] border border-slate-200 bg-[#f6fbf7] p-5">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#1a5c38]">Members only</p>
+                <p class="mt-3 text-sm leading-7 text-slate-700">
+                  Saving listings, contacting owners, booking land, and owner management all require sign-in or account creation.
+                </p>
+                <div class="mt-5 flex flex-col gap-2">
+                  <a href="/accounts/login/" class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white no-underline transition hover:bg-slate-800">Sign in to continue</a>
+                  <a href="/accounts/register/" class="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 no-underline transition hover:border-slate-400">Create account</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="bg-white py-16">
+  <div class="container mx-auto px-4">
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div class="max-w-2xl">
+        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">Featured owner posts</p>
+        <h2 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl">Public listing previews that make the platform feel alive.</h2>
+        <p class="mt-3 text-sm leading-7 text-slate-600">
+          Uploaded posts from land owners are shown here to attract visitors. To open full listing details, contact owners, or reserve land, users must sign in or create an account.
+        </p>
+      </div>
+      <div class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        Sign-in required for action
+      </div>
+    </div>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-3">
+      {% for land in featured_lands %}
+      <article class="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+        <div class="relative h-72 overflow-hidden">
+          {% if land.primary_image %}
+          <img src="{{ land.primary_image.url }}" alt="{{ land.title }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent"></div>
+          {% else %}
+          <div class="h-full w-full bg-[linear-gradient(145deg,_#163824,_#2d7d4f_58%,_#dcb65d)]"></div>
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.2),_transparent_35%),linear-gradient(to_top,_rgba(0,0,0,0.5),rgba(0,0,0,0.05))]"></div>
+          {% endif %}
+
+          <div class="absolute left-5 right-5 top-5 flex items-center justify-between gap-3">
+            <span class="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">
+              {% if land.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}
+            </span>
+            {% if land.owner.is_verified %}
+            <span class="rounded-full bg-[#1a5c38] px-3 py-1 text-xs font-semibold text-white">Verified</span>
+            {% endif %}
+          </div>
+
+          <div class="absolute bottom-0 left-0 right-0 p-5 text-white">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/75">{{ land.location }}</p>
+            <h3 class="mt-2 text-2xl font-bold leading-tight">{{ land.title }}</h3>
+            <div class="mt-3 flex flex-wrap gap-3 text-sm text-white/90">
+              {% if land.size %}
+              <span>{{ land.size }} {{ land.get_size_unit_display }}</span>
+              {% endif %}
+              <span>{{ land.price_display }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-6">
+          <p class="text-sm leading-7 text-slate-600">{{ land.description|truncatechars:140 }}</p>
+          <div class="mt-5 flex gap-3">
+            <a href="/accounts/login/" class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white no-underline transition hover:bg-slate-800">Sign in to view</a>
+            <a href="/accounts/register/" class="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 no-underline transition hover:border-slate-400">Create account</a>
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <article class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm lg:col-span-3">
+        <div class="grid lg:grid-cols-[0.9fr_1.1fr]">
+          <div class="min-h-[280px] bg-[linear-gradient(145deg,_#163824,_#2d7d4f_55%,_#e3bc63)]"></div>
+          <div class="p-8 md:p-10">
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">View what to discover in our website</p>
+            <h3 class="mt-3 text-3xl font-bold text-slate-900">As owners upload listings, this section becomes a strong public showcase.</h3>
+            <p class="mt-4 max-w-2xl text-sm leading-8 text-slate-600">
+              The layout is already ready to display uploaded posts with images. Until then, the page still guides visitors toward account creation and sign-in.
+            </p>
+            <div class="mt-6 flex gap-3">
+              <a href="/accounts/register/" class="inline-flex items-center justify-center rounded-full bg-[#1a5c38] px-5 py-3 text-sm font-semibold text-white no-underline transition hover:bg-[#134428]">Create account</a>
+              <a href="/accounts/login/" class="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 no-underline transition hover:border-slate-400">Sign in</a>
+            </div>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="bg-slate-950 py-16 text-black">
+  <div class="container mx-auto px-4">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+          <i class="bi bi-map"></i>
+        </div>
+        <h3 class="mt-4 text-lg font-semibold">Map-based browsing</h3>
+        <p class="mt-2 text-sm leading-7 text-white/70">Help users compare land visually, not just through plain text and phone calls.</p>
+      </div>
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+          <i class="bi bi-calendar-check"></i>
+        </div>
+        <h3 class="mt-4 text-lg font-semibold">Reservation workflow</h3>
+        <p class="mt-2 text-sm leading-7 text-white/70">Booking requests, approvals, and availability rules make the system practical.</p>
+      </div>
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+          <i class="bi bi-chat-left-text"></i>
+        </div>
+        <h3 class="mt-4 text-lg font-semibold">Direct messaging</h3>
+        <p class="mt-2 text-sm leading-7 text-white/70">Visitors see the promise, while signed-in users unlock owner conversations.</p>
+      </div>
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <h3 class="mt-4 text-lg font-semibold">Verification layer</h3>
+        <p class="mt-2 text-sm leading-7 text-white/70">Admin review and owner verification create a more trustworthy impression.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bg-white py-16">
+  <div class="container mx-auto px-4">
+    <div class="rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,_#f8fafc,_#eef7f0_42%,_#fff6e2)] p-8 shadow-sm md:p-10">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="max-w-2xl">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">Ready to continue?</p>
+          <h2 class="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">Sign in to unlock the full experience.</h2>
+          <p class="mt-3 text-sm leading-8 text-slate-600">
+            View complete listing details, message owners, save favorites, and reserve land only after authentication.
+          </p>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <a href="/accounts/login/" class="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-slate-800">Sign in</a>
+          <a href="/accounts/register/" class="inline-flex items-center justify-center rounded-full bg-[#1a5c38] px-6 py-3 text-sm font-semibold text-white no-underline transition hover:bg-[#134428]">Create account</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

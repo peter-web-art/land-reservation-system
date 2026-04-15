@@ -189,6 +189,14 @@ class Reservation(models.Model):
                       help_text='Final agreed price for this booking')
     notes          = models.TextField(blank=True)
 
+    class Meta:
+        # BUG #2 FIX: Add database indexes for faster queries on common filters
+        indexes = [
+            models.Index(fields=['land', 'status', 'start_date', 'end_date']),
+            models.Index(fields=['land', 'customer']),
+            models.Index(fields=['customer_email']),
+        ]
+
     def __str__(self):
         name = self.customer.username if self.customer else self.customer_name
         return f"{name} — {self.land.title}"

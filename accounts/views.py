@@ -8,9 +8,12 @@ from django.views.decorators.http import require_http_methods
 from django import forms
 from django.utils.html import strip_tags
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
-import bleach, re
+from django.db.models.functions import TruncMonth
+from datetime import datetime, timedelta
+import bleach, re, json
+import string, random
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -20,6 +23,7 @@ except ImportError:
         return decorator
 
 from .models import User
+from .decorators import admin_required
 
 
 def sanitize(value, max_length=None):
@@ -154,13 +158,15 @@ def login_view(request):
         messages.error(request, 'Invalid username or password. Please try again.')
         return auth_modal_redirect(request, 'login')
 
-    auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    if user.is_staff or user.role == User.ROLE_ADMIN:
+        messages.error(request, 'Admin accounts must sign in through the admin login page.')
+        return auth_modal_redirect(request, 'login')
+
+    auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
     messages.success(request, f'Welcome back, {user.username}.')
 
-    next_url = request.POST.get('next') or request.GET.get('next') or ''
-    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-        return redirect(next_url)
-
+    # Always redirect based on user role, not arbitrary next_url
+    # This prevents redirect loops and ensures users go to appropriate dashboards
     from .decorators import role_based_redirect
     return redirect(role_based_redirect(user))
 
@@ -173,12 +179,11 @@ def register(request):
     form = UserRegistrationForm(request.POST, request.FILES)
     if form.is_valid():
         user = form.save()
-        auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
         messages.success(request, f'Welcome, {user.username}! Your account has been created.')
-        next_url = request.POST.get('next') or request.GET.get('next') or ''
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-            return redirect(next_url)
-
+        
+        # Always redirect based on user role, not arbitrary next_url
+        # This prevents redirect loops and ensures users go to appropriate dashboards
         from .decorators import role_based_redirect
         return redirect(role_based_redirect(user))
 
@@ -211,23 +216,12 @@ def profile_edit(request):
 
 # ── Admin Portal ──────────────────────────────────────────────────────────────
 
-def admin_required(view_func):
-    """Decorator: only users with role=admin or is_staff can access."""
-    from functools import wraps
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        if not (request.user.is_staff or request.user.role == User.ROLE_ADMIN):
-            messages.error(request, 'Access denied — Admin only.')
-            return redirect('lands:land_list')
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
 
 @admin_required
 def admin_portal(request):
     from lands.models import Land, Reservation
+
+    # Basic stats
     total_users    = User.objects.count()
     total_owners   = User.objects.filter(role=User.ROLE_OWNER).count()
     total_customers = User.objects.filter(role=User.ROLE_CUSTOMER).count()
@@ -238,11 +232,79 @@ def admin_portal(request):
     pending_book   = Reservation.objects.filter(status='pending').count()
     approved_book  = Reservation.objects.filter(status='approved').count()
 
+    # Revenue stats
+    total_revenue = Reservation.objects.filter(payment_status='paid').aggregate(
+        total=Sum('amount_paid'))['total'] or 0
+    monthly_revenue = Reservation.objects.filter(
+        payment_status='paid', booking_date__gte=datetime.now() - timedelta(days=30)
+    ).aggregate(total=Sum('amount_paid'))['total'] or 0
+
+    # Recent data
     kyc_pending    = User.objects.filter(kyc_status='pending').order_by('-date_joined')
     flagged        = User.objects.filter(is_suspended=True)[:10]
-
+    recent_users   = User.objects.order_by('-date_joined')[:20]
+    dashboard_users = User.objects.annotate(
+        total_reservations=Count('reservations', distinct=True),
+        total_posts=Count('lands', distinct=True),
+        total_messages=Count('sent_messages', distinct=True),
+    ).order_by('-date_joined')[:50]
+    recent_owners  = User.objects.filter(role=User.ROLE_OWNER).order_by('-date_joined')[:20]
     recent_lands   = Land.objects.select_related('owner').order_by('-created_at')[:15]
     recent_bookings = Reservation.objects.select_related('land', 'customer').order_by('-booking_date')[:15]
+
+    # Analytics data for charts
+    # User registration trend (last 12 months)
+    user_trend_raw = User.objects.annotate(
+        month=TruncMonth('date_joined')
+    ).values('month').annotate(count=Count('id')).order_by('-month')[:12]
+
+    # Format user trend data for Chart.js
+    user_trend = []
+    for item in reversed(list(user_trend_raw)):
+        user_trend.append({
+            'month': item['month'].strftime('%b %Y') if item['month'] else 'Unknown',
+            'count': item['count']
+        })
+
+    # Booking status distribution
+    booking_stats_raw = Reservation.objects.values('status').annotate(count=Count('id'))
+    booking_stats = []
+    status_labels = {'pending': 'Pending', 'approved': 'Approved', 'rejected': 'Rejected', 'cancelled': 'Cancelled'}
+    for item in booking_stats_raw:
+        booking_stats.append({
+            'status': status_labels.get(item['status'], item['status'].title()),
+            'count': item['count']
+        })
+
+    # Revenue by month (last 6 months)
+    revenue_trend_raw = Reservation.objects.filter(
+        payment_status='paid'
+    ).annotate(
+        month=TruncMonth('booking_date')
+    ).values('month').annotate(
+        revenue=Sum('amount_paid')
+    ).order_by('-month')[:6]
+
+    # Format revenue trend data for Chart.js
+    revenue_trend = []
+    for item in reversed(list(revenue_trend_raw)):
+        revenue_trend.append({
+            'month': item['month'].strftime('%b %Y') if item['month'] else 'Unknown',
+            'revenue': float(item['revenue'] or 0)
+        })
+
+    # Top performing lands
+    top_lands = Land.objects.annotate(
+        booking_count=Count('reservations')
+    ).order_by('-booking_count')[:10]
+
+    # System health
+    system_health = {
+        'total_disk_space': 'N/A',  # Would need system monitoring
+        'database_size': 'N/A',
+        'active_sessions': User.objects.filter(last_login__gte=datetime.now() - timedelta(hours=1)).count(),
+        'error_rate': 0,  # Would need logging system
+    }
 
     return render(request, 'accounts/admin_portal.html', {
         'total_users': total_users, 'total_owners': total_owners,
@@ -250,12 +312,19 @@ def admin_portal(request):
         'unverified': unverified, 'suspended': suspended,
         'total_lands': total_lands, 'total_bookings': total_bookings,
         'pending_book': pending_book, 'approved_book': approved_book,
+        'total_revenue': total_revenue, 'monthly_revenue': monthly_revenue,
         'kyc_pending': kyc_pending,
-        'recent_users': User.objects.order_by('-date_joined')[:20],
-        'recent_owners': User.objects.filter(role=User.ROLE_OWNER).order_by('-date_joined')[:20],
+        'recent_users': recent_users,
+        'dashboard_users': dashboard_users,
+        'recent_owners': recent_owners,
         'flagged': flagged,
         'recent_lands': recent_lands,
         'recent_bookings': recent_bookings,
+        'user_trend': user_trend,
+        'booking_stats': booking_stats,
+        'revenue_trend': revenue_trend,
+        'top_lands': top_lands,
+        'system_health': system_health,
     })
 
 
@@ -288,6 +357,12 @@ def admin_user_action(request, user_id):
         target.is_owner = True
         target.save()
         messages.success(request, f'{target.username} promoted to Land Owner.')
+    elif action == 'reset_password':
+        # Generate a new random password
+        new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+        target.set_password(new_password)
+        target.save()
+        messages.success(request, f'Password reset for {target.username}. New password: {new_password} (Please share securely)')
     elif action == 'delete_user':
         if target.is_staff or target.role == User.ROLE_ADMIN:
             messages.error(request, 'Cannot delete admin users.')
@@ -295,6 +370,25 @@ def admin_user_action(request, user_id):
             username = target.username
             target.delete()
             messages.success(request, f'{username} has been permanently deleted.')
+
+    return redirect('accounts:admin_portal')
+
+
+@admin_required
+@require_http_methods(['POST'])
+def admin_booking_action(request, booking_id):
+    from lands.models import Reservation
+    booking = get_object_or_404(Reservation, pk=booking_id)
+    action = request.POST.get('action')
+
+    if action == 'approve':
+        booking.status = 'approved'
+        booking.save()
+        messages.success(request, f'Booking #{booking.id} approved.')
+    elif action == 'reject':
+        booking.status = 'rejected'
+        booking.save()
+        messages.success(request, f'Booking #{booking.id} rejected.')
 
     return redirect('accounts:admin_portal')
 
@@ -396,3 +490,25 @@ def review_kyc(request, user_id):
         target.save()
         messages.warning(request, f'{target.username} KYC rejected.')
     return redirect('accounts:admin_portal')
+
+
+# ── Admin Login ───────────────────────────────────────────────────────────────
+
+def admin_login(request):
+    """Separate admin login that bypasses normal authentication flow."""
+    if request.user.is_authenticated and (request.user.is_staff or request.user.role == User.ROLE_ADMIN):
+        return redirect('accounts:admin_portal')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+        if user and user.is_active and (user.is_staff or user.role == User.ROLE_ADMIN):
+            auth_login(request, user)
+            messages.success(request, f'Welcome back, {user.username}!')
+            return redirect('accounts:admin_portal')
+        else:
+            messages.error(request, 'Invalid admin credentials or insufficient permissions.')
+
+    return render(request, 'accounts/admin_login.html')

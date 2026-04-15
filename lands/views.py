@@ -342,10 +342,13 @@ def land_list(request):
         'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Singida', 'Songwe', 'Tabora',
         'Simiyu', 'Geita', 'Katavi', 'Njombe', 'Iringa', 'Manyara'
     ]
+
+    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')[:3]
     
     return render(request, 'lands/land_list.html', {
         'lands': page_obj, 'page_obj': page_obj, 'paginator': paginator,
         'map_pins': map_pins, 'wishlisted_ids': wishlisted_ids,
+        'featured_lands': featured_lands,
         'tanzania_regions': tanzania_regions,
         'current_filters': {
             'listing_type': listing_type,
@@ -534,6 +537,7 @@ def book_land(request, pk):
         form = ReservationForm(request.POST, user=request.user, land=land)
         if form.is_valid():
             # FIX #1b: duplicate active booking check (rent + sale)
+            # BUG #4 FIX: Also check for guest users by email
             if request.user.is_authenticated:
                 existing = Reservation.objects.filter(
                     land=land, customer=request.user,
@@ -542,6 +546,17 @@ def book_land(request, pk):
                     messages.warning(request,
                         'You already have an active or pending booking for this land.')
                     return redirect('lands:land_detail', pk=land.pk)
+            else:
+                # Check guest duplicate bookings by email
+                guest_email = form.cleaned_data.get('customer_email')
+                if guest_email:
+                    existing = Reservation.objects.filter(
+                        land=land, customer_email=guest_email,
+                        status__in=['pending', 'approved']).exists()
+                    if existing:
+                        messages.warning(request,
+                            'A booking for this land already exists with this email address.')
+                        return redirect('lands:land_detail', pk=land.pk)
             r            = form.save(commit=False)
             r.land       = land
             r.status     = 'pending'
@@ -736,7 +751,7 @@ def edit_land(request, pk):
     return render(request, 'lands/edit_land.html', {'form': form, 'land': land})
 
 
-@login_required
+@owner_required
 @require_http_methods(['GET', 'POST'])
 def delete_land(request, pk):
     land = get_object_or_404(Land, pk=pk, owner=request.user)
@@ -807,17 +822,18 @@ def update_reservation_status(request, pk, status):
     old_status = r.status
 
     # FIX #2: overlap check before approving rent bookings
+    # BUG #3 FIX: Check both APPROVED and PENDING overlaps to prevent double-booking
     if status == 'approved' and r.land.listing_type == 'rent':
         if r.start_date and r.end_date:
             conflict = Reservation.objects.filter(
-                land=r.land, status='approved',
+                land=r.land, status__in=['approved', 'pending'],
                 start_date__lt=r.end_date,
                 end_date__gt=r.start_date
             ).exclude(pk=r.pk).exists()
             if conflict:
                 messages.error(
                     request,
-                    'Cannot approve this booking because another approved booking already covers those dates.',
+                    'Cannot approve this booking because another booking already covers those dates.',
                 )
                 return redirect('lands:reservations_management')
 
@@ -825,11 +841,14 @@ def update_reservation_status(request, pk, status):
     if status == 'approved':
         pm = request.POST.get('payment_method', '').strip()
         pr = request.POST.get('payment_reference', '').strip()
+        # Owner can override payment method/reference during approval
         if pm: r.payment_method = pm
-        if pr:
-            r.payment_reference = pr
-            r.payment_status    = 'paid'
-            r.amount_paid       = r.agreed_price or r.land.price  # FIX #3
+        if pr: r.payment_reference = pr
+        # BUG #1 FIX: Mark as paid if customer already provided payment info (during booking)
+        # OR if owner confirms it during approval
+        if r.payment_reference:
+            r.payment_status = 'paid'
+            r.amount_paid    = r.agreed_price or r.land.price
     r.save()
 
     # SMS on approval
@@ -882,18 +901,24 @@ def mark_payment(request, pk):
     if r.land.owner != request.user:
         messages.error(request, 'Permission denied.')
         return redirect('lands:reservations_management')
-    r.payment_status    = 'paid'
-    r.payment_method    = request.POST.get('payment_method', r.payment_method)
-    r.payment_reference = request.POST.get('payment_reference', r.payment_reference or '')
-    r.amount_paid       = r.agreed_price or r.land.price   # FIX #3: use agreed_price
+    # Allow owner to confirm/update payment details
+    payment_method = request.POST.get('payment_method', '').strip()
+    payment_ref = request.POST.get('payment_reference', '').strip()
+    if payment_method:
+        r.payment_method = payment_method
+    if payment_ref:
+        r.payment_reference = payment_ref
+    r.payment_status = 'paid'
+    r.amount_paid = r.agreed_price or r.land.price
     r.save()
     messages.success(request, 'Payment recorded.')
     return redirect('lands:reservations_management')
 
 
+@login_required
 def report_listing(request, pk):
-    """Allow anyone to flag a suspicious listing."""
-    if request.method == 'POST' and request.user.is_authenticated:
+    """Allow authenticated users to flag a suspicious listing."""
+    if request.method == 'POST':
         reason = sanitize_text(request.POST.get('reason', ''), 500)
         land   = get_object_or_404(Land, pk=pk)
         import logging

@@ -218,9 +218,9 @@
         </ul>
       </div>
       <div>
-        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Admin</h5>
+        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Administrator</h5>
         <ul class="space-y-2">
-          <li><a href="/admin/login/?next=/accounts/admin-portal/" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Admin Portal</a></li>
+          <li><a href="{% url 'accounts:admin_login' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Administrator Login</a></li>
         </ul>
       </div>
     </div>
@@ -231,7 +231,7 @@
         </div>
         <span class="text-sm font-semibold text-gray-700">LandReserve</span>
       </div>
-      <p class="text-xs text-gray-400">© 2026 LandReserve. <a href="{% url 'lands:help_center' %}" class="hover:text-gray-600 no-underline">Help Center</a> · <a href="{% url 'lands:land_list' %}" class="hover:text-gray-600 no-underline">Browse lands</a> · <a href="/admin/login/?next=/accounts/admin-portal/" class="hover:text-gray-600 no-underline">Admin Portal</a></p>
+      <p class="text-xs text-gray-400">© 2026 LandReserve. <a href="{% url 'lands:help_center' %}" class="hover:text-gray-600 no-underline">Help Center</a> · <a href="{% url 'lands:land_list' %}" class="hover:text-gray-600 no-underline">Browse lands</a></p>
     </div>
   </div>
 </footer>
@@ -256,9 +256,8 @@
         Continue with Google
       </a>
       <div class="flex items-center gap-3 text-xs text-gray-400"><div class="flex-1 h-px bg-gray-200"></div><span>or</span><div class="flex-1 h-px bg-gray-200"></div></div>
-      <form method="post" action="{% url 'login' %}">
+      <form method="post" action="{% url 'accounts:login' %}">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
         <div class="space-y-3">
           <input type="text" name="username" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Username" required autocomplete="username">
           <input type="password" name="password" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Password" required autocomplete="current-password">
@@ -275,7 +274,6 @@
       <div class="flex items-center gap-3 text-xs text-gray-400"><div class="flex-1 h-px bg-gray-200"></div><span>or</span><div class="flex-1 h-px bg-gray-200"></div></div>
       <form method="post" action="{% url 'accounts:register' %}">
         {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
         <input type="hidden" name="role" value="customer">
         <div class="space-y-3">
           <input type="text" name="username" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Username" required autocomplete="username">
