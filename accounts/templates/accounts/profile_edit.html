@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Account Settings — LandReserve{% endblock %}
+{% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
 <div class="container mx-auto px-4 py-8" style="max-width:1080px">
+  <h1 class="text-4xl font-extrabold text-white mb-8 drop-shadow-md">Account Settings</h1>
   <div class="flex flex-col lg:flex-row gap-10">
     <!-- LEFT SIDEBAR -->
-    <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-24 self-start">
-      <div class="text-center pb-6 border-b border-gray-200 mb-5">
+    <aside class="w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-24 self-start form-glass rounded-2xl p-6 border border-white/20 shadow-xl">
+      <div class="text-center pb-6 border-b border-white/10 mb-5">
+
         <div>
           {% if request.user.profile_picture %}
             <img src="{{ request.user.profile_picture.url }}" class="w-24 h-24 rounded-full object-cover border-4 border-gray-200 mx-auto" alt="Profile">
@@ -52,7 +55,7 @@
     </aside>
 
     <!-- RIGHT CONTENT AREA -->
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 form-glass rounded-2xl p-8 border border-white/20 shadow-xl">
 
       <!-- PERSONAL INFO SECTION -->
       <div class="profile-section block" id="section-personal">
@@ -143,7 +146,7 @@
         <h2 class="text-2xl font-bold text-gray-900 mb-1">Login &amp; Security</h2>
         <p class="text-gray-500 mb-6">Manage your account security and how you sign in.</p>
 
-        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="form-glass border border-white/20 rounded-xl overflow-hidden shadow-xl">
           <div class="p-0">
             <div class="flex items-center justify-between py-5 px-6 border-b border-gray-200">
               <div>

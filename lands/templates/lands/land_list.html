@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% load static %}
 {% block title %}Reserve Prime Land Across Tanzania | LandReserve{% endblock %}
 
@@ -7,17 +7,19 @@
   .landing-hero {
     background-image:
       linear-gradient(180deg, rgba(10, 35, 19, 0.94), rgba(9, 53, 32, 0.95) 42%, rgba(13, 71, 45, 0.88)),
-      radial-gradient(circle at 15% 15%, rgba(255,255,255,0.14), transparent 22%),
-      radial-gradient(circle at 85% 18%, rgba(132,204,22,0.16), transparent 24%);
+      radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.14), transparent 22%),
+      radial-gradient(circle at 85% 18%, rgba(132, 204, 22, 0.16), transparent 24%);
   }
+
   .landing-hero::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.12), transparent 20%),
-                radial-gradient(circle at 20% 70%, rgba(16,185,129,0.14), transparent 18%);
+    background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.12), transparent 20%),
+      radial-gradient(circle at 20% 70%, rgba(16, 185, 129, 0.14), transparent 18%);
     pointer-events: none;
   }
+
   .landing-hero .hero-backdrop {
     position: absolute;
     inset: 0;
@@ -25,40 +27,50 @@
     opacity: 0.22;
     filter: saturate(0.5) blur(0.8px);
   }
+
   .landing-hero .hero-inner {
     position: relative;
     z-index: 1;
   }
+
   .feature-card,
   .access-card,
   .system-step-card {
     border-radius: 1.75rem;
-    border: 1px solid rgba(212,232,218,0.18);
+    border: 1px solid rgba(212, 232, 218, 0.18);
     backdrop-filter: blur(18px);
   }
+
   .feature-card {
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
   }
+
   .system-step-card {
-    background: rgba(229,244,226,0.95);
-    border-color: rgba(26,92,56,0.18);
+    background: rgba(229, 244, 226, 0.95);
+    border-color: rgba(26, 92, 56, 0.18);
   }
+
   .system-step-card h3 {
     color: #0f2f1d;
   }
+
   .system-step-card p {
     color: #28432c;
   }
+
   .access-card {
-    background: rgba(15,47,29,0.65);
-    border-color: rgba(255,255,255,0.12);
+    background: rgba(15, 47, 29, 0.65);
+    border-color: rgba(255, 255, 255, 0.12);
   }
+
   .access-card h3 {
     color: #f8fafc;
   }
+
   .access-card li {
-    color: rgba(248,250,252,0.92);
+    color: rgba(248, 250, 252, 0.92);
   }
+
   .section-heading {
     letter-spacing: 0.22em;
     text-transform: uppercase;
@@ -66,15 +78,18 @@
     font-size: 0.82rem;
     font-weight: 700;
   }
+
   .featured-card {
     border-radius: 2rem;
     overflow: hidden;
   }
+
   .featured-card .featured-image-wrap {
     overflow: hidden;
     border-top-left-radius: 2rem;
     border-top-right-radius: 2rem;
   }
+
   .featured-card .featured-image-wrap img {
     border-top-left-radius: 2rem;
     border-top-right-radius: 2rem;
@@ -87,12 +102,22 @@
   <div class="hero-backdrop"></div>
   <div class="hero-inner container mx-auto px-4 py-24 sm:py-28 lg:py-32">
     <div class="mx-auto max-w-4xl text-center">
-      <p class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d4e8da] shadow-sm">Tanzania agricultural land reservations</p>
+      <p
+        class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d4e8da] shadow-sm">
+        Tanzania agricultural land reservations</p>
       <h1 class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">Reserve Prime Land Across Tanzania</h1>
-      <p class="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#d4e8da] sm:text-lg">Browse, book, and manage agricultural land across Tanzania with ease. Whether you’re a smallholder or a commercial farmer, find the right land today.</p>
-      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
-        <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center rounded-full bg-green px-8 py-4 text-sm font-semibold text-[#0f2618] shadow-xl shadow-[#1a5c38]/20 transition hover:bg-slate-100">Browse Listings</a>
-        <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/20">Create Account</a>
+      <p class="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#d4e8da] sm:text-lg">Browse, book, and manage
+        agricultural land across Tanzania with ease. Whether you’re a smallholder or a commercial farmer, find the right
+        land today.</p>
+      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-4">
+        <button type="button" onclick="openModal('login')"
+          class="group inline-flex items-center gap-2 rounded-xl border-2 border-white/40 bg-white/15 px-7 py-3.5 text-sm font-bold text-white shadow-md shadow-black/10 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/25 hover:border-white/60 hover:shadow-lg cursor-pointer">
+          <i class="bi bi-box-arrow-in-right text-base"></i> Sign in
+        </button>
+        <button type="button" onclick="openModal('register')"
+          class="group inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/8 px-7 py-3.5 text-sm font-semibold text-white/90 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/15 hover:text-white cursor-pointer">
+          <i class="bi bi-person-plus text-base"></i> Create Account
+        </button>
       </div>
     </div>
   </div>
@@ -107,28 +132,41 @@
     <div class="mx-auto max-w-6xl">
       <div class="text-center">
         <p class="section-heading">Built for Tanzania Land Reservations</p>
-        <h2 class="mt-4 text-3xl font-semibold text-white sm:text-4xl">A public landing page for visitors first, then a protected system for owners, customers, and admin after account creation.</h2>
+        <h2 class="mt-4 text-3xl font-semibold text-white sm:text-4xl">A public landing page for visitors first, then a
+          protected system for owners, customers, and admin after account creation.</h2>
       </div>
       <div class="mt-10 grid gap-6 lg:grid-cols-4">
         <div class="feature-card p-6">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🌿</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">
+            🌿</div>
           <h3 class="mt-5 text-xl font-semibold">Premium Locations</h3>
-          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Discover agricultural plots across Tanzania with verified land data and owner details.</p>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Discover agricultural plots across Tanzania with verified
+            land data and owner details.</p>
         </div>
         <div class="feature-card p-6">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">⚡</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">
+            ⚡</div>
           <h3 class="mt-5 text-xl font-semibold">Easy Booking</h3>
-          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Reserve land with clear request flows and faster owner approval once you sign in.</p>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Reserve land with clear request flows and faster owner
+            approval once you sign in.</p>
         </div>
         <div class="feature-card p-6">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🔒</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">
+            🔒</div>
           <h3 class="mt-5 text-xl font-semibold">Secure Reservations</h3>
-          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Your bookings are confirmed and managed securely with admin and owner oversight.</p>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Your bookings are confirmed and managed securely with
+            admin and owner oversight.</p>
         </div>
         <div class="feature-card p-6">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">🌾</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/30 text-[#1a5c38] text-xl">
+            🌾</div>
           <h3 class="mt-5 text-xl font-semibold">Streamlined Farmland</h3>
-          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Find quality farm land with the right details so you can plan the next growing season fast.</p>
+          <p class="mt-3 text-sm leading-6 text-[#d4e8da]/90">Find quality farm land with the right details so you can
+            plan the next growing season fast.</p>
         </div>
       </div>
     </div>
@@ -140,23 +178,33 @@
     <div class="mx-auto max-w-6xl">
       <div class="text-center">
         <p class="section-heading">How the System Works</p>
-        <h2 class="mt-4 text-3xl font-semibold text-[#0f2f1d] sm:text-4xl">Every protected action starts with account creation. After that, each role gets the right interface and permissions.</h2>
+        <h2 class="mt-4 text-3xl font-semibold text-[#0f2f1d] sm:text-4xl">Every protected action starts with account
+          creation. After that, each role gets the right interface and permissions.</h2>
       </div>
       <div class="mt-10 grid gap-6 lg:grid-cols-3">
         <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">01</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">
+            01</div>
           <h3 class="mt-6 text-xl font-semibold">Create an Account</h3>
-          <p class="mt-3 text-sm leading-7 text-[#334834]">Start from the landing page, create your account, then choose whether you are an owner or a customer.</p>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Start from the landing page, create your account, then choose
+            whether you are an owner or a customer.</p>
         </div>
         <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">02</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">
+            02</div>
           <h3 class="mt-6 text-xl font-semibold">Owners Submit Verified Land</h3>
-          <p class="mt-3 text-sm leading-7 text-[#334834]">Owners upload land details, government verification, images, and request approvals for admin review.</p>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Owners upload land details, government verification, images,
+            and request approvals for admin review.</p>
         </div>
         <div class="rounded-[2rem] border border-[#aac9a7]/50 bg-[#f6faf5] p-8 system-step-card">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">03</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4e8da]/35 text-[#0f2f1d] text-lg font-bold">
+            03</div>
           <h3 class="mt-6 text-xl font-semibold">Customers Book Farmland</h3>
-          <p class="mt-3 text-sm leading-7 text-[#334834]">Customers browse approved posts, request bookings, and track pending and approved farmland handover periods.</p>
+          <p class="mt-3 text-sm leading-7 text-[#334834]">Customers browse approved posts, request bookings, and track
+            pending and approved farmland handover periods.</p>
         </div>
       </div>
     </div>
@@ -168,11 +216,14 @@
     <div class="mx-auto max-w-6xl">
       <div class="text-center">
         <p class="section-heading">Role-Based Access</p>
-        <h2 class="mt-4 text-3xl font-semibold text-black sm:text-4xl">The system changes after sign-in so each user sees only the tools relevant to their responsibilities.</h2>
+        <h2 class="mt-4 text-3xl font-semibold text-black sm:text-4xl">The system changes after sign-in so each user
+          sees only the tools relevant to their responsibilities.</h2>
       </div>
       <div class="mt-10 grid gap-6 lg:grid-cols-3">
         <div class="access-card p-8">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🧑‍🌾</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">
+            🧑‍🌾</div>
           <h3 class="mt-6 text-xl font-semibold">For Land Owners</h3>
           <ul class="mt-5 space-y-3 text-sm leading-7">
             <li>Add land with specification and images.</li>
@@ -181,7 +232,9 @@
           </ul>
         </div>
         <div class="access-card p-8">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🧑‍🤝‍🧑</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">
+            🧑‍🤝‍🧑</div>
           <h3 class="mt-6 text-xl font-semibold">For Customers</h3>
           <ul class="mt-5 space-y-3 text-sm leading-7">
             <li>Browse approved farmland posts across Tanzania.</li>
@@ -190,7 +243,9 @@
           </ul>
         </div>
         <div class="access-card p-8">
-          <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">🛡️</div>
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#1a5c38]/15 bg-[#d4e8da]/35 text-[#1a5c38] text-xl">
+            🛡️</div>
           <h3 class="mt-6 text-xl font-semibold">For Administrators</h3>
           <ul class="mt-5 space-y-3 text-sm leading-7">
             <li>Review land submissions and verification status.</li>
@@ -209,28 +264,46 @@
       <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div class="max-w-3xl">
           <p class="section-heading">Featured Listings</p>
-          <h2 class="mt-3 text-3xl font-semibold text-white sm:text-4xl">Latest approved land listings available across Tanzania.</h2>
+          <h2 class="mt-3 text-3xl font-semibold text-white sm:text-4xl">Latest approved land listings available across
+            Tanzania.</h2>
         </div>
-        <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/15">Create an account</a>
       </div>
 
       <div class="mt-10 grid gap-6 lg:grid-cols-3">
         {% for land in featured_lands %}
-        <article class="featured-card border border-[#d4e8da]/70 bg-white p-6 shadow-lg transition duration-200 hover:border-[#1a5c38] hover:bg-[#f2faf2] hover:shadow-xl">
+        <article
+          class="featured-card border border-[#c2e0c0]/70 bg-[#f5fcf5] p-6 shadow-lg transition duration-200 hover:border-[#1a5c38] hover:bg-[#eef7ef] hover:shadow-xl">
           <div class="featured-image-wrap bg-[#134428]">
             {% if land.primary_image %}
-            <img src="{{ land.primary_image.url }}" alt="{{ land.title }}" class="h-56 w-full object-cover transition duration-500 hover:scale-105">
+            <img src="{{ land.primary_image.url }}" alt="{{ land.title }}"
+              class="h-56 w-full object-cover transition duration-500 hover:scale-105">
             {% else %}
             <div class="flex h-56 items-center justify-center bg-[#0f2f1d] text-[#d4e8da]">No image available</div>
             {% endif %}
           </div>
           <div class="mt-5">
-            <span class="inline-flex rounded-full bg-[#d4e8da]/30 px-3 py-1 text-xs font-semibold text-[#1a5c38]">{% if land.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}</span>
+            <div class="flex items-center justify-between mb-2">
+              {% if land.listing_type == 'rent' %}
+              <span class="inline-flex rounded-full bg-[#d4e8da]/30 px-3 py-1 text-xs font-semibold text-[#1a5c38]">For Rent</span>
+              {% else %}
+              <span class="inline-flex rounded-full bg-[#d4e8da]/30 px-3 py-1 text-xs font-semibold text-[#1a5c38]">For Sale</span>
+              {% endif %}
+              
+              {% if land.is_available %}
+              <span class="text-[10px] font-bold text-green-600 uppercase tracking-wider">Available Now</span>
+              {% else %}
+              <span class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+                Booked{% if land.get_active_reservation %} until {{ land.get_active_reservation.end_date|date:"M d" }}{% endif %}
+              </span>
+              {% endif %}
+            </div>
             <h3 class="mt-4 text-xl font-semibold text-[#0f2f1d]">{{ land.title }}</h3>
-            <p class="mt-3 text-sm leading-7 text-slate-700">{{ land.description|truncatechars:110 }}</p>
-            <div class="mt-5 flex flex-col gap-2 text-sm text-slate-700">
+            <p class="mt-3 text-sm leading-7 text-slate-900">{{ land.description|truncatechars:110 }}</p>
+            <div class="mt-5 flex flex-col gap-2 text-sm text-slate-800">
               <span><strong class="text-[#0f2f1d]">Location:</strong> {{ land.location }}</span>
-              {% if land.size %}<span><strong class="text-[#0f2f1d]">Size:</strong> {{ land.size }} {{ land.get_size_unit_display }}</span>{% endif %}
+              {% if land.size %}
+              <span><strong class="text-[#0f2f1d]">Size:</strong> {{ land.size }} {{ land.get_size_unit_display }}</span>
+              {% endif %}
               <span><strong class="text-[#0f2f1d]">Price:</strong> {{ land.price_display }}</span>
             </div>
           </div>
@@ -239,7 +312,8 @@
         <div class="rounded-[2rem] border border-white/10 bg-white/5 p-10 text-center text-slate-600">
           <p class="text-sm uppercase tracking-[0.3em] text-[#0f2f1d]">No listings available yet</p>
           <h3 class="mt-4 text-2xl font-semibold text-[#0f2f1d]">Check back soon!</h3>
-          <p class="mt-3 text-sm leading-7 text-slate-600">When owners publish their land, this section will show the latest opportunities across Tanzania.</p>
+          <p class="mt-3 text-sm leading-7 text-slate-600">When owners publish their land, this section will show the
+            latest opportunities across Tanzania.</p>
         </div>
         {% endfor %}
       </div>
@@ -249,12 +323,23 @@
 
 <section class="bg-[#1a5c38] py-16 text-slate-950">
   <div class="container mx-auto px-4">
-    <div class="mx-auto flex flex-col items-center justify-between gap-6 rounded-[2rem] bg-[#d4e8da]/20 border border-[#d4e8da]/30 p-10 sm:flex-row">
+    <div
+      class="mx-auto flex flex-col items-center justify-between gap-6 rounded-[2rem] bg-[#d4e8da]/20 border border-[#d4e8da]/30 p-10 sm:flex-row">
       <div class="max-w-3xl text-center sm:text-left">
         <h2 class="text-3xl font-semibold">Create Your Account Before Using the System</h2>
-        <p class="mt-3 text-sm leading-7 text-slate-900/80">Browse publicly from the landing page, then create an account to book land, submit listings, manage approvals, and access your role-based dashboard.</p>
+        <p class="mt-3 text-sm leading-7 text-slate-900/80">Browse publicly from the landing page, then create an
+          account to book land, submit listings, manage approvals, and access your role-based dashboard.</p>
       </div>
-      <a href="{% url 'accounts:register' %}" class="inline-flex items-center justify-center rounded-full bg-slate-950 px-8 py-4 text-sm font-semibold text-white transition hover:bg-slate-900">Browse Public Posts</a>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <button type="button" onclick="openModal('login')"
+          class="group inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-[#1a5c38] shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl cursor-pointer">
+          <i class="bi bi-box-arrow-in-right text-base"></i> Sign in
+        </button>
+        <button type="button" onclick="openModal('register')"
+          class="group inline-flex items-center gap-2 rounded-xl bg-slate-900 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-black/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-xl cursor-pointer">
+          <i class="bi bi-person-plus text-base"></i> Create Account
+        </button>
+      </div>
     </div>
   </div>
 </section>

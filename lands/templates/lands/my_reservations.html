@@ -61,7 +61,7 @@
           <div class="flex flex-wrap gap-4 text-sm text-gray-600">
             <span class="flex items-center gap-1"><i class="bi bi-calendar3"></i> {{ r.booking_date|date:"M d, Y" }}</span>
             {% if r.start_date and r.end_date %}<span class="flex items-center gap-1"><i class="bi bi-arrow-left-right"></i> {{ r.start_date|date:"M d" }} &rarr; {{ r.end_date|date:"M d, Y" }} ({{ r.duration_display }})</span>{% endif %}
-            <span class="font-semibold">${{ r.agreed_price|default:r.land.price }}</span>
+            <span class="font-semibold">Tsh {{ r.agreed_price|default:r.land.price }}</span>
             {% if r.payment_status == 'paid' %}<span class="text-green-600 flex items-center gap-1"><i class="bi bi-check-circle-fill"></i> Paid</span>{% endif %}
           </div>
         </div>

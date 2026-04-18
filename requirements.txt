@@ -22,7 +22,7 @@ django-allauth>=65.0           # Google OAuth & social login
 
 # Utilities
 python-dateutil>=2.8
-dj-database-url>=2.0           # PostgreSQL connection string
+dj-database-url>=2.0           # PostgreSQL connection strings
 psycopg2-binary>=2.9           # PostgreSQL driver (production)
 
 # Media storage (production)

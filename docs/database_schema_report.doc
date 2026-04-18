@@ -1,0 +1,260 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+    <meta charset="utf-8">
+    <title>Database Schema Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+        h2 { color: #e67e22; margin-top: 30px; border-left: 5px solid #e67e22; padding-left: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .meta { color: #7f8c8d; font-size: 0.9em; margin-bottom: 20px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .pk { background-color: #d1ecf1; color: #0c5460; }
+        .fk { background-color: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>Land Reservation System - Database Schema Report</h1>
+    <div class="meta">Generated on: 2026-04-18</div>
+
+    <h2>1. Executive Summary</h2>
+    <p>This document provides a comprehensive overview of the database architecture for the Land Reservation System. The schema is optimized for a marketplace environment supporting Land Owners, Customers, and Administrators. It handles property listings, Airbnb-style booking management, payment tracking, and internal communications.</p>
+
+    <h2>2. Core Modules</h2>
+    <ul>
+        <li><strong>User Management (Accounts):</strong> Custom user model with role-based access and KYC verification.</li>
+        <li><strong>Properties (Lands):</strong> Listings with gallery support, GPS location, and dynamic pricing models.</li>
+        <li><strong>Bookings (Reservations):</strong> Lifecycle management for land rentals and sales.</li>
+        <li><strong>Engagement:</strong> Wishlists, Messaging, and Notification tracking.</li>
+    </ul>
+
+    <h2>3. Table Definitions</h2>
+
+    <h3>3.1 Table: accounts_user</h3>
+    <p>Extended Django AbstractUser model to support distinct roles and verification status.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>id <span class="badge pk">PK</span></td>
+                <td>AutoField</td>
+                <td>Unique identifier for the user.</td>
+            </tr>
+            <tr>
+                <td>username</td>
+                <td>CharField(150)</td>
+                <td>Unique display name for login.</td>
+            </tr>
+            <tr>
+                <td>role</td>
+                <td>CharField(20)</td>
+                <td>customer, owner, or admin.</td>
+            </tr>
+            <tr>
+                <td>is_owner</td>
+                <td>BooleanField</td>
+                <td>Flag identifying land owners.</td>
+            </tr>
+            <tr>
+                <td>is_verified</td>
+                <td>BooleanField</td>
+                <td>Admin-approved verification status.</td>
+            </tr>
+            <tr>
+                <td>phone</td>
+                <td>CharField(20)</td>
+                <td>Primary contact number.</td>
+            </tr>
+            <tr>
+                <td>kyc_status</td>
+                <td>CharField(20)</td>
+                <td>Status of identity verification (Approved/Pending/etc).</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 Table: lands_land</h3>
+    <p>Stores detailed information about listed properties.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>id <span class="badge pk">PK</span></td>
+                <td>AutoField</td>
+                <td>Unique identifier for the property.</td>
+            </tr>
+            <tr>
+                <td>owner_id <span class="badge fk">FK</span></td>
+                <td>ForeignKey</td>
+                <td>Reference to accounts_user (owner).</td>
+            </tr>
+            <tr>
+                <td>title</td>
+                <td>CharField(200)</td>
+                <td>Name of the property listing.</td>
+            </tr>
+            <tr>
+                <td>listing_type</td>
+                <td>CharField(10)</td>
+                <td>Rent or Sale.</td>
+            </tr>
+            <tr>
+                <td>price</td>
+                <td>DecimalField</td>
+                <td>Base cost (monthly, annually, or total).</td>
+            </tr>
+            <tr>
+                <td>location</td>
+                <td>CharField(200)</td>
+                <td>Geographic location description.</td>
+            </tr>
+            <tr>
+                <td>size</td>
+                <td>DecimalField</td>
+                <td>Land dimensions in acres/hectares/sqm.</td>
+            </tr>
+            <tr>
+                <td>topography</td>
+                <td>CharField(20)</td>
+                <td>Terrain type (Flat, Sloped, Rolling, etc).</td>
+            </tr>
+            <tr>
+                <td>has_water</td>
+                <td>BooleanField</td>
+                <td>Access to water utility.</td>
+            </tr>
+            <tr>
+                <td>has_electricity</td>
+                <td>BooleanField</td>
+                <td>Access to power grid.</td>
+            </tr>
+            <tr>
+                <td>road_access</td>
+                <td>BooleanField</td>
+                <td>Physical accessibility by vehicle.</td>
+            </tr>
+            <tr>
+                <td>is_fenced</td>
+                <td>BooleanField</td>
+                <td>Property improvement: Fencing.</td>
+            </tr>
+            <tr>
+                <td>is_cleared</td>
+                <td>BooleanField</td>
+                <td>Property improvement: Site clearing.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.3 Table: lands_reservation</h3>
+    <p>Manages the reservation lifecycle, tracking dates, payments, and approvals.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>id <span class="badge pk">PK</span></td>
+                <td>AutoField</td>
+                <td>Unique identifier for the reservation.</td>
+            </tr>
+            <tr>
+                <td>land_id <span class="badge fk">FK</span></td>
+                <td>ForeignKey</td>
+                <td>Reference to lands_land.</td>
+            </tr>
+            <tr>
+                <td>customer_id <span class="badge fk">FK</span></td>
+                <td>ForeignKey</td>
+                <td>Reference to accounts_user (customer).</td>
+            </tr>
+            <tr>
+                <td>start_date</td>
+                <td>DateField</td>
+                <td>Start of the rental period.</td>
+            </tr>
+            <tr>
+                <td>end_date</td>
+                <td>DateField</td>
+                <td>End of the rental period.</td>
+            </tr>
+            <tr>
+                <td>status</td>
+                <td>CharField(20)</td>
+                <td>pending, approved, rejected, cancelled.</td>
+            </tr>
+            <tr>
+                <td>payment_status</td>
+                <td>CharField(20)</td>
+                <td>unpaid, paid, refunded.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>3.4 Table: lands_landimage</h3>
+    <p>Gallery system for land listings.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>land_id <span class="badge fk">FK</span></td>
+                <td>ForeignKey</td>
+                <td>Reference to the property.</td>
+            </tr>
+            <tr>
+                <td>image</td>
+                <td>ImageField</td>
+                <td>Uploaded image file path.</td>
+            </tr>
+            <tr>
+                <td>is_primary</td>
+                <td>BooleanField</td>
+                <td>Featured flag for search results.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. Relationship Map</h2>
+    <ul>
+        <li><strong>One-to-Many:</strong> User &rarr; Lands (One owner can list multiple properties).</li>
+        <li><strong>One-to-Many:</strong> Land &rarr; Reservations (One property can have multiple booking attempts).</li>
+        <li><strong>One-to-Many:</strong> Land &rarr; Images (Galleries).</li>
+        <li><strong>Many-to-Many (via junction):</strong> User &rarr; Land (Wishlist/Favorites).</li>
+    </ul>
+
+    <h2>5. Constraints, Indexes & Modern Auth</h2>
+    <p>The system uses database indexes and advanced logic to ensure fast performance and security:</p>
+    <ul>
+        <li><code>lands_reservation</code> (land, status, start_date, end_date) - Optimized for availability checks.</li>
+        <li><strong>Availability Logic:</strong> Automated calculation of "Next Available" slots based on active reservations.</li>
+        <li><strong>Auth System:</strong> Integrated Google OAuth 2.0 (Social Account) and Automated Password Recovery via Email.</li>
+        <li><code>lands_reservation</code> (customer_email)</li>
+        <li><code>lands_wishlist</code> (user, land) - Unique Constraint</li>
+    </ul>
+</body>
+</html>

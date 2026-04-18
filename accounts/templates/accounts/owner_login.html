@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Admin Login — Land Reserve{% endblock %}
+{% block title %}Owner Login — Land Reserve{% endblock %}
 {% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
 <div class="min-h-[calc(100vh-140px)] flex items-center justify-center px-4 py-12">
@@ -8,10 +8,10 @@
     <!-- Header -->
     <div class="text-center mb-8">
       <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-        <i class="bi bi-shield-lock-fill text-3xl text-white"></i>
+        <i class="bi bi-house-fill text-3xl text-white"></i>
       </div>
-      <h1 class="text-3xl font-bold text-white mb-2">Admin Access</h1>
-      <p class="text-white text-lg">Secure login for platform administrators</p>
+      <h1 class="text-3xl font-bold text-white mb-2">Land Owner Access</h1>
+      <p class="text-white text-lg">Secure login for land owners</p>
     </div>
 
     <!-- Login Form -->
@@ -26,7 +26,7 @@
           <input type="text" id="username" name="username" required
                  class="w-full px-4 py-3 rounded-lg text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent transition-all"
                  style="background-color: rgba(255, 255, 255, 0.95); border: 2px solid rgba(26, 92, 56, 0.6);"
-                 placeholder="Enter admin username">
+                 placeholder="Enter owner username">
         </div>
 
         <div>
@@ -36,12 +36,12 @@
           <input type="password" id="password" name="password" required
                  class="w-full px-4 py-3 rounded-lg text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-transparent transition-all"
                  style="background-color: rgba(255, 255, 255, 0.95); border: 2px solid rgba(26, 92, 56, 0.6);"
-                 placeholder="Enter admin password">
+                 placeholder="Enter owner password">
         </div>
 
         <button type="submit"
-                class="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-2 focus:ring-offset-slate-900 transition-all transform hover:scale-105">
-          <i class="bi bi-box-arrow-in-right mr-2"></i>Access Admin Panel
+                class="w-full bg-primary text-white font-semibold py-3 px-4 rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-2 focus:ring-offset-green-900 transition-all transform hover:scale-105">
+          <i class="bi bi-box-arrow-in-right mr-2"></i>Access Owner Dashboard
         </button>
       </form>
 
@@ -52,41 +52,6 @@
         </a>
       </div>
     </div>
-
-    <!-- Security Notice -->
-    <div class="mt-6 text-center">
-      <p class="text-xs text-white/80">
-        <i class="bi bi-info-circle mr-1"></i>
-        This portal is restricted to authorized administrators only.
-        All access attempts are logged and monitored.
-      </p>
-    </div>
   </div>
 </div>
-
-<style>
-/* Custom animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.backdrop-blur-lg {
-  backdrop-filter: blur(16px);
-}
-
-.focus\:ring-amber-400:focus {
-  --tw-ring-color: var(--primary-light);
-}
-
-.focus\:ring-offset-slate-900:focus {
-  --tw-ring-offset-color: #0f172a;
-}
-
-/* Placeholder colors for inputs */
-#username::placeholder,
-#password::placeholder {
-  color: rgba(107, 114, 128, 0.7);
-}
-</style>
 {% endblock %}

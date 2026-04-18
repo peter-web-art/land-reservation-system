@@ -1,5 +1,5 @@
 # Land Reserve
-
+## updated
 Land Reserve is a Django-based land reservation and sales platform with customer browsing, owner listing management, KYC workflows, reservations, wishlists, messaging, and an admin review flow.
 
 ## Current Project Layout
@@ -13,7 +13,7 @@ fixed-land-system/
 |-- media/               Runtime uploads in local development
 |-- static/              Active compiled CSS and shared static assets
 |-- templates/           Shared templates and error pages
-|-- .env.example         Environment variable template
+|-- .env.example         Environment variable templates
 |-- .gitignore
 |-- manage.py
 |-- README.md
@@ -29,9 +29,10 @@ Archived and unused material has been moved to:
 - Public land discovery with homepage search and detail pages
 - Rent and buy listing flows
 - Customer reservations, wishlist, and messaging
-- Owner dashboards, listing management, and reservation management
+- Owner dashboards, listing management with Terrain & Utility tracking
 - KYC submission and admin review
-- Google OAuth support through Django Allauth
+- Google OAuth 2.0 support through Django Allauth
+- Automated Password Recovery flow via email
 - Security hardening for redirects, CSRF handling, and rate limiting
 
 ## Tech Stack

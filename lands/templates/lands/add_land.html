@@ -1,35 +1,40 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}List Your Land — LandReserve{% endblock %}
+{% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
-    <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-[#1a5c38] no-underline">Dashboard</a>
-    <span>/</span>
-    <span>List New Land</span>
-  </div>
-  
-  <h1 class="text-3xl font-bold text-gray-900 mb-2">List Your Land</h1>
-  <p class="text-gray-500 mb-8">Complete all steps. Good photos and clear descriptions get significantly more bookings.</p>
+<div class="container mx-auto px-4 py-8 flex justify-center">
+  <div class="w-full max-w-3xl">
+    <div class="flex items-center gap-2 text-sm text-white/80 mb-4 bg-black/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
+      <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-white no-underline text-white font-medium">Dashboard</a>
+      <span>/</span>
+      <span class="text-white">Add new post</span>
+    </div>
 
-  <form method="post" enctype="multipart/form-data" id="addLandForm" class="max-w-3xl">
+    <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">Add your land</h1>
+    <p class="text-white/90 mb-8 font-medium drop-shadow-sm">Complete all steps. Good photos and clear descriptions get significantly more bookings.</p>
+
+
+    <form method="post" enctype="multipart/form-data" id="addLandForm" class="w-full">
     {% csrf_token %}
 
     <!-- 1. Basic Info -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
+        <span
+          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
         <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
       </div>
-      
+
       <div class="space-y-4">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.title.label }} <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.title.label }} <span
+              class="text-red-500">*</span></label>
           {{ form.title }}
           <div class="text-sm text-gray-500 mt-1">e.g. "Prime Agricultural Plot — Morogoro Road"</div>
           {% if form.title.errors %}<div class="text-red-500 text-sm mt-1">{{ form.title.errors }}</div>{% endif %}
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.listing_type.label }}</label>
@@ -41,31 +46,36 @@
             {{ form.land_use }}
           </div>
         </div>
-        
+
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span
+              class="text-red-500">*</span></label>
           {{ form.description }}
-          <div class="text-sm text-gray-500 mt-1">Soil type, access roads, water source, boundaries, improvements, and any restrictions</div>
+          <div class="text-sm text-gray-500 mt-1">Soil type, access roads, water source, boundaries, improvements, and
+            any restrictions</div>
           {% if form.description.errors %}<div class="text-red-500 text-sm mt-1">{{ form.description.errors }}</div>{% endif %}
         </div>
       </div>
     </div>
 
     <!-- 2. Location & Size -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">2</span>
+        <span
+          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">2</span>
         <h3 class="text-lg font-semibold text-gray-900">Location & Size</h3>
       </div>
-      
+
       <div class="space-y-4">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.location.label }} <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.location.label }} <span
+              class="text-red-500">*</span></label>
           {{ form.location }}
-          <div class="text-sm text-gray-500 mt-1">Region, District, area (e.g. "Arusha, Moshi Road, near Kilimanjaro Airport")</div>
+          <div class="text-sm text-gray-500 mt-1">Region, District, area (e.g. "Arusha, Moshi Road, near Kilimanjaro
+            Airport")</div>
           {% if form.location.errors %}<div class="text-red-500 text-sm mt-1">{{ form.location.errors }}</div>{% endif %}
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-geo-alt"></i> Latitude</label>
@@ -78,10 +88,11 @@
             <div class="text-sm text-gray-500 mt-1">GPS longitude (e.g. 39.2083)</div>
           </div>
         </div>
-        
+
         <div id="addLandMap" class="h-64 rounded-lg overflow-hidden mb-3"></div>
-        <div class="text-sm text-gray-500 mb-3"><i class="bi bi-info-circle"></i> Click on the map to set coordinates, or enter them manually.</div>
-        
+        <div class="text-sm text-gray-500 mb-3"><i class="bi bi-info-circle"></i> Click on the map to set coordinates,
+          or enter them manually.</div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.size.label }}</label>
@@ -96,19 +107,71 @@
       </div>
     </div>
 
-    <!-- 3. Pricing -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <!-- 3. Terrain & Utilities -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">3</span>
+        <h3 class="text-lg font-semibold text-gray-900">Terrain & Utilities</h3>
+      </div>
+
+      <div class="space-y-6">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
+          {{ form.topography }}
+          <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Utilities Availability</h4>
+            <div class="flex flex-col gap-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.has_water }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Water Access (Well/River/City)</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.has_electricity }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Electricity Grid Access</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.road_access }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Road/Vehicle Access</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Land Improvements</h4>
+            <div class="flex flex-col gap-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.is_fenced }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Is Partially/Fully Fenced</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.is_cleared }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Cleared for Construction/Farming</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Pricing -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+      <div class="flex items-center gap-3 mb-6">
+        <span
+          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
         <h3 class="text-lg font-semibold text-gray-900">Pricing</h3>
       </div>
-      
+
       <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price.label }} ($) <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price.label }} (Tsh) <span
+                class="text-red-500">*</span></label>
             {{ form.price }}
-            <div class="text-sm text-gray-500 mt-1" id="priceHint">Set your rate</div>
+            <div class="text-sm text-gray-500 mt-1" id="priceHint">Set your rate in Tanzanian shillings</div>
             {% if form.price.errors %}<div class="text-red-500 text-sm mt-1">{{ form.price.errors }}</div>{% endif %}
           </div>
           <div class="mb-4">
@@ -121,9 +184,10 @@
         <!-- Rental duration (shown only for rent) -->
         <div id="rentPricingSection">
           <div class="bg-green-50 p-4 rounded-lg mb-4">
-            <strong><i class="bi bi-tag"></i> Airbnb-style Discounts</strong> — offer discounts for longer bookings to attract more tenants and fill your land faster.
+            <strong><i class="bi bi-tag"></i> Airbnb-style Discounts</strong> — offer discounts for longer bookings to
+            attract more tenants and fill your land faster.
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.weekly_discount.label }} (%)</label>
@@ -138,12 +202,14 @@
               {% if form.monthly_discount.errors %}<div class="text-red-500 text-sm mt-1">{{ form.monthly_discount.errors }}</div>{% endif %}
             </div>
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.min_duration_days.label }} (days)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.min_duration_days.label }}
+                (days)</label>
               {{ form.min_duration_days }}
-              <div class="text-sm text-gray-500 mt-1">Shortest booking you'll accept (e.g. 30 for one month minimum)</div>
+              <div class="text-sm text-gray-500 mt-1">Shortest booking you'll accept (e.g. 30 for one month minimum)
+              </div>
             </div>
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.max_duration_days.label }}</label>
@@ -174,39 +240,46 @@
       </div>
     </div>
 
-    <!-- 4. Photo -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <!-- 5. Photo -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
+        <span
+          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
         <h3 class="text-lg font-semibold text-gray-900">Photos</h3>
       </div>
-      
+
       <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Cover Image <span class="text-red-500">*</span></label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cover Image <span
+            class="text-red-500">*</span></label>
         {{ form.image }}
-        <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP · max 5 MB · Listings with clear photos get <strong>3× more enquiries</strong></div>
+        <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP · max 5 MB · Listings with clear photos get <strong>3×
+            more enquiries</strong></div>
         {% if form.image.errors %}<div class="text-red-500 text-sm mt-1">{{ form.image.errors }}</div>{% endif %}
       </div>
 
       <div class="mt-4">
         <label class="block text-sm font-medium text-gray-700 mb-2">Additional Photos (Gallery)</label>
-        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#1a5c38] transition-colors cursor-pointer" id="galleryDropzone">
+        <div
+          class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#1a5c38] transition-colors cursor-pointer"
+          id="galleryDropzone">
           <i class="bi bi-cloud-upload text-4xl text-gray-400 mb-2"></i>
           <p class="text-gray-500 text-sm">Click to upload or drag and drop</p>
           <p class="text-gray-400 text-xs mt-1">Upload multiple images (max 10)</p>
         </div>
-        <input type="file" name="gallery_images" id="galleryInput" multiple accept="image/jpeg,image/png,image/webp" class="hidden">
+        <input type="file" name="gallery_images" id="galleryInput" multiple accept="image/jpeg,image/png,image/webp"
+          class="hidden">
         <div id="galleryPreview" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4"></div>
       </div>
     </div>
 
-    <!-- 5. Contact -->
+    <!-- 6. Contact -->
     <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
+        <span
+          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">6</span>
         <h3 class="text-lg font-semibold text-gray-900">Contact Details</h3>
       </div>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_phone.label }}</label>
@@ -220,167 +293,170 @@
     </div>
 
     <div class="flex gap-3">
-      <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
+      <button type="submit"
+        class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
         <i class="bi bi-check-lg"></i> Publish Listing
       </button>
-      <a href="{% url 'lands:owner_dashboard' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
+      <a href="{% url 'lands:owner_dashboard' %}"
+        class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
     </div>
   </form>
+  </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  var mapEl = document.getElementById('addLandMap');
-  if (!mapEl || typeof L === 'undefined') return;
-  var latInput = document.getElementById('id_latitude');
-  var lngInput = document.getElementById('id_longitude');
-  var initLat = parseFloat(latInput && latInput.value) || -6.5;
-  var initLng = parseFloat(lngInput && lngInput.value) || 35.5;
-  var initZoom = (latInput && latInput.value) ? 14 : 6;
-  var map = L.map('addLandMap').setView([initLat, initLng], initZoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OSM', maxZoom: 18
-  }).addTo(map);
-  var marker = null;
-  if (latInput && latInput.value && lngInput && lngInput.value) {
-    marker = L.marker([initLat, initLng]).addTo(map);
-  }
-  map.on('click', function(e) {
-    if (marker) map.removeLayer(marker);
-    marker = L.marker(e.latlng).addTo(map);
-    if (latInput) latInput.value = e.latlng.lat.toFixed(6);
-    if (lngInput) lngInput.value = e.latlng.lng.toFixed(6);
+  document.addEventListener('DOMContentLoaded', function () {
+    var mapEl = document.getElementById('addLandMap');
+    if (!mapEl || typeof L === 'undefined') return;
+    var latInput = document.getElementById('id_latitude');
+    var lngInput = document.getElementById('id_longitude');
+    var initLat = parseFloat(latInput && latInput.value) || -6.5;
+    var initLng = parseFloat(lngInput && lngInput.value) || 35.5;
+    var initZoom = (latInput && latInput.value) ? 14 : 6;
+    var map = L.map('addLandMap').setView([initLat, initLng], initZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OSM', maxZoom: 18
+    }).addTo(map);
+    var marker = null;
+    if (latInput && latInput.value && lngInput && lngInput.value) {
+      marker = L.marker([initLat, initLng]).addTo(map);
+    }
+    map.on('click', function (e) {
+      if (marker) map.removeLayer(marker);
+      marker = L.marker(e.latlng).addTo(map);
+      if (latInput) latInput.value = e.latlng.lat.toFixed(6);
+      if (lngInput) lngInput.value = e.latlng.lng.toFixed(6);
+    });
   });
-});
 </script>
 
 <script>
-const listingTypeEl = document.getElementById('id_listing_type');
-const priceUnitEl   = document.getElementById('id_price_unit');
-const rentSection   = document.getElementById('rentPricingSection');
-const priceEl       = document.getElementById('id_price');
-const wdEl          = document.getElementById('id_weekly_discount');
-const mdEl          = document.getElementById('id_monthly_discount');
-const priceHint     = document.getElementById('priceHint');
+  const listingTypeEl = document.getElementById('id_listing_type');
+  const priceUnitEl = document.getElementById('id_price_unit');
+  const rentSection = document.getElementById('rentPricingSection');
+  const priceEl = document.getElementById('id_price');
+  const wdEl = document.getElementById('id_weekly_discount');
+  const mdEl = document.getElementById('id_monthly_discount');
+  const priceHint = document.getElementById('priceHint');
 
-function updateFormState() {
-  const isRent = listingTypeEl && listingTypeEl.value === 'rent';
-  if (rentSection) rentSection.style.display = isRent ? '' : 'none';
-  if (!isRent && priceUnitEl) priceUnitEl.value = 'total';
-  if (priceHint) priceHint.textContent = isRent ? 'Monthly/yearly rate customers will pay' : 'Total asking price for this land';
-  updatePreview();
-}
-
-function updatePreview() {
-  const price = parseFloat(priceEl ? priceEl.value : 0) || 0;
-  const unit  = priceUnitEl ? priceUnitEl.value : 'month';
-  const wd    = parseFloat(wdEl ? wdEl.value : 0) || 0;
-  const md    = parseFloat(mdEl ? mdEl.value : 0) || 0;
-  if (!price) { ['prev1mo','prev3mo','prev1yr'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent='—'; }); return; }
-
-  let ppd = unit === 'month' ? price/30 : unit === 'year' ? price/365 : price/30;
-  function calc(days) {
-    const base = ppd * days;
-    const weeks = days / 7;
-    let disc = 0;
-    if (weeks >= 4 && md > 0) disc = md/100;
-    else if (weeks >= 1 && wd > 0) disc = wd/100;
-    return (base * (1-disc)).toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0});
+  function updateFormState() {
+    const isRent = listingTypeEl && listingTypeEl.value === 'rent';
+    if (rentSection) rentSection.style.display = isRent ? '' : 'none';
+    if (!isRent && priceUnitEl) priceUnitEl.value = 'total';
+    if (priceHint) priceHint.textContent = isRent ? 'Monthly/yearly rate customers will pay' : 'Total asking price for this land';
+    updatePreview();
   }
-  const p1 = document.getElementById('prev1mo'); if(p1) p1.textContent = '$'+calc(30);
-  const p3 = document.getElementById('prev3mo'); if(p3) p3.textContent = '$'+calc(90);
-  const p1y= document.getElementById('prev1yr'); if(p1y) p1y.textContent = '$'+calc(365);
-}
 
-if (listingTypeEl) listingTypeEl.addEventListener('change', updateFormState);
-if (priceEl)       priceEl.addEventListener('input', updatePreview);
-if (priceUnitEl)   priceUnitEl.addEventListener('change', updatePreview);
-if (wdEl)          wdEl.addEventListener('input', updatePreview);
-if (mdEl)          mdEl.addEventListener('input', updatePreview);
-updateFormState();
+  function updatePreview() {
+    const price = parseFloat(priceEl ? priceEl.value : 0) || 0;
+    const unit = priceUnitEl ? priceUnitEl.value : 'month';
+    const wd = parseFloat(wdEl ? wdEl.value : 0) || 0;
+    const md = parseFloat(mdEl ? mdEl.value : 0) || 0;
+    if (!price) { ['prev1mo', 'prev3mo', 'prev1yr'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; }); return; }
+
+    let ppd = unit === 'month' ? price / 30 : unit === 'year' ? price / 365 : price / 30;
+    function calc(days) {
+      const base = ppd * days;
+      const weeks = days / 7;
+      let disc = 0;
+      if (weeks >= 4 && md > 0) disc = md / 100;
+      else if (weeks >= 1 && wd > 0) disc = wd / 100;
+      return (base * (1 - disc)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+    const p1 = document.getElementById('prev1mo'); if (p1) p1.textContent = 'Tsh ' + calc(30);
+    const p3 = document.getElementById('prev3mo'); if (p3) p3.textContent = 'Tsh ' + calc(90);
+    const p1y = document.getElementById('prev1yr'); if (p1y) p1y.textContent = 'Tsh ' + calc(365);
+  }
+
+  if (listingTypeEl) listingTypeEl.addEventListener('change', updateFormState);
+  if (priceEl) priceEl.addEventListener('input', updatePreview);
+  if (priceUnitEl) priceUnitEl.addEventListener('change', updatePreview);
+  if (wdEl) wdEl.addEventListener('input', updatePreview);
+  if (mdEl) mdEl.addEventListener('input', updatePreview);
+  updateFormState();
 </script>
 
 <script>
-// Gallery image upload handling
-const galleryDropzone = document.getElementById('galleryDropzone');
-const galleryInput = document.getElementById('galleryInput');
-const galleryPreview = document.getElementById('galleryPreview');
-let galleryFiles = [];
+  // Gallery image upload handling
+  const galleryDropzone = document.getElementById('galleryDropzone');
+  const galleryInput = document.getElementById('galleryInput');
+  const galleryPreview = document.getElementById('galleryPreview');
+  let galleryFiles = [];
 
-if (galleryDropzone && galleryInput) {
-  galleryDropzone.addEventListener('click', () => galleryInput.click());
-  
-  galleryInput.addEventListener('change', function(e) {
-    handleFiles(this.files);
-  });
+  if (galleryDropzone && galleryInput) {
+    galleryDropzone.addEventListener('click', () => galleryInput.click());
 
-  galleryDropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    galleryDropzone.classList.add('border-[#1a5c38]', 'bg-green-50');
-  });
+    galleryInput.addEventListener('change', function (e) {
+      handleFiles(this.files);
+    });
 
-  galleryDropzone.addEventListener('dragleave', () => {
-    galleryDropzone.classList.remove('border-[#1a5c38]', 'bg-green-50');
-  });
+    galleryDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      galleryDropzone.classList.add('border-[#1a5c38]', 'bg-green-50');
+    });
 
-  galleryDropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    galleryDropzone.classList.remove('border-[#1a5c38]', 'bg-green-50');
-    handleFiles(e.dataTransfer.files);
-  });
-}
+    galleryDropzone.addEventListener('dragleave', () => {
+      galleryDropzone.classList.remove('border-[#1a5c38]', 'bg-green-50');
+    });
 
-function handleFiles(files) {
-  const maxFiles = 10;
-  const maxSize = 5 * 1024 * 1024;
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    galleryDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      galleryDropzone.classList.remove('border-[#1a5c38]', 'bg-green-50');
+      handleFiles(e.dataTransfer.files);
+    });
+  }
 
-  Array.from(files).forEach(file => {
-    if (galleryFiles.length >= maxFiles) {
-      alert('Maximum 10 images allowed');
-      return;
-    }
-    if (!allowedTypes.includes(file.type)) {
-      alert('Only JPG, PNG, WebP allowed');
-      return;
-    }
-    if (file.size > maxSize) {
-      alert(file.name + ' is too large (max 5MB)');
-      return;
-    }
-    galleryFiles.push(file);
-  });
-  updateGalleryPreview();
-}
+  function handleFiles(files) {
+    const maxFiles = 10;
+    const maxSize = 5 * 1024 * 1024;
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
-function updateGalleryPreview() {
-  galleryPreview.innerHTML = '';
-  galleryFiles.forEach((file, index) => {
-    const div = document.createElement('div');
-    div.className = 'relative group';
-    div.innerHTML = `
+    Array.from(files).forEach(file => {
+      if (galleryFiles.length >= maxFiles) {
+        alert('Maximum 10 images allowed');
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only JPG, PNG, WebP allowed');
+        return;
+      }
+      if (file.size > maxSize) {
+        alert(file.name + ' is too large (max 5MB)');
+        return;
+      }
+      galleryFiles.push(file);
+    });
+    updateGalleryPreview();
+  }
+
+  function updateGalleryPreview() {
+    galleryPreview.innerHTML = '';
+    galleryFiles.forEach((file, index) => {
+      const div = document.createElement('div');
+      div.className = 'relative group';
+      div.innerHTML = `
       <img src="${URL.createObjectURL(file)}" class="w-full h-24 object-cover rounded-lg">
       <button type="button" onclick="removeGalleryImage(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600">&times;</button>
     `;
-    galleryPreview.appendChild(div);
-  });
-}
+      galleryPreview.appendChild(div);
+    });
+  }
 
-function removeGalleryImage(index) {
-  galleryFiles.splice(index, 1);
-  updateGalleryPreview();
-}
+  function removeGalleryImage(index) {
+    galleryFiles.splice(index, 1);
+    updateGalleryPreview();
+  }
 
-// Add gallery files to form on submit
-const form = document.getElementById('addLandForm');
-if (form) {
-  form.addEventListener('submit', function(e) {
-    if (galleryFiles.length > 0) {
-      const dataTransfer = new DataTransfer();
-      galleryFiles.forEach(file => dataTransfer.items.add(file));
-      galleryInput.files = dataTransfer.files;
-    }
-  });
-}
+  // Add gallery files to form on submit
+  const form = document.getElementById('addLandForm');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      if (galleryFiles.length > 0) {
+        const dataTransfer = new DataTransfer();
+        galleryFiles.forEach(file => dataTransfer.items.add(file));
+        galleryInput.files = dataTransfer.files;
+      }
+    });
+  }
 </script>
 {% endblock %}

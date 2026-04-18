@@ -13,7 +13,7 @@ from django.core.paginator import Paginator
 import bleach, re
 from datetime import date as date_cls, timedelta
 
-from .models import Land, Reservation, Message, Wishlist, LandImage
+from .models import Land, Reservation, Message, Wishlist, LandImage, Notification
 import json
 
 User = get_user_model()
@@ -104,6 +104,8 @@ class LandForm(forms.ModelForm):
         fields = ['title', 'description', 'price', 'price_unit', 'location',
                   'latitude', 'longitude',
                   'listing_type', 'size', 'size_unit', 'land_use',
+                  'topography', 'has_water', 'has_electricity', 'road_access',
+                  'is_fenced', 'is_cleared',
                   'weekly_discount', 'monthly_discount',
                   'min_duration_days', 'max_duration_days',
                   'contact_phone', 'contact_email', 'image']
@@ -115,7 +117,7 @@ class LandForm(forms.ModelForm):
             self.fields['contact_phone'].initial = getattr(owner, 'phone', '')
             self.fields['contact_email'].initial = getattr(owner, 'email', '')
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
         self.fields['price'].widget.attrs['placeholder']            = 'e.g. 150000'
         self.fields['weekly_discount'].widget.attrs['placeholder']  = 'e.g. 10  (means 10% off)'
         self.fields['monthly_discount'].widget.attrs['placeholder'] = 'e.g. 20  (means 20% off)'
@@ -197,9 +199,11 @@ class ReservationForm(forms.ModelForm):
         self.land = kwargs.pop('land', None)
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'
+            })
         self.fields['notes'].widget = forms.Textarea(attrs={
-            'rows': 2, 'class': 'form-control',
+            'rows': 2, 'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors',
             'placeholder': 'Any specific requirements, access instructions, or notes…'})
         self.fields['payment_reference'].widget.attrs['placeholder'] = 'e.g. M-Pesa: ABC123XY'
         today_str = date_cls.today().isoformat()
@@ -219,7 +223,8 @@ class ReservationForm(forms.ModelForm):
             self.fields['customer_email'].widget  = forms.HiddenInput()
 
     def clean_customer_phone(self):
-        p = self.cleaned_data.get('customer_phone', '').strip()
+        p = self.cleaned_data.get('customer_phone') or ''
+        p = p.strip()
         if p and not re.match(r'^[\d\+\s\-\(\)]{6,20}$', p):
             raise forms.ValidationError('Enter a valid phone number.')
         return p
@@ -634,11 +639,19 @@ def customer_dashboard(request):
     recent    = qs.select_related('land').order_by('-booking_date')[:5]
     wishlist_count = Wishlist.objects.filter(user=request.user).count()
     wishlist_items = Wishlist.objects.filter(user=request.user).select_related('land', 'land__owner')[:4]
+    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')[:4]
+    active_reservations = qs.filter(status__in=['pending', 'approved']).select_related('land', 'land__owner').order_by('-booking_date')[:6]
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+    latest_notifications = Notification.objects.filter(user=request.user).select_related('user')[:3]
     return render(request, 'lands/customer_dashboard.html', {
         'total': total, 'pending': pending,
         'approved': approved, 'cancelled': cancelled,
         'recent_reservations': recent,
+        'active_reservations': active_reservations,
+        'featured_lands': featured_lands,
         'wishlist_count': wishlist_count, 'wishlist_items': wishlist_items,
+        'unread_notifications': unread_notifications,
+        'latest_notifications': latest_notifications,
     })
 
 

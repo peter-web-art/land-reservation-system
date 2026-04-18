@@ -1,24 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Edit {{ land.title }} — LandReserve{% endblock %}
+{% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-  <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
-    <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-[#1a5c38] no-underline">Dashboard</a>
-    <span>/</span>
-    <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-[#1a5c38] no-underline">{{ land.title|truncatechars:20 }}</a>
-    <span>/</span>
-    <span>Edit</span>
-  </div>
-  
-  <h1 class="text-3xl font-bold text-gray-900 mb-2">Edit Listing</h1>
-  <p class="text-gray-500 mb-8">Changes are live immediately after saving.</p>
+<div class="container mx-auto px-4 py-8 flex justify-center">
+  <div class="w-full max-w-3xl">
+    <div class="flex items-center gap-2 text-sm text-white/80 mb-4 bg-black/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
+      <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-white no-underline text-white font-medium">Dashboard</a>
+      <span>/</span>
+      <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-white no-underline text-white">{{ land.title|truncatechars:20 }}</a>
+      <span>/</span>
+      <span class="text-white">Edit</span>
+    </div>
+    
+    <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">Edit Listing</h1>
+    <p class="text-white/90 mb-8 font-medium drop-shadow-sm">Changes are live immediately after saving.</p>
 
-  <form method="post" enctype="multipart/form-data" class="max-w-3xl">
+    <form method="post" enctype="multipart/form-data" class="w-full">
     {% csrf_token %}
 
     <!-- Basic Info -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
         <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
@@ -48,7 +50,7 @@
     </div>
 
     <!-- Location & Size -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">2</span>
         <h3 class="text-lg font-semibold text-gray-900">Location & Size</h3>
@@ -84,16 +86,66 @@
       </div>
     </div>
 
-    <!-- Pricing -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <!-- 3. Terrain & Utilities -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">3</span>
+        <h3 class="text-lg font-semibold text-gray-900">Terrain & Utilities</h3>
+      </div>
+
+      <div class="space-y-6">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
+          {{ form.topography }}
+          <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Utilities Availability</h4>
+            <div class="flex flex-col gap-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.has_water }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Water Access (Well/River/City)</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.has_electricity }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Electricity Grid Access</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.road_access }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Road/Vehicle Access</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Land Improvements</h4>
+            <div class="flex flex-col gap-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.is_fenced }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Is Partially/Fully Fenced</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                {{ form.is_cleared }}
+                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Cleared for Construction/Farming</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Pricing -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
         <h3 class="text-lg font-semibold text-gray-900">Pricing</h3>
       </div>
       <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price.label }} ($) <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.price.label }} (Tsh) <span class="text-red-500">*</span></label>
             {{ form.price }}
             {% if form.price.errors %}<div class="text-red-500 text-sm mt-1">{{ form.price.errors }}</div>{% endif %}
           </div>
@@ -132,10 +184,10 @@
       </div>
     </div>
 
-    <!-- Photo -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <!-- 5. Photo -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
         <h3 class="text-lg font-semibold text-gray-900">Photo</h3>
       </div>
       <div class="space-y-4">
@@ -153,10 +205,10 @@
       </div>
     </div>
 
-    <!-- Contact -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <!-- 6. Contact -->
+    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
-        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
+        <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">6</span>
         <h3 class="text-lg font-semibold text-gray-900">Contact Details</h3>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,6 +233,7 @@
       </a>
     </div>
   </form>
+  </div>
 </div>
 
 <script>

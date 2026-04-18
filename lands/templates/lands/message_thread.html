@@ -107,7 +107,7 @@
                 {% endif %}
               </div>
               <div class="mt-2">
-                <span class="text-lg font-bold text-[#1a5c38]">${{ msg.land.price|floatformat:0 }}</span>
+                <span class="text-lg font-bold text-[#1a5c38]">Tsh {{ msg.land.price|floatformat:0 }}</span>
                 {% if msg.land.price_unit and msg.land.price_unit != 'total' %}
                   <span class="text-sm text-gray-500">/{{ msg.land.get_price_unit_display }}</span>
                 {% endif %}

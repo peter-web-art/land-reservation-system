@@ -71,6 +71,19 @@
           <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-check-circle"></i> Available</span>
           {% else %}
           <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Reserved</span>
+          {% with active_res=land.get_active_reservation %}
+          {% if active_res %}
+          <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p class="text-sm text-amber-800 m-0">
+              <i class="bi bi-calendar-x"></i> 
+              Booked until <strong>{{ active_res.end_date|date:"M d, Y" }}</strong>.
+            </p>
+            <p class="text-xs text-amber-600 mt-1 m-0">
+              You can start your booking from <strong>{{ land.next_available_date|date:"M d, Y" }}</strong>.
+            </p>
+          </div>
+          {% endif %}
+          {% endwith %}
           {% endif %}
         </span>
       </div>
@@ -116,12 +129,45 @@
             <i class="bi bi-flower1 text-gray-400"></i>
             <span>{{ land.get_land_use_display }}</span>
           </div>
-          {% if land.size %}
           <div class="flex items-center gap-2 text-gray-700">
             <i class="bi bi-rulers text-gray-400"></i>
-            <span>{{ land.size }} {{ land.get_size_unit_display }}</span>
+            <span>{{ land.size|default:"—" }} {{ land.get_size_unit_display }}</span>
+          </div>
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-mountain text-gray-400"></i>
+            <span>{{ land.get_topography_display|default:"Flat" }} terrain</span>
+          </div>
+          {% if land.has_water %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-droplet text-gray-400"></i>
+            <span>Water access</span>
           </div>
           {% endif %}
+          {% if land.has_electricity %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-lightning-charge text-gray-400"></i>
+            <span>Electricity grid</span>
+          </div>
+          {% endif %}
+          {% if land.road_access %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-truck text-gray-400"></i>
+            <span>Road access</span>
+          </div>
+          {% endif %}
+          {% if land.is_fenced %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-border-outer text-gray-400"></i>
+            <span>Fully/Partially fenced</span>
+          </div>
+          {% endif %}
+          {% if land.is_cleared %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-tree text-gray-400"></i>
+            <span>Cleared land</span>
+          </div>
+          {% endif %}
+
           {% if land.owner.is_verified %}
           <div class="flex items-center gap-2 text-gray-700">
             <i class="bi bi-shield-check text-gray-400"></i>

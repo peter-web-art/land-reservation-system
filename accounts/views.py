@@ -68,7 +68,7 @@ class UserRegistrationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
 
     def clean_username(self):
         val = self.cleaned_data.get('username', '')
@@ -121,7 +121,7 @@ class ProfileEditForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs.update({'class': 'form-control'})
+            field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
 
     def clean_bio(self):        return sanitize(self.cleaned_data.get('bio'))
     def clean_first_name(self): return sanitize(self.cleaned_data.get('first_name'), 30)
@@ -152,21 +152,17 @@ def login_view(request):
 
     username = sanitize(request.POST.get('username', ''), 150)
     password = request.POST.get('password', '')
+
     user = authenticate(request, username=username, password=password)
 
     if user is None:
         messages.error(request, 'Invalid username or password. Please try again.')
         return auth_modal_redirect(request, 'login')
 
-    if user.is_staff or user.role == User.ROLE_ADMIN:
-        messages.error(request, 'Admin accounts must sign in through the admin login page.')
-        return auth_modal_redirect(request, 'login')
-
     auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
     messages.success(request, f'Welcome back, {user.username}.')
 
-    # Always redirect based on user role, not arbitrary next_url
-    # This prevents redirect loops and ensures users go to appropriate dashboards
+    # Auto-redirect based on user's stored role — no role selection needed
     from .decorators import role_based_redirect
     return redirect(role_based_redirect(user))
 
@@ -179,13 +175,9 @@ def register(request):
     form = UserRegistrationForm(request.POST, request.FILES)
     if form.is_valid():
         user = form.save()
-        auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
-        messages.success(request, f'Welcome, {user.username}! Your account has been created.')
-        
-        # Always redirect based on user role, not arbitrary next_url
-        # This prevents redirect loops and ensures users go to appropriate dashboards
-        from .decorators import role_based_redirect
-        return redirect(role_based_redirect(user))
+        messages.success(request, f'Account created successfully! Please log in to continue.')
+        # Redirect to login — do NOT auto-login after registration
+        return auth_modal_redirect(request, 'login')
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         errors = {f: e.as_text() for f, e in form.errors.items()}
@@ -512,3 +504,10 @@ def admin_login(request):
             messages.error(request, 'Invalid admin credentials or insufficient permissions.')
 
     return render(request, 'accounts/admin_login.html')
+
+
+def owner_login(request):
+    """Redirect to unified login — separate owner login is no longer needed."""
+    if request.user.is_authenticated and (request.user.is_owner or request.user.role == User.ROLE_OWNER):
+        return redirect('lands:owner_dashboard')
+    return auth_modal_redirect(request, 'login')

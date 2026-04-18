@@ -36,10 +36,8 @@ def global_context(request):
             current_mode = 'admin'
             can_switch_mode = False
         elif is_owner_capable:
-            current_mode = request.session.get('current_mode', 'customer')
-            if current_mode not in ('customer', 'owner'):
-                current_mode = 'customer'
-            can_switch_mode = True
+            current_mode = 'owner'  # Always owner mode for owner accounts
+            can_switch_mode = False  # Disable switching
         else:
             current_mode = 'customer'
             can_switch_mode = False

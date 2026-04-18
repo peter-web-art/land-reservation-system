@@ -1,12 +1,14 @@
-{% load static %}
+{% load static socialaccount %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}LandReserve - Find Your Ideal Land{% endblock %}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
@@ -48,338 +50,485 @@
       --reserved: #f59e0b;
       --sold: #dc2626;
     }
+
     .highlighted {
       border-color: var(--primary) !important;
       box-shadow: 0 0 0 2px rgba(26, 92, 56, 0.15);
     }
-    .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    #authModal.show { display: flex !important; }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    #authModal.show {
+      display: flex !important;
+    }
+
     .nav-search-shell {
       box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
     }
-    .nav-search-segment + .nav-search-segment {
+
+    .nav-search-segment+.nav-search-segment {
       border-left: 1px solid #e5e7eb;
     }
+
     @media (max-width: 767px) {
-      .nav-search-segment + .nav-search-segment {
+      .nav-search-segment+.nav-search-segment {
         border-left: none;
       }
+    }
+    .bg-form-premium {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2070&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+    }
+
+    .form-glass {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
   </style>
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
   {% block extra_css %}{% endblock %}
 </head>
-<body class="flex flex-col min-h-screen bg-gray-50 font-sans">
-<nav class="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 md:px-5 shadow-sm">
-  <a class="flex items-center gap-2 no-underline shrink-0" href="{% url 'lands:land_list' %}">
-    <div class="w-8 h-8 bg-[#1a5c38] rounded-lg flex items-center justify-center">
-      <svg viewBox="0 0 20 20" fill="none" class="w-5 h-5">
-        <path d="M3 14 L10 4 L17 14 Z" fill="white" fill-opacity="0.9"/>
-        <rect x="7" y="10" width="6" height="4" fill="white" fill-opacity="0.7" rx="0.5"/>
-      </svg>
-    </div>
-    <span class="text-lg font-bold text-gray-800 tracking-tight">Land<span class="text-[#1a5c38]">Reserve</span></span>
-  </a>
 
-  {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
-  <div class="hidden lg:flex flex-1 justify-center px-6">
-    <div class="nav-search-shell flex max-w-2xl items-center rounded-full border border-gray-200 bg-white p-1.5">
-      <button type="button" class="nav-search-segment flex min-w-[160px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50" onclick="document.getElementById('navSearchWhere')?.focus()">
-        <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Where</span>
-        <input type="text" id="navSearchWhere" class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400" placeholder="Search location" value="{{ request.GET.location|default:'' }}" autocomplete="off">
-      </button>
-      <label class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
-        <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Intent</span>
-        <select id="navSearchType" class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none">
-          <option value="" {% if not request.GET.type %}selected{% endif %}>All stays</option>
-          <option value="rent" {% if request.GET.type == 'rent' %}selected{% endif %}>Rent land</option>
-          <option value="sale" {% if request.GET.type == 'sale' %}selected{% endif %}>Buy land</option>
-        </select>
-      </label>
-      <label class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
-        <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Budget</span>
-        <input type="number" id="navSearchBudget" class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400" placeholder="Max price" value="{{ request.GET.max_price|default:'' }}" min="0">
-      </label>
-      <button type="button" id="navSearchButton" class="ml-2 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#d2415a] text-white transition-colors hover:bg-[#b9344b]">
-        <i class="bi bi-search text-base"></i>
-      </button>
-    </div>
-  </div>
-  {% endif %}
+<body class="flex flex-col min-h-screen font-sans {% block body_class %}bg-gray-50{% endblock %}">
+  <nav
+    class="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 md:px-5 shadow-sm">
+    <a class="flex items-center gap-2 no-underline shrink-0" href="{% url 'lands:land_list' %}">
+      <div class="w-8 h-8 bg-[#1a5c38] rounded-lg flex items-center justify-center">
+        <svg viewBox="0 0 20 20" fill="none" class="w-5 h-5">
+          <path d="M3 14 L10 4 L17 14 Z" fill="white" fill-opacity="0.9" />
+          <rect x="7" y="10" width="6" height="4" fill="white" fill-opacity="0.7" rx="0.5" />
+        </svg>
+      </div>
+      <span class="text-lg font-bold text-gray-800 tracking-tight">Land<span
+          class="text-[#1a5c38]">Reserve</span></span>
+    </a>
 
-  <div class="flex items-center gap-2 md:gap-3 shrink-0">
-    {% if user.is_authenticated %}
+    {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    <div class="hidden lg:flex flex-1 justify-center px-6">
+      <div class="nav-search-shell flex max-w-2xl items-center rounded-full border border-gray-200 bg-white p-1.5">
+        <button type="button"
+          class="nav-search-segment flex min-w-[160px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50"
+          onclick="document.getElementById('navSearchWhere')?.focus()">
+          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Where</span>
+          <input type="text" id="navSearchWhere"
+            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400"
+            placeholder="Search location" value="{{ request.GET.location|default:'' }}" autocomplete="off">
+        </button>
+        <label
+          class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Intent</span>
+          <select id="navSearchType"
+            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none">
+            <option value="" {% if not request.GET.type %}selected{% endif %}>All stays</option>
+            <option value="rent" {% if request.GET.type == 'rent' %}selected{% endif %}>Rent land</option>
+            <option value="sale" {% if request.GET.type == 'sale' %}selected{% endif %}>Buy land</option>
+          </select>
+        </label>
+        <label
+          class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Budget</span>
+          <input type="number" id="navSearchBudget"
+            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400"
+            placeholder="Max price" value="{{ request.GET.max_price|default:'' }}" min="0">
+        </label>
+        <button type="button" id="navSearchButton"
+          class="ml-2 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#d2415a] text-white transition-colors hover:bg-[#b9344b]">
+          <i class="bi bi-search text-base"></i>
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="flex items-center gap-2 md:gap-3 shrink-0">
+      {% if user.is_authenticated %}
       {% if unread_messages %}
-      <a href="{% url 'lands:inbox' %}" class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
+      <a href="{% url 'lands:inbox' %}"
+        class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
         <i class="bi bi-chat-dots text-xl"></i>
-        <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{ unread_messages }}</span>
+        <span
+          class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{
+          unread_messages }}</span>
       </a>
       {% endif %}
 
       {% if can_switch_mode %}
       <form method="post" action="{% url 'lands:switch_mode' %}" class="hidden md:block">
         {% csrf_token %}
-        <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-full text-xs font-medium text-gray-600 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">
-          {% if current_mode == 'owner' %}<i class="bi bi-person"></i> Customer{% else %}<i class="bi bi-house"></i> Owner{% endif %}
+        <button type="submit"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-full text-xs font-medium text-gray-600 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">
+          {% if current_mode == 'owner' %}<i class="bi bi-person"></i> Customer{% else %}<i class="bi bi-house"></i>
+          Owner{% endif %}
         </button>
       </form>
       {% endif %}
 
-      <a class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline" href="{% url 'lands:add_land' %}">
-        <i class="bi bi-plus-lg mr-1"></i>List Land
+      {% if user.role == 'owner' or user.is_owner %}
+      <a class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline"
+        href="{% url 'lands:add_land' %}">
+        <i class="bi bi-plus-lg mr-1"></i>Add new post
       </a>
+      {% endif %}
+
+      <div class="hidden md:flex flex-col text-right mr-2">
+        <span class="text-sm text-gray-600">Welcome, <strong>{{ user.first_name|default:user.username }}</strong></span>
+        <span class="text-xs uppercase tracking-[0.24em] text-[#1a5c38] font-semibold">
+          {% if current_mode == 'owner' %}Owner Dashboard{% elif current_mode == 'admin' %}Admin Dashboard{% else %}Customer Dashboard{% endif %}
+        </span>
+      </div>
 
       <div class="relative group">
-        <a class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 hover:border-[#1a5c38] transition-colors" href="{% url 'accounts:profile_edit' %}" title="{{ user.username }}">
+        <a class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 hover:border-[#1a5c38] transition-colors"
+          href="{% url 'accounts:profile_edit' %}" title="{{ user.username }}">
           {% if user.profile_picture %}
           <img src="{{ user.profile_picture.url }}" alt="Avatar" class="w-full h-full object-cover">
           {% else %}
           <i class="bi bi-person text-gray-500 text-base"></i>
           {% endif %}
         </a>
-        <div class="absolute right-0 top-11 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+        <div
+          class="absolute right-0 top-11 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
           <div class="px-4 py-2 border-b border-gray-100">
             <p class="text-xs font-semibold text-gray-800 truncate">{{ user.username }}</p>
             <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
           </div>
-          <a href="{% url 'accounts:profile_edit' %}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i class="bi bi-person-gear w-4"></i> Profile</a>
-          <a href="{% url 'lands:my_reservations' %}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i class="bi bi-calendar-check w-4"></i> My Bookings</a>
-          <a href="{% url 'lands:my_wishlist' %}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i class="bi bi-heart w-4"></i> Wishlist</a>
+          <a href="{% url 'accounts:profile_edit' %}"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+              class="bi bi-person-gear w-4"></i> Profile</a>
+          <a href="{% url 'lands:my_reservations' %}"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+              class="bi bi-calendar-check w-4"></i> My Bookings</a>
+          <a href="{% url 'lands:my_wishlist' %}"
+            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+              class="bi bi-heart w-4"></i> Wishlist</a>
           <div class="border-t border-gray-100 mt-1">
             <form method="post" action="{% url 'logout' %}">
               {% csrf_token %}
-              <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 no-underline"><i class="bi bi-box-arrow-right w-4"></i> Log out</button>
+              <button type="submit"
+                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 no-underline"><i
+                  class="bi bi-box-arrow-right w-4"></i> Log out</button>
             </form>
           </div>
         </div>
       </div>
-    {% else %}
-      <button type="button" class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors" onclick="openModal('register')">
-        <i class="bi bi-plus-lg mr-1"></i>List Land
+      {% else %}
+      <button type="button"
+        class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors"
+        onclick="openModal('register')">
+        <i class="bi bi-plus-lg mr-1"></i>Add new post
       </button>
-      <button class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all" onclick="openModal('login')">
+      <button
+        class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
+        onclick="openModal('login')">
         <i class="bi bi-list text-base"></i>
         <i class="bi bi-person-circle text-lg text-gray-400"></i>
       </button>
-    {% endif %}
-  </div>
-</nav>
+      {% endif %}
+    </div>
+  </nav>
 
-{% if messages %}
-<div class="fixed top-16 right-4 z-[70] space-y-2 max-w-sm w-full" id="flashMessages">
-  {% for message in messages %}
-  <div class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-pulse-once
+  {% if messages %}
+  <div class="fixed top-16 right-4 z-[70] space-y-2 max-w-sm w-full" id="flashMessages">
+    {% for message in messages %}
+    <div class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium animate-pulse-once
     {% if message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
     {% elif message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
     {% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
     {% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
-    <i class="bi bi-{% if message.tags == 'error' %}x-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mt-0.5 shrink-0 text-base"></i>
-    <span class="flex-1">{{ message }}</span>
-    <button onclick="this.parentElement.remove()" class="shrink-0 opacity-60 hover:opacity-100 ml-1"><i class="bi bi-x"></i></button>
+      <i
+        class="bi bi-{% if message.tags == 'error' %}x-circle{% elif message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} mt-0.5 shrink-0 text-base"></i>
+      <span class="flex-1">{{ message }}</span>
+      <button onclick="this.parentElement.remove()" class="shrink-0 opacity-60 hover:opacity-100 ml-1"><i
+          class="bi bi-x"></i></button>
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
-<script>setTimeout(function(){var el=document.getElementById('flashMessages');if(el)el.remove();},5000);</script>
-{% endif %}
+  <script>setTimeout(function () { var el = document.getElementById('flashMessages'); if (el) el.remove(); }, 5000);</script>
+  {% endif %}
 
-{% block hero %}{% endblock %}
+  {% block hero %}{% endblock %}
 
-<main class="{% block main_class %}{% endblock %}">
-  {% block content %}{% endblock %}
-</main>
+  <main class="{% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
 
-<footer class="bg-white border-t border-gray-200 py-6 mt-auto">
-  <div class="container mx-auto px-4">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-      <div>
-        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Explore</h5>
-        <ul class="space-y-2">
-          <li><a href="{% url 'lands:land_list' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Browse all lands</a></li>
-        </ul>
+  <footer class="bg-white border-t border-gray-200 py-6 mt-auto">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6">
+        <div>
+          <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Explore</h5>
+          <ul class="space-y-2">
+            <li><a href="{% url 'lands:land_list' %}"
+                class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Browse all lands</a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Support</h5>
+          <ul class="space-y-2">
+            <li><a href="{% url 'lands:help_center' %}"
+                class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Help Center</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Hosting</h5>
+          <ul class="space-y-2">
+            {% if user.is_authenticated %}
+            <li><a href="{% url 'lands:add_land' %}"
+                class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Add new post</a></li>
+            {% else %}
+            <li><button type="button" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors text-left"
+                onclick="openModal('register')">Add new post</button></li>
+            {% endif %}
+          </ul>
+        </div>
       </div>
-      <div>
-        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Support</h5>
-        <ul class="space-y-2">
-          <li><a href="{% url 'lands:help_center' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Help Center</a></li>
-          {% if user.is_authenticated %}
-          {% else %}
-          {% endif %}
-        </ul>
-      </div>
-      <div>
-        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Hosting</h5>
-        <ul class="space-y-2">
-          {% if user.is_authenticated %}
-          <li><a href="{% url 'lands:add_land' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">List your land</a></li>
-          {% else %}
-          <li><button type="button" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors text-left" onclick="openModal('register')">List your land</button></li>
-          {% endif %}
-        </ul>
-      </div>
-      <div>
-        <h5 class="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">Administrator</h5>
-        <ul class="space-y-2">
-          <li><a href="{% url 'accounts:admin_login' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">Administrator Login</a></li>
-        </ul>
+      <div class="pt-4 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 bg-[#1a5c38] rounded-md flex items-center justify-center">
+            <svg viewBox="0 0 20 20" fill="none" class="w-3.5 h-3.5">
+              <path d="M3 14 L10 4 L17 14 Z" fill="white" fill-opacity="0.9" />
+            </svg>
+          </div>
+          <span class="text-sm font-semibold text-gray-700">LandReserve</span>
+        </div>
+        <p class="text-xs text-gray-400">© 2026 LandReserve. <a href="{% url 'lands:help_center' %}"
+            class="hover:text-gray-600 no-underline">Help Center</a> · <a href="{% url 'lands:land_list' %}"
+            class="hover:text-gray-600 no-underline">Browse lands</a></p>
       </div>
     </div>
-    <div class="pt-4 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-2">
-        <div class="w-6 h-6 bg-[#1a5c38] rounded-md flex items-center justify-center">
-          <svg viewBox="0 0 20 20" fill="none" class="w-3.5 h-3.5"><path d="M3 14 L10 4 L17 14 Z" fill="white" fill-opacity="0.9"/></svg>
-        </div>
-        <span class="text-sm font-semibold text-gray-700">LandReserve</span>
+  </footer>
+
+  {% if not user.is_authenticated %}
+  <div class="fixed inset-0 z-[60] bg-black/60 hidden items-center justify-center p-4 backdrop-blur-sm" id="authModal">
+    <div class="form-glass rounded-2xl shadow-2xl w-full max-w-sm overflow-y-auto max-h-[90vh] border border-white/20"
+      onclick="event.stopPropagation()">
+
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 class="text-base font-bold text-gray-900">Log in or sign up</h2>
+        <button onclick="closeModal()"
+          class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
+          <i class="bi bi-x-lg text-gray-500 text-sm"></i>
+        </button>
       </div>
-      <p class="text-xs text-gray-400">© 2026 LandReserve. <a href="{% url 'lands:help_center' %}" class="hover:text-gray-600 no-underline">Help Center</a> · <a href="{% url 'lands:land_list' %}" class="hover:text-gray-600 no-underline">Browse lands</a></p>
+      <div class="flex border-b border-gray-100">
+        <button class="flex-1 py-3 text-sm font-medium transition-colors border-b-2" id="loginTabBtn"
+          onclick="showTab('login')">Log in</button>
+        <button class="flex-1 py-3 text-sm font-medium transition-colors border-b-2" id="registerTabBtn"
+          onclick="showTab('register')">Sign up</button>
+      </div>
+
+      <div id="loginFormWrap" class="p-6 space-y-3">
+        <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline"
+          href="{% provider_login_url 'google' %}">
+          <svg viewBox="0 0 24 24" class="w-4 h-4">
+            <path fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+            <path fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          Continue with Google
+        </a>
+        <div class="flex items-center gap-3 text-xs text-gray-400">
+          <div class="flex-1 h-px bg-gray-200"></div><span>or</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+        <form method="post" action="{% url 'accounts:login' %}">
+          {% csrf_token %}
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input type="text" name="username"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="Enter username" required autocomplete="username">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm font-medium text-gray-700">Password</label>
+                <a href="{% url 'password_reset' %}" class="text-[11px] font-semibold text-[#1a5c38] hover:underline no-underline">Forgot password?</a>
+              </div>
+              <input type="password" name="password"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="Enter password" required autocomplete="current-password">
+            </div>
+            <button type="submit"
+              class="w-full py-3 mt-2 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors">Log
+              in</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="registerFormWrap" class="p-6 space-y-3 hidden">
+        <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline"
+          href="{% provider_login_url 'google' %}">
+          <svg viewBox="0 0 24 24" class="w-4 h-4">
+            <path fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+            <path fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          Continue with Google
+        </a>
+        <div class="flex items-center gap-3 text-xs text-gray-400">
+          <div class="flex-1 h-px bg-gray-200"></div><span>or</span>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+        <form method="post" action="{% url 'accounts:register' %}">
+          {% csrf_token %}
+          <div class="space-y-4">
+            <div>
+              <label for="register_role" class="block text-sm font-medium text-gray-700 mb-1">Register as</label>
+              <select id="register_role" name="role"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors">
+                <option value="customer" selected>Customer</option>
+                <option value="owner">Land Owner</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input type="text" name="username"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="Choose a username" required autocomplete="username">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+              <input type="email" name="email"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" name="password1"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="Create a password" required autocomplete="new-password">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+              <input type="password" name="password2"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="Confirm your password" required autocomplete="new-password">
+            </div>
+            <button type="submit"
+              class="w-full py-3 mt-2 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors">Create
+              account</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</footer>
+  {% endif %}
 
-{% if not user.is_authenticated %}
-<div class="fixed inset-0 z-[60] bg-black/50 hidden items-center justify-center" id="authModal">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden" onclick="event.stopPropagation()">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-      <h2 class="text-base font-bold text-gray-900">Log in or sign up</h2>
-      <button onclick="closeModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-        <i class="bi bi-x-lg text-gray-500 text-sm"></i>
-      </button>
-    </div>
-    <div class="flex border-b border-gray-100">
-      <button class="flex-1 py-3 text-sm font-medium transition-colors border-b-2" id="loginTabBtn" onclick="showTab('login')">Log in</button>
-      <button class="flex-1 py-3 text-sm font-medium transition-colors border-b-2" id="registerTabBtn" onclick="showTab('register')">Sign up</button>
-    </div>
-
-    <div id="loginFormWrap" class="p-6 space-y-3">
-      <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline" href="/accounts/google/login/">
-        <svg viewBox="0 0 24 24" class="w-4 h-4"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </a>
-      <div class="flex items-center gap-3 text-xs text-gray-400"><div class="flex-1 h-px bg-gray-200"></div><span>or</span><div class="flex-1 h-px bg-gray-200"></div></div>
-      <form method="post" action="{% url 'accounts:login' %}">
-        {% csrf_token %}
-        <div class="space-y-3">
-          <input type="text" name="username" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Username" required autocomplete="username">
-          <input type="password" name="password" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Password" required autocomplete="current-password">
-          <button type="submit" class="w-full py-2.5 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors">Continue</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="registerFormWrap" class="p-6 space-y-3 hidden">
-      <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline" href="/accounts/google/login/">
-        <svg viewBox="0 0 24 24" class="w-4 h-4"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </a>
-      <div class="flex items-center gap-3 text-xs text-gray-400"><div class="flex-1 h-px bg-gray-200"></div><span>or</span><div class="flex-1 h-px bg-gray-200"></div></div>
-      <form method="post" action="{% url 'accounts:register' %}">
-        {% csrf_token %}
-        <input type="hidden" name="role" value="customer">
-        <div class="space-y-3">
-          <input type="text" name="username" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Username" required autocomplete="username">
-          <input type="email" name="email" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Email address" required autocomplete="email">
-          <input type="password" name="password1" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Password" required autocomplete="new-password">
-          <input type="password" name="password2" class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors" placeholder="Confirm password" required autocomplete="new-password">
-          <button type="submit" class="w-full py-2.5 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors">Create account</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-{% endif %}
-
-{% block extra_js %}{% endblock %}
-<script>
-  function openModal(tab) {
-    var modal = document.getElementById('authModal');
-    if (!modal) return;
-    modal.classList.remove('hidden');
-    modal.classList.add('show');
-    showTab(tab || 'register');
-  }
-
-  function closeModal() {
-    var modal = document.getElementById('authModal');
-    if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('show');
-  }
-
-  function showTab(tab) {
-    var lw = document.getElementById('loginFormWrap');
-    var rw = document.getElementById('registerFormWrap');
-    var lb = document.getElementById('loginTabBtn');
-    var rb = document.getElementById('registerTabBtn');
-    if (!lw || !rw) return;
-    var on = ['text-[#1a5c38]', 'border-[#1a5c38]', 'font-semibold'];
-    var off = ['text-gray-500', 'border-transparent'];
-    if (tab === 'login') {
-      lw.classList.remove('hidden');
-      rw.classList.add('hidden');
-      lb.classList.add(...on);
-      lb.classList.remove(...off);
-      rb.classList.remove(...on);
-      rb.classList.add(...off);
-    } else {
-      rw.classList.remove('hidden');
-      lw.classList.add('hidden');
-      rb.classList.add(...on);
-      rb.classList.remove(...off);
-      lb.classList.remove(...on);
-      lb.classList.add(...off);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var modal = document.getElementById('authModal');
-    if (modal) {
-      modal.addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-      });
-      showTab('login');
+  {% block extra_js %}{% endblock %}
+  <script>
+    function openModal(tab) {
+      var modal = document.getElementById('authModal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      modal.classList.add('show');
+      showTab(tab || 'register');
     }
 
-    function runNavSearch() {
-      var params = new URLSearchParams();
-      var where = document.getElementById('navSearchWhere');
-      var type = document.getElementById('navSearchType');
-      var budget = document.getElementById('navSearchBudget');
-      if (where && where.value.trim()) params.set('location', where.value.trim());
-      if (type && type.value) params.set('type', type.value);
-      if (budget && budget.value) params.set('max_price', budget.value);
-      window.location.href = '/lands/' + (params.toString() ? '?' + params.toString() : '');
+    function closeModal() {
+      var modal = document.getElementById('authModal');
+      if (!modal) return;
+      modal.classList.add('hidden');
+      modal.classList.remove('show');
     }
 
-    var navSearchButton = document.getElementById('navSearchButton');
-    if (navSearchButton) {
-      navSearchButton.addEventListener('click', runNavSearch);
+    function showTab(tab) {
+      var lw = document.getElementById('loginFormWrap');
+      var rw = document.getElementById('registerFormWrap');
+      var lb = document.getElementById('loginTabBtn');
+      var rb = document.getElementById('registerTabBtn');
+      if (!lw || !rw) return;
+      var on = ['text-[#1a5c38]', 'border-[#1a5c38]', 'font-semibold'];
+      var off = ['text-gray-500', 'border-transparent'];
+      if (tab === 'login') {
+        lw.classList.remove('hidden');
+        rw.classList.add('hidden');
+        lb.classList.add(...on);
+        lb.classList.remove(...off);
+        rb.classList.remove(...on);
+        rb.classList.add(...off);
+      } else {
+        rw.classList.remove('hidden');
+        lw.classList.add('hidden');
+        rb.classList.add(...on);
+        rb.classList.remove(...off);
+        lb.classList.remove(...on);
+        lb.classList.add(...off);
+      }
     }
 
-    var navSearchWhere = document.getElementById('navSearchWhere');
-    if (navSearchWhere) {
-      navSearchWhere.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          runNavSearch();
-        }
-      });
-    }
+    document.addEventListener('DOMContentLoaded', function () {
+      var modal = document.getElementById('authModal');
+      if (modal) {
+        modal.addEventListener('click', function (e) {
+          if (e.target === this) closeModal();
+        });
+        showTab('login');
+      }
 
-    var navSearchBudget = document.getElementById('navSearchBudget');
-    if (navSearchBudget) {
-      navSearchBudget.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          runNavSearch();
-        }
-      });
-    }
+      function runNavSearch() {
+        var params = new URLSearchParams();
+        var where = document.getElementById('navSearchWhere');
+        var type = document.getElementById('navSearchType');
+        var budget = document.getElementById('navSearchBudget');
+        if (where && where.value.trim()) params.set('location', where.value.trim());
+        if (type && type.value) params.set('type', type.value);
+        if (budget && budget.value) params.set('max_price', budget.value);
+        window.location.href = '/lands/' + (params.toString() ? '?' + params.toString() : '');
+      }
 
-    var authTarget = new URLSearchParams(window.location.search).get('auth');
-    if (authTarget === 'login' || authTarget === 'register') {
-      openModal(authTarget);
-    }
-  });
-</script>
+      var navSearchButton = document.getElementById('navSearchButton');
+      if (navSearchButton) {
+        navSearchButton.addEventListener('click', runNavSearch);
+      }
+
+      var navSearchWhere = document.getElementById('navSearchWhere');
+      if (navSearchWhere) {
+        navSearchWhere.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            runNavSearch();
+          }
+        });
+      }
+
+      var navSearchBudget = document.getElementById('navSearchBudget');
+      if (navSearchBudget) {
+        navSearchBudget.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            runNavSearch();
+          }
+        });
+      }
+
+      var authTarget = new URLSearchParams(window.location.search).get('auth');
+      if (authTarget === 'login' || authTarget === 'register') {
+        openModal(authTarget);
+      }
+    });
+  </script>
 </body>
+
 </html>

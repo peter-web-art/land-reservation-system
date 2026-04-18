@@ -42,6 +42,20 @@ class Land(models.Model):
     ]
     land_use = models.CharField(max_length=20, choices=LAND_TYPE_CHOICES, default='agricultural', blank=True)
 
+    # ── TERRAIN & UTILITIES ───────────────────────────────────────────────────
+    TOPOGRAPHY_CHOICES = [
+        ('flat', 'Flat'), ('sloped', 'Sloped'), ('rolling', 'Rolling Hills'),
+        ('mountainous', 'Mountainous'), ('depressed', 'Depressed/Lowland'),
+    ]
+    topography = models.CharField(max_length=20, choices=TOPOGRAPHY_CHOICES, default='flat', blank=True)
+    
+    has_water       = models.BooleanField(default=False, help_text='Access to water (well/tap/river)')
+    has_electricity = models.BooleanField(default=False, help_text='Access to power grid')
+    road_access     = models.BooleanField(default=True, help_text='Accessible by vehicle/road')
+    
+    is_fenced       = models.BooleanField(default=False, help_text='Is the land fenced?')
+    is_cleared      = models.BooleanField(default=False, help_text='Is the land cleared of bushes/trees?')
+
     # ── AIRBNB-STYLE PRICING ───────────────────────────────────────────────────
     PRICE_UNIT_CHOICES = [
         ('month', 'Per Month'),
@@ -100,11 +114,24 @@ class Land(models.Model):
     def status_display(self):
         return "Available" if self.is_available else "Booked"
 
+    def get_active_reservation(self):
+        """Returns the current or next upcoming approved reservation."""
+        today = date.today()
+        return self.reservations.filter(status='approved', end_date__gte=today).order_by('start_date').first()
+
+    @property
+    def next_available_date(self):
+        """Calculates the next date this land will be free for booking."""
+        res = self.get_active_reservation()
+        if res and res.end_date:
+            return res.end_date + timedelta(days=1)
+        return date.today()
+
     @property
     def price_display(self):
         unit_map = {'month': '/month', 'year': '/year', 'total': ''}
         suffix = unit_map.get(self.price_unit, '')
-        return f'${self.price:,.0f}{suffix}'
+        return f'Tsh {self.price:,.0f}{suffix}'
 
     @property
     def get_all_images(self):
@@ -219,6 +246,17 @@ class Reservation(models.Model):
         if days >= 7:
             return f'{days // 7} week{"s" if days // 7 != 1 else ""}'
         return f'{days} day{"s" if days != 1 else ""}'
+
+    @property
+    def release_status(self):
+        if self.status == 'approved' and self.end_date:
+            remaining = (self.end_date - date.today()).days
+            if remaining > 0:
+                return f'{remaining} day{"s" if remaining != 1 else ""} until release'
+            if remaining == 0:
+                return 'Release today'
+            return 'Release overdue'
+        return None
 
     @property
     def total_amount(self):

@@ -6,7 +6,7 @@
   <h1 class="text-3xl font-bold text-gray-900 mb-8">Welcome back, {{ user.first_name|default:user.username }}</h1>
 
   <!-- Stats row -->
-  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+  <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8">
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div class="text-sm text-gray-500">Total Bookings</div>
       <div class="text-2xl font-bold text-gray-900">{{ total }}</div>
@@ -23,40 +23,123 @@
       <div class="text-sm text-gray-500">Cancelled</div>
       <div class="text-2xl font-bold text-red-600">{{ cancelled }}</div>
     </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Notifications</div>
+      <div class="text-2xl font-bold text-[#1a5c38]">{{ unread_notifications }}</div>
+      <a href="{% url 'lands:my_notifications' %}" class="text-sm text-[#1a5c38] hover:underline">View notifications</a>
+    </div>
   </div>
 
-  <!-- Recent bookings -->
-  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold text-gray-900">Your bookings</h2>
-      <a href="{% url 'lands:my_reservations' %}" class="text-[#1a5c38] hover:underline text-sm">Show all &rarr;</a>
+  {% if latest_notifications %}
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-8 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900">Recent notifications</h2>
+        <p class="text-sm text-gray-500">Latest updates about your bookings and approvals.</p>
+      </div>
+      <a href="{% url 'lands:my_notifications' %}" class="text-sm text-[#1a5c38] hover:underline">See all</a>
     </div>
-    {% if recent_reservations %}
     <div class="space-y-3">
-      {% for r in recent_reservations %}
-      <a href="{% url 'lands:land_detail' r.land.id %}" class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg hover:shadow-md transition-all no-underline">
-        <div class="w-24 h-16 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-          {% if r.land.image %}<img src="{{ r.land.image.url }}" class="w-full h-full object-cover" loading="lazy" alt="">
-          {% else %}<div class="w-full h-full flex items-center justify-center text-2xl">🌿</div>{% endif %}
+      {% for n in latest_notifications %}
+      <a href="{{ n.link|default:'#' }}" class="block rounded-xl border border-gray-200 p-4 hover:border-[#1a5c38] hover:bg-[#f6fffa] transition-colors no-underline">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="font-semibold text-gray-900">{{ n.title }}</p>
+            <p class="text-sm text-gray-500">{{ n.message|truncatechars:80 }}</p>
+          </div>
+          <span class="text-xs text-gray-400">{{ n.created_at|date:'M d' }}</span>
         </div>
-        <div class="flex-1">
-          <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
-          <div class="text-sm text-gray-500">{{ r.land.location }}{% if r.start_date %} &middot; {{ r.start_date|date:"M d" }} &rarr; {{ r.end_date|date:"M d" }}{% endif %}</div>
-          <div class="flex items-center gap-2 mt-1">
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-orange-100 text-orange-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-700{% endif %}">{{ r.get_status_display }}</span>
-            <span class="font-semibold text-gray-900">${{ r.agreed_price|default:r.land.price }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if featured_lands %}
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-5">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900">Fresh listings</h2>
+        <p class="text-sm text-gray-500">Browse the latest land posts and book the right property for your needs.</p>
+      </div>
+      <a href="{% url 'lands:land_list' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all listings &rarr;</a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {% for land in featured_lands %}
+      <a href="{% url 'lands:land_detail' land.id %}" class="group block overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm hover:shadow-md transition-all no-underline">
+        <div class="aspect-video bg-gray-200 overflow-hidden">
+          {% if land.image %}<img src="{{ land.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="">
+          {% else %}<div class="w-full h-full flex items-center justify-center text-3xl">🌿</div>{% endif %}
+        </div>
+        <div class="p-4">
+          <div class="text-sm font-semibold text-gray-900 mb-1">{{ land.title }}</div>
+          <div class="text-xs text-gray-500 mb-3">{{ land.location }}</div>
+          <div class="flex items-center justify-between gap-2 text-sm text-gray-700">
+            <span>{{ land.price_display }}</span>
+            <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs">{{ land.get_listing_type_display }}</span>
           </div>
         </div>
       </a>
       {% endfor %}
     </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent bookings -->
+  <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-900">Your bookings</h2>
+        <p class="text-sm text-gray-500">View status, booking period, owner contact details, and release timing for approved reservations.</p>
+      </div>
+      <a href="{% url 'lands:my_reservations' %}" class="text-[#1a5c38] hover:underline text-sm">Show all &rarr;</a>
+    </div>
+    {% if active_reservations %}
+    <div class="space-y-4">
+      {% for r in active_reservations %}
+      <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 hover:border-gray-300 transition-all">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div class="flex items-start gap-4">
+            <div class="w-24 h-20 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
+              {% if r.land.image %}<img src="{{ r.land.image.url }}" class="w-full h-full object-cover" loading="lazy" alt="">
+              {% else %}<div class="w-full h-full flex items-center justify-center text-2xl">🌿</div>{% endif %}
+            </div>
+            <div>
+              <a href="{% url 'lands:land_detail' r.land.id %}" class="text-lg font-semibold text-gray-900 hover:text-[#1a5c38] hover:underline no-underline">{{ r.land.title }}</a>
+              <div class="text-sm text-gray-500">{{ r.land.location }}</div>
+              <div class="mt-2 text-sm text-gray-700 space-y-1">
+                {% if r.start_date and r.end_date %}
+                <div><strong>Period:</strong> {{ r.start_date|date:"M d, Y" }} &rarr; {{ r.end_date|date:"M d, Y" }} ({{ r.duration_display }})</div>
+                {% endif %}
+                <div><strong>Status:</strong> {{ r.get_status_display }}</div>
+                <div><strong>Amount:</strong> Tsh {{ r.total_amount }}</div>
+                <div><strong>Owner:</strong> {{ r.land.owner.get_full_name|default:r.land.owner.username }}</div>
+                {% if r.land.contact_phone %}<div><i class="bi bi-phone"></i> {{ r.land.contact_phone }}</div>{% endif %}
+                {% if r.land.contact_email %}<div><i class="bi bi-envelope"></i> {{ r.land.contact_email }}</div>{% endif %}
+                {% if r.release_status %}<div class="text-sm text-green-700"><i class="bi bi-clock-history"></i> {{ r.release_status }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 min-w-[170px]">
+            <a href="{% url 'lands:land_detail' r.land.id %}" class="inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">View listing</a>
+            {% if r.status == 'pending' %}
+            <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel this pending booking?')">
+              {% csrf_token %}
+              <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors">Cancel request</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
     {% else %}
     <div class="flex flex-col items-center justify-center py-12 text-center border-none">
       <div class="text-5xl mb-4">📋</div>
-      <h3 class="text-xl font-semibold text-gray-800 mb-2">No bookings yet</h3>
-      <p class="text-gray-500 mb-4">Time to start exploring — find the perfect land for you.</p>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">No active reservations yet</h3>
+      <p class="text-gray-500 mb-4">Browse available land posts, request booking, and manage your reservation period here.</p>
       <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
-        <i class="bi bi-search"></i> Start exploring
+        <i class="bi bi-search"></i> Browse land posts
       </a>
     </div>
     {% endif %}

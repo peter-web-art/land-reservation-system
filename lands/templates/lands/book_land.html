@@ -1,24 +1,31 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{% if land.listing_type == 'rent' %}Reserve{% else %}Inquire{% endif %} {{ land.title }} — LandReserve{% endblock %}
+{% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-  <div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
-    <a href="{% url 'lands:land_list' %}" class="hover:text-[#1a5c38] no-underline">Browse</a>
+  <div class="flex items-center gap-2 text-sm text-white/80 mb-6 bg-black/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
+    <a href="{% url 'lands:land_list' %}" class="hover:text-white no-underline text-white font-medium">Browse</a>
     <span>/</span>
-    <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-[#1a5c38] no-underline">{{ land.title|truncatechars:30 }}</a>
+    <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-white no-underline text-white">{{ land.title|truncatechars:30 }}</a>
     <span>/</span>
-    <span>{% if land.listing_type == 'rent' %}Reserve{% else %}Inquire{% endif %}</span>
+    <span class="text-white">{% if land.listing_type == 'rent' %}Reserve{% else %}Inquire{% endif %}</span>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2">
-      <h2 class="text-2xl font-bold mb-6">
+      <h2 class="text-3xl font-extrabold text-white mb-6 drop-shadow-md">
         {% if land.listing_type == 'rent' %}Confirm Your Reservation{% else %}Make an Enquiry{% endif %}
       </h2>
 
+      {% if user.is_authenticated %}
+      <a href="{% url 'lands:customer_dashboard' %}" class="inline-flex items-center gap-2 text-sm text-[#1a5c38] hover:underline mb-4">
+        <i class="bi bi-arrow-left-circle"></i> Back to dashboard
+      </a>
+      {% endif %}
+
       <!-- Booking Summary Card -->
-      <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+      <div class="form-glass border border-white/20 rounded-xl p-4 mb-6 shadow-xl">
         <div class="flex gap-4">
           {% if land.primary_image %}
           <div class="w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
@@ -48,7 +55,7 @@
         {% csrf_token %}
 
         {% if land.listing_type == 'rent' %}
-        <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
             <h3 class="font-semibold">Select Your Dates</h3>
@@ -103,7 +110,7 @@
         </div>
         {% endif %}
 
-        <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}2{% else %}1{% endif %}</span>
             <h3 class="font-semibold">Your Information</h3>
@@ -142,7 +149,7 @@
         </div>
 
         {% if land.listing_type == 'rent' %}
-        <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}3{% else %}2{% endif %}</span>
             <h3 class="font-semibold">Payment Method</h3>
@@ -168,7 +175,7 @@
         </div>
         {% endif %}
 
-        <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}4{% else %}2{% endif %}</span>
             <h3 class="font-semibold">Additional Notes <span class="text-gray-400 text-sm">(optional)</span></h3>
@@ -186,6 +193,9 @@
           Review Booking
         </button>
         
+        <a href="{% url 'lands:customer_dashboard' %}" class="block w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm text-center hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline mb-3">
+          <i class="bi bi-arrow-left"></i> Back to dashboard
+        </a>
         <a href="{% url 'lands:land_detail' land.id %}" class="block w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm text-center hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
           <i class="bi bi-arrow-left"></i> Back to listing
         </a>
@@ -194,7 +204,7 @@
 
     <!-- Sidebar -->
     <div>
-      <div class="bg-white border border-gray-200 rounded-xl p-4 sticky top-20">
+      <div class="form-glass border border-white/20 rounded-xl p-4 sticky top-20 shadow-xl">
         {% if land.primary_image %}<img src="{{ land.primary_image.url }}" class="w-full h-40 object-cover rounded-lg mb-4" alt="">{% else %}<div class="w-full h-40 bg-green-100 rounded-lg flex items-center justify-center text-4xl mb-4">🌍</div>{% endif %}
         
         <h4 class="font-semibold text-lg mb-2">{{ land.title }}</h4>
@@ -215,8 +225,12 @@
 
         <div id="priceBreakdown" class="space-y-2 text-sm">
           <div class="flex justify-between">
-            <span>{% if land.listing_type == 'rent' %}Estimated daily rate{% else %}Listing price{% endif %}</span>
-            <span id="basePrice" class="font-medium">${{ land.price }}</span>
+            <span id="basePriceLabel">
+              {% if land.listing_type == 'rent' %}
+                {% if land.price_unit == 'month' %}Quoted monthly rate{% elif land.price_unit == 'year' %}Quoted yearly rate{% else %}Listing price{% endif %}
+              {% else %}Listing price{% endif %}
+            </span>
+            <span id="basePrice" class="font-medium">Tsh {{ land.price }}</span>
           </div>
           {% if land.weekly_discount > 0 %}
           <div class="flex justify-between hidden" id="weeklyDiscRow">
@@ -321,7 +335,7 @@
       <button type="button" onclick="document.getElementById('reviewModal').classList.add('hidden')" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
         <i class="bi bi-pencil"></i> Edit
       </button>
-      <button type="submit" form="bookingForm" class="flex-1 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+      <button type="button" onclick="submitBookingForm()" class="flex-1 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
         <i class="bi bi-check-circle"></i> Confirm Booking
       </button>
     </div>
@@ -331,6 +345,7 @@
 <script>
 const isRental = {% if land.listing_type == 'rent' %}true{% else %}false{% endif %};
 const pricePerDay = {{ price_per_day|default:0 }};
+const priceUnit = '{{ land.price_unit }}';
 const weeklyDisc  = {{ weekly_discount|default:0 }};
 const monthlyDisc = {{ monthly_discount|default:0 }};
 const minDays     = {{ min_days|default:1 }};
@@ -349,7 +364,7 @@ function formatDateShort(ds) {
 }
 
 function formatPrice(n) {
-  return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+  return 'Tsh ' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
 }
 
 function updatePricing() {
@@ -453,6 +468,13 @@ function showError(msg) { showDuration(msg, true, false, 0); }
 function clearError() { 
   const el = document.getElementById('durationInfo'); 
   if (el) el.classList.add('hidden'); 
+}
+
+function submitBookingForm() {
+  const form = document.getElementById('bookingForm');
+  if (form) {
+    form.submit();
+  }
 }
 
 const sd = document.getElementById('startDate');
