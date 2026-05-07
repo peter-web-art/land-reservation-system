@@ -2,27 +2,32 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import User
+from .models import User, PersonalDetails
+
+
+class PersonalDetailsInline(admin.StackedInline):
+    model = PersonalDetails
+    can_delete = False
+    verbose_name_plural = 'Personal Details'
+    fk_name = 'user'
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = (
         'username', 'get_full_name_display', 'email', 'role_badge',
-        'verified_badge', 'suspended_badge', 'phone', 'date_joined', 'actions_col'
+        'verified_badge', 'suspended_badge', 'date_joined', 'actions_col'
     )
     list_filter   = ('role', 'is_verified', 'is_suspended', 'is_active', 'is_staff')
-    search_fields = ('username', 'email', 'first_name', 'last_name', 'phone')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
     ordering      = ('-date_joined',)
     actions       = ['verify_owners', 'unverify_owners', 'suspend_users', 'unsuspend_users']
+    inlines       = [PersonalDetailsInline]
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('first_name', 'last_name', 'email', 'phone', 'bio', 'profile_picture')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'email')}),
         ('Role & Status', {'fields': ('role', 'is_owner', 'is_verified', 'is_suspended')}),
-        ('KYC Documents', {'fields': ('kyc_document', 'kyc_status', 'kyc_notes',
-                                      'govt_letter', 'govt_letter_date'),
-                           'classes': ('collapse',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )

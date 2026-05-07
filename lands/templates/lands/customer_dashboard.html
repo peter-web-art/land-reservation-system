@@ -47,7 +47,7 @@
             <p class="font-semibold text-gray-900">{{ n.title }}</p>
             <p class="text-sm text-gray-500">{{ n.message|truncatechars:80 }}</p>
           </div>
-          <span class="text-xs text-gray-400">{{ n.created_at|date:'M d' }}</span>
+          <span class="text-xs text-gray-400">{{ n.created_on|date:'M d' }}</span>
         </div>
       </a>
       {% endfor %}
@@ -59,24 +59,29 @@
   <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-5">
       <div>
-        <h2 class="text-xl font-semibold text-gray-900">Fresh listings</h2>
+        <h2 class="text-xl font-semibold text-gray-900">Fresh lands</h2>
         <p class="text-sm text-gray-500">Browse the latest land posts and book the right property for your needs.</p>
       </div>
-      <a href="{% url 'lands:land_list' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all listings &rarr;</a>
+      <a href="{% url 'lands:land_list' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all lands &rarr;</a>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {% for land in featured_lands %}
       <a href="{% url 'lands:land_detail' land.id %}" class="group block overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-sm hover:shadow-md transition-all no-underline">
         <div class="aspect-video bg-gray-200 overflow-hidden">
-          {% if land.image %}<img src="{{ land.image.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="">
+          {% if land.land_image_path %}<img src="{{ land.land_image_path.url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" alt="">
           {% else %}<div class="w-full h-full flex items-center justify-center text-3xl">🌿</div>{% endif %}
         </div>
         <div class="p-4">
           <div class="text-sm font-semibold text-gray-900 mb-1">{{ land.title }}</div>
-          <div class="text-xs text-gray-500 mb-3">{{ land.location }}</div>
+          <div class="text-xs text-gray-500 mb-1">{{ land.location }}</div>
+          {% if land.size %}
+          <div class="text-[10px] text-[#1a5c38] font-medium mb-2">
+            <i class="bi bi-rulers"></i> Remained: {{ land.current_remaining_size }} / {{ land.size }} {{ land.get_size_unit_display }}
+          </div>
+          {% endif %}
           <div class="flex items-center justify-between gap-2 text-sm text-gray-700">
             <span>{{ land.price_display }}</span>
-            <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs">{{ land.get_listing_type_display }}</span>
+            <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs">{{ land.get_usage_display }}</span>
           </div>
         </div>
       </a>
@@ -101,7 +106,7 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div class="flex items-start gap-4">
             <div class="w-24 h-20 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0">
-              {% if r.land.image %}<img src="{{ r.land.image.url }}" class="w-full h-full object-cover" loading="lazy" alt="">
+              {% if r.land.land_image_path %}<img src="{{ r.land.land_image_path.url }}" class="w-full h-full object-cover" loading="lazy" alt="">
               {% else %}<div class="w-full h-full flex items-center justify-center text-2xl">🌿</div>{% endif %}
             </div>
             <div>
@@ -121,7 +126,7 @@
             </div>
           </div>
           <div class="flex flex-col gap-2 min-w-[170px]">
-            <a href="{% url 'lands:land_detail' r.land.id %}" class="inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">View listing</a>
+            <a href="{% url 'lands:land_detail' r.land.id %}" class="inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">View land</a>
             {% if r.status == 'pending' %}
             <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel this pending booking?')">
               {% csrf_token %}
@@ -155,7 +160,7 @@
       {% for w in wishlist_items %}
       <a href="{% url 'lands:land_detail' w.land.id %}" class="block no-underline">
         <div class="aspect-video rounded-lg overflow-hidden bg-gray-100 mb-2">
-          {% if w.land.image %}<img src="{{ w.land.image.url }}" class="w-full h-full object-cover" loading="lazy">
+          {% if w.land.land_image_path %}<img src="{{ w.land.land_image_path.url }}" class="w-full h-full object-cover" loading="lazy">
           {% else %}<div class="w-full h-full flex items-center justify-center text-3xl">🌿</div>{% endif %}
         </div>
         <div class="font-medium text-gray-900 truncate">{{ w.land.title }}</div>

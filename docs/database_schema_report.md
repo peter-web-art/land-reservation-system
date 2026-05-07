@@ -35,7 +35,7 @@ Core table for property listings.
 | `id` | PK | Primary Key |
 | `owner_id` | FK | Reference to `accounts_user` |
 | `title` | String | Property title |
-| `listing_type` | Choice | `rent` or `sale` |
+| `usage` | Choice | `rent` or `sale` |
 | `price` | Decimal | Base price |
 | `price_unit` | Choice | `month`, `year`, or `total` |
 | `location` | String | Physical address/region |
@@ -43,12 +43,7 @@ Core table for property listings.
 | `size` | Decimal | Surface area |
 | `land_use` | Choice | `agricultural`, `residential`, etc. |
 | `topography` | Choice | Terrain type (Flat, Sloped, Rolling, etc.) |
-| `has_water` | Boolean | Utilities: Water access |
-| `has_electricity`| Boolean | Utilities: Power grid access |
-| `road_access` | Boolean | Infrastructure: Vehicle accessibility |
-| `is_fenced` | Boolean | Improvements: Fencing status |
-| `is_cleared` | Boolean | Improvements: Vegetation clearing status |
-| `is_active` | Boolean | Visibility flag |
+| `land_image_path` | String | Upload path: `lands/` |
 
 ### 2.3 `lands_reservation`
 Tracks booking requests and payments.
@@ -64,15 +59,18 @@ Tracks booking requests and payments.
 | `payment_status`| Choice | `unpaid`, `paid`, `refunded` |
 | `agreed_price` | Decimal | Final price for the transaction |
 
-### 2.4 `lands_landimage`
-Gallery for land listings.
+### 2.4 `lands_utility` (New)
+Categorized list of utilities and amenities.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `land_id` | FK | Reference to `lands_land` |
-| `image` | Image | Image file path |
-| `is_primary` | Boolean | Featured image flag |
-| `order` | Int | Gallery display order |
+| `id` | PK | Primary Key |
+| `name` | String | e.g., "Piped Water", "Solar Power", "Fiber Internet" |
+| `icon_class` | String | CSS class for UI icons (FontAwesome) |
+
+**Examples:** Water Access, Solar Power, Fiber Internet, Perimeter Wall, Road Access, Street Lights.
+
+### 2.4 `lands_land_utilities`
 
 ---
 
@@ -81,8 +79,7 @@ Gallery for land listings.
 1. **User - Land (1:N):** A user (Owner) can list multiple properties.
 2. **Land - Reservation (1:N):** A property tracks its history of bookings.
 3. **User - Reservation (1:N):** A user (Customer) can have multiple reservations.
-4. **Land - LandImage (1:N):** Each property has a gallery of images.
-5. **User - Land (M:N):** Wishlist functionality (tracked via many-to-many junction).
+6. User - Land (M:N): Wishlist functionality (tracked via many-to-many junction).
 
 ---
 

@@ -19,7 +19,7 @@
           Find attractive land opportunities in a cleaner, safer way.
         </h1>
         <p class="mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
-          Browse beautiful public previews from real owner posts, understand the value of the platform quickly, and then sign in to unlock full listing access, owner contact, reservations, and saved items.
+          Browse beautiful public previews from real owner posts, understand the value of the platform quickly, and then sign in to unlock full land access, owner contact, reservations, and saved items.
         </p>
 
         <div class="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -34,7 +34,7 @@
         <div class="mt-10 grid gap-4 sm:grid-cols-3">
           <div class="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browse better</p>
-            <p class="mt-2 text-lg font-bold text-slate-900">Real listing previews</p>
+            <p class="mt-2 text-lg font-bold text-slate-900">Real land previews</p>
           </div>
           <div class="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Move faster</p>
@@ -58,7 +58,7 @@
               </p>
               <div class="mt-6 space-y-3">
                 <div class="rounded-2xl bg-black/20 p-4">
-                  <p class="text-sm font-semibold">Browse live owner listings</p>
+                  <p class="text-sm font-semibold">Browse live owner lands</p>
                   <p class="mt-1 text-sm leading-7 text-black/85">Search by location, price, size, type, and availability.</p>
                 </div>
                 <div class="rounded-2xl bg-black/20 p-4">
@@ -81,7 +81,7 @@
               <div class="rounded-[1.5rem] border border-slate-200 bg-[#f6fbf7] p-5">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#1a5c38]">Members only</p>
                 <p class="mt-3 text-sm leading-7 text-slate-700">
-                  Saving listings, contacting owners, booking land, and owner management all require sign-in or account creation.
+                  Saving lands, contacting owners, booking land, and owner management all require sign-in or account creation.
                 </p>
                 <div class="mt-5 flex flex-col gap-2">
                   <button type="button" onclick="openModal('login')" class="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 cursor-pointer">Sign in to continue</button>
@@ -103,9 +103,9 @@
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div class="max-w-2xl">
         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">Featured owner posts</p>
-        <h2 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl">Public listing previews that make the platform feel alive.</h2>
+        <h2 class="mt-2 text-3xl font-bold text-slate-900 md:text-4xl">Public land previews that make the platform feel alive.</h2>
         <p class="mt-3 text-sm leading-7 text-slate-600">
-          Uploaded posts from land owners are shown here to attract visitors. To open full listing details, contact owners, or reserve land, users must sign in or create an account.
+          Uploaded posts from land owners are shown here to attract visitors. To open full land details, contact owners, or reserve land, users must sign in or create an account.
         </p>
       </div>
       <div class="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -127,7 +127,7 @@
 
           <div class="absolute left-5 right-5 top-5 flex items-center justify-between gap-3">
             <span class="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-900">
-              {% if land.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}
+              {% if land.usage == 'rent' %}For Rent{% else %}For Sale{% endif %}
             </span>
             {% if land.owner.is_verified %}
             <span class="rounded-full bg-[#1a5c38] px-3 py-1 text-xs font-semibold text-white">Verified</span>
@@ -160,7 +160,7 @@
           <div class="min-h-[280px] bg-[linear-gradient(145deg,_#163824,_#2d7d4f_55%,_#e3bc63)]"></div>
           <div class="p-8 md:p-10">
             <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">View what to discover in our website</p>
-            <h3 class="mt-3 text-3xl font-bold text-slate-900">As owners upload listings, this section becomes a strong public showcase.</h3>
+            <h3 class="mt-3 text-3xl font-bold text-slate-900">As owners upload lands, this section becomes a strong public showcase.</h3>
             <p class="mt-4 max-w-2xl text-sm leading-8 text-slate-600">
               The layout is already ready to display uploaded posts with images. Until then, the page still guides visitors toward account creation and sign-in.
             </p>
@@ -219,7 +219,7 @@
           <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#1a5c38]">Ready to continue?</p>
           <h2 class="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">Sign in to unlock the full experience.</h2>
           <p class="mt-3 text-sm leading-8 text-slate-600">
-            View complete listing details, message owners, save favorites, and reserve land only after authentication.
+            View complete land details, message owners, save favorites, and reserve land only after authentication.
           </p>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row">

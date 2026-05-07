@@ -194,8 +194,8 @@ CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 # ── 2. Session Security ───────────────────────────────────────────────────────
 SESSION_COOKIE_HTTPONLY = True    # JS cannot read session cookie
 SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF via cross-site navigation blocked
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 week
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 week (applies if browser stays open)
 
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'

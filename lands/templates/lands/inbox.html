@@ -45,7 +45,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-start mb-1">
                 <span class="font-semibold text-gray-900">{{ msg.sender.get_full_name|default:msg.sender.username }}</span>
-                <span class="text-xs text-gray-500">{{ msg.created_at|timesince }} ago</span>
+                <span class="text-xs text-gray-500">{{ msg.created_on|timesince }} ago</span>
               </div>
               {% if msg.subject %}
               <div class="text-sm font-medium text-gray-700 truncate">{{ msg.subject }}</div>
@@ -74,7 +74,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-start mb-1">
                 <span class="font-semibold text-gray-900">{{ msg.recipient.get_full_name|default:msg.recipient.username }}</span>
-                <span class="text-xs text-gray-500">{{ msg.created_at|timesince }} ago</span>
+                <span class="text-xs text-gray-500">{{ msg.created_on|timesince }} ago</span>
               </div>
               {% if msg.subject %}
               <div class="text-sm font-medium text-gray-700 truncate">{{ msg.subject }}</div>
@@ -92,7 +92,7 @@
       <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
         <i class="bi bi-chat-square-text text-5xl text-gray-300 mb-4"></i>
         <h3 class="text-xl font-semibold text-gray-800 mb-2">No messages yet</h3>
-        <p class="text-gray-500">When someone contacts you about a listing, their messages will appear here.</p>
+        <p class="text-gray-500">When someone contacts you about a land, their messages will appear here.</p>
       </div>
     {% endif %}
   {% endif %}

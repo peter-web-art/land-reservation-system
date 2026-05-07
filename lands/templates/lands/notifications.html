@@ -34,7 +34,7 @@
       <div class="flex-1">
         <div class="flex items-center justify-between">
           <div class="font-semibold text-gray-900">{{ n.title }}</div>
-          <div class="text-xs text-gray-400">{{ n.created_at|timesince }} ago</div>
+          <div class="text-xs text-gray-400">{{ n.created_on|timesince }} ago</div>
         </div>
         <div class="text-sm text-gray-600 mt-1">{{ n.message }}</div>
         {% if n.link %}

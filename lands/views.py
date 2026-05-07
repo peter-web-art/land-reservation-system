@@ -10,10 +10,12 @@ from django.conf import settings
 from django.utils.html import strip_tags
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
+from accounts.decorators import owner_required, customer_required
 import bleach, re
 from datetime import date as date_cls, timedelta
+from decimal import Decimal
 
-from .models import Land, Reservation, Message, Wishlist, LandImage, Notification
+from .models import Land, Reservation, Message, Wishlist, Notification, Utility
 import json
 
 User = get_user_model()
@@ -85,33 +87,23 @@ def send_sms_notification(phone_number, message):
         return False
 
 
-def owner_required(view_func):
-    """Decorator: must be logged in AND have owner/admin role."""
-    @login_required
-    def _wrapped(request, *args, **kwargs):
-        if request.user.role not in ('owner', 'admin') and not request.user.is_owner and not request.user.is_staff:
-            messages.error(request, 'You need a Land Owner account to access this page.')
-            return redirect('accounts:profile_edit')
-        return view_func(request, *args, **kwargs)
-    return _wrapped
-
-
 # ── Forms ─────────────────────────────────────────────────────────────────────
 
 class LandForm(forms.ModelForm):
     class Meta:
         model  = Land
-        fields = ['title', 'description', 'price', 'price_unit', 'location',
+        fields = ['land_id', 'title', 'description', 'price', 'price_unit', 'location',
                   'latitude', 'longitude',
-                  'listing_type', 'size', 'size_unit', 'land_use',
-                  'topography', 'has_water', 'has_electricity', 'road_access',
-                  'is_fenced', 'is_cleared',
+                  'usage', 'size', 'size_unit', 'land_use',
+                  'topography', 'utilities', 'additional_utilities_notes',
                   'weekly_discount', 'monthly_discount',
                   'min_duration_days', 'max_duration_days',
-                  'contact_phone', 'contact_email', 'image']
+                  'contact_phone', 'contact_email', 'land_image_path']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['utilities'].widget = forms.CheckboxSelectMultiple()
+        self.fields['utilities'].queryset = Utility.objects.all()
         owner = getattr(self.instance, 'owner', None)
         if owner:
             self.fields['contact_phone'].initial = getattr(owner, 'phone', '')
@@ -138,14 +130,14 @@ class LandForm(forms.ModelForm):
 
     def clean(self):
         cleaned      = super().clean()
-        listing_type = cleaned.get('listing_type')
+        usage = cleaned.get('usage')
         wd = cleaned.get('weekly_discount', 0) or 0
         md = cleaned.get('monthly_discount', 0) or 0
         if wd and not (0 <= wd <= 90):
             self.add_error('weekly_discount', 'Must be 0–90%.')
         if md and not (0 <= md <= 90):
             self.add_error('monthly_discount', 'Must be 0–90%.')
-        if listing_type == 'sale':
+        if usage == 'sale':
             cleaned['price_unit']        = 'total'
             cleaned['weekly_discount']   = 0
             cleaned['monthly_discount']  = 0
@@ -192,7 +184,7 @@ class ReservationForm(forms.ModelForm):
     class Meta:
         model  = Reservation
         fields = ['customer_name', 'customer_email', 'customer_phone',
-                  'start_date', 'end_date', 'payment_method', 'payment_reference', 'notes']
+                  'start_date', 'end_date', 'requested_size', 'payment_method', 'payment_reference', 'notes']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
@@ -205,14 +197,20 @@ class ReservationForm(forms.ModelForm):
         self.fields['notes'].widget = forms.Textarea(attrs={
             'rows': 2, 'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors',
             'placeholder': 'Any specific requirements, access instructions, or notes…'})
+        
+        if self.land and self.land.size:
+            self.fields['requested_size'].widget.attrs['placeholder'] = f"e.g. 5 (Max {self.land.size})"
+            self.fields['requested_size'].label = f"Requested Size ({self.land.get_size_unit_display()})"
+        else:
+            self.fields['requested_size'].widget = forms.HiddenInput()
         self.fields['payment_reference'].widget.attrs['placeholder'] = 'e.g. M-Pesa: ABC123XY'
         today_str = date_cls.today().isoformat()
         self.fields['start_date'].widget.attrs['min'] = today_str
         self.fields['end_date'].widget.attrs['min']   = today_str
-        if self.land and self.land.listing_type == 'sale':
+        if self.land and self.land.usage == 'sale':
             self.fields['start_date'].required = False
             self.fields['end_date'].required   = False
-        elif self.land and self.land.listing_type == 'rent':
+        elif self.land and self.land.usage == 'rent':
             self.fields['start_date'].required = True
             self.fields['end_date'].required   = True
         if self.user and self.user.is_authenticated:
@@ -233,7 +231,13 @@ class ReservationForm(forms.ModelForm):
         cleaned = super().clean()
         start   = cleaned.get('start_date')
         end     = cleaned.get('end_date')
-        if self.land and self.land.listing_type == 'rent':
+        req_size = cleaned.get('requested_size')
+        
+        if self.land and self.land.size and req_size:
+            if req_size <= 0:
+                self.add_error('requested_size', 'Size must be greater than zero.')
+        
+        if self.land and self.land.usage == 'rent':
             if not start:
                 self.add_error('start_date', 'Select a start date.')
             if not end:
@@ -251,21 +255,26 @@ class ReservationForm(forms.ModelForm):
                     if self.land.max_duration_days and days > self.land.max_duration_days:
                         self.add_error('end_date',
                             f'Maximum rental is {self.land.max_duration_days} days.')
-                    # BUG FIX #9: check BOTH approved AND pending overlaps
-                    if not self.land.is_available_for_dates(start, end):
-                        self.add_error('start_date',
-                            'This land is already booked or has a pending booking for those dates. '
-                            'Please choose different dates.')
+                    
+                    if not self.land.is_available_for_dates(start, end, req_size):
+                        remain = self.land.get_remaining_size_for_dates(start, end)
+                        self.add_error('requested_size',
+                            f'Only {remain} {self.land.get_size_unit_display()} available for these dates.')
+        elif self.land and self.land.usage == 'sale':
+            if not self.land.is_available_for_dates(requested_size=req_size):
+                remain = self.land.get_remaining_size_for_dates()
+                self.add_error('requested_size',
+                    f'Only {remain} {self.land.get_size_unit_display()} available for sale.')
         return cleaned
 
 
 # ── Views ─────────────────────────────────────────────────────────────────────
 
 def land_list(request):
-    lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')
+    lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')
     
     # ── Filters from hero search bar & category tabs ──
-    listing_type = request.GET.get('type')
+    usage = request.GET.get('type')
     land_use     = request.GET.get('use')
     location     = request.GET.get('location')
     keyword      = request.GET.get('keyword', '')
@@ -275,8 +284,8 @@ def land_list(request):
     max_size     = request.GET.get('max_size')
     availability = request.GET.get('availability')
     
-    if listing_type in ['rent', 'sale']:
-        lands = lands.filter(listing_type=listing_type)
+    if usage in ['rent', 'sale']:
+        lands = lands.filter(usage=usage)
     if land_use in ['agricultural', 'residential', 'commercial', 'industrial', 'mixed']:
         lands = lands.filter(land_use=land_use)
     if location:
@@ -313,7 +322,7 @@ def land_list(request):
     elif sort == 'size_large':
         lands = lands.order_by(F('size').desc(nulls_last=True))
     else:
-        lands = lands.order_by('-created_at')
+        lands = lands.order_by('-created_on')
 
     # FIX #3: Build map_pins from queryset BEFORE converting to list via availability filter
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
@@ -323,7 +332,7 @@ def land_list(request):
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
-         'price': l.price_display, 'location': l.location, 'type': l.listing_type,
+         'price': l.price_display, 'location': l.location, 'type': l.usage,
          'status': 'available' if l.is_available else 'reserved'}
         for l in map_pins_qs[:200]
     ])
@@ -348,7 +357,7 @@ def land_list(request):
         'Simiyu', 'Geita', 'Katavi', 'Njombe', 'Iringa', 'Manyara'
     ]
 
-    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')[:3]
+    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')
     
     return render(request, 'lands/land_list.html', {
         'lands': page_obj, 'page_obj': page_obj, 'paginator': paginator,
@@ -356,7 +365,7 @@ def land_list(request):
         'featured_lands': featured_lands,
         'tanzania_regions': tanzania_regions,
         'current_filters': {
-            'listing_type': listing_type,
+            'usage': usage,
             'land_use': land_use,
             'location': location,
             'keyword': keyword,
@@ -418,12 +427,12 @@ def location_autocomplete(request):
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)
 def search_lands(request):
     form  = SearchForm(request.GET)
-    lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')
+    lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')
     
-    # Handle listing_type filter from navbar (rent/sale)
-    listing_type = request.GET.get('listing_type')
-    if listing_type in ['rent', 'sale']:
-        lands = lands.filter(listing_type=listing_type)
+    # Handle usage filter from navbar (rent/sale)
+    usage = request.GET.get('usage')
+    if usage in ['rent', 'sale']:
+        lands = lands.filter(usage=usage)
     
     # Handle land_use filter (agricultural, residential, etc.)
     land_use = request.GET.get('land_use')
@@ -459,7 +468,7 @@ def search_lands(request):
     elif sort == 'size_large':
         lands = lands.order_by(F('size').desc(nulls_last=True))
     else:
-        lands = lands.order_by('-created_at')
+        lands = lands.order_by('-created_on')
 
     # FIX #3: Build map_pins from queryset BEFORE converting to list
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
@@ -469,7 +478,7 @@ def search_lands(request):
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
-         'price': l.price_display, 'location': l.location, 'type': l.listing_type,
+         'price': l.price_display, 'location': l.location, 'type': l.usage,
          'status': 'available' if l.is_available else 'reserved'}
         for l in map_pins_qs[:200]
     ])
@@ -514,8 +523,21 @@ def land_detail(request, pk):
     is_wishlisted = False
     if request.user.is_authenticated:
         is_wishlisted = Wishlist.objects.filter(user=request.user, land=land).exists()
+
+    # Build booked periods for availability calendar
+    booked_periods = []
+    if land.usage == 'rent':
+        for period in land.get_booked_periods():
+            booked_periods.append({
+                'start': period['start_date'].isoformat(),
+                'end': period['end_date'].isoformat(),
+                'status': period['status'],
+            })
+
     return render(request, 'lands/land_detail.html', {
         'land': land, 'similar_lands': similar, 'is_wishlisted': is_wishlisted,
+        'booked_periods_json': json.dumps(booked_periods),
+        'next_available_date': land.next_available_date.isoformat(),
     })
 
 
@@ -523,12 +545,17 @@ def land_detail(request, pk):
 def book_land(request, pk):
     land = get_object_or_404(Land, pk=pk, is_active=True)
 
+    # Prevent admin/staff accounts from booking land
+    if request.user.is_authenticated and (request.user.role == User.ROLE_ADMIN or request.user.is_staff):
+        messages.error(request, 'Admin accounts cannot book land.')
+        return redirect('lands:land_detail', pk=land.pk)
+
     # FIX #1: prevent owner booking their own land
     if request.user.is_authenticated and request.user == land.owner:
         messages.warning(request, 'You cannot book your own listing.')
         return redirect('lands:land_detail', pk=land.pk)
 
-    if land.listing_type == 'sale' and not land.is_available:
+    if land.usage == 'sale' and not land.is_available:
         messages.warning(request, 'This land has already been sold.')
         return redirect('lands:land_detail', pk=land.pk)
 
@@ -537,6 +564,15 @@ def book_land(request, pk):
     qs_end    = request.GET.get('end')
     if qs_start: initial['start_date'] = qs_start
     if qs_end:   initial['end_date']   = qs_end
+
+    # Pre-fill dates with next available period if land is currently unavailable
+    if land.usage == 'rent' and not land.is_available and not qs_start:
+        next_date = land.next_available_date
+        if next_date:
+            initial['start_date'] = next_date.isoformat()
+            if land.min_duration_days:
+                end_date = next_date + timedelta(days=land.min_duration_days)
+                initial['end_date'] = end_date.isoformat()
 
     if request.method == 'POST':
         form = ReservationForm(request.POST, user=request.user, land=land)
@@ -567,8 +603,14 @@ def book_land(request, pk):
             r.status     = 'pending'
             r.start_date = form.cleaned_data.get('start_date')
             r.end_date   = form.cleaned_data.get('end_date')
-            r.agreed_price = (land.calculate_price(r.start_date, r.end_date)
+            r.requested_size = form.cleaned_data.get('requested_size')
+            
+            base_price = (land.calculate_price(r.start_date, r.end_date)
                               if r.start_date and r.end_date else land.price)
+            if r.requested_size and land.size:
+                base_price = base_price * (Decimal(str(r.requested_size)) / land.size)
+            r.agreed_price = round(base_price, 2)
+            
             if request.user.is_authenticated:
                 r.customer = request.user
                 if not r.customer_name:
@@ -596,12 +638,13 @@ def book_land(request, pk):
     })
 
 
+@customer_required
 @login_required
 def my_reservations(request):
     reservations = (Reservation.objects
                     .filter(customer=request.user)
                     .select_related('land')
-                    .order_by('-booking_date'))
+                    .order_by('-created_on'))
     return render(request, 'lands/my_reservations.html', {'reservations': reservations})
 
 
@@ -629,6 +672,7 @@ def cancel_reservation(request, pk):
     return redirect('lands:my_reservations')
 
 
+@customer_required
 @login_required
 def customer_dashboard(request):
     qs        = Reservation.objects.filter(customer=request.user)
@@ -636,11 +680,11 @@ def customer_dashboard(request):
     pending   = qs.filter(status='pending').count()
     approved  = qs.filter(status='approved').count()
     cancelled = qs.filter(status='cancelled').count()
-    recent    = qs.select_related('land').order_by('-booking_date')[:5]
+    recent    = qs.select_related('land').order_by('-created_on')[:5]
     wishlist_count = Wishlist.objects.filter(user=request.user).count()
     wishlist_items = Wishlist.objects.filter(user=request.user).select_related('land', 'land__owner')[:4]
-    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_at')[:4]
-    active_reservations = qs.filter(status__in=['pending', 'approved']).select_related('land', 'land__owner').order_by('-booking_date')[:6]
+    featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')[:4]
+    active_reservations = qs.filter(status__in=['pending', 'approved']).select_related('land', 'land__owner').order_by('-created_on')[:6]
     unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
     latest_notifications = Notification.objects.filter(user=request.user).select_related('user')[:3]
     return render(request, 'lands/customer_dashboard.html', {
@@ -670,7 +714,7 @@ def owner_dashboard(request):
     recent_bookings = (Reservation.objects
                        .filter(land_id__in=ids)
                        .select_related('land', 'customer')
-                       .order_by('-booking_date')[:8])
+                       .order_by('-created_on')[:8])
     total_views = sum(l.view_count for l in lands)
     total_wishlists = Wishlist.objects.filter(land__in=lands).count()
     
@@ -684,7 +728,7 @@ def owner_dashboard(request):
         land_id__in=ids,
         status='approved',
         payment_status='paid',
-        booking_date__gte=thirty_days_ago,
+        created_on__gte=thirty_days_ago,
     ).aggregate(total=Sum('amount_paid'))['total'] or 0
     
     # Last 7 days earnings
@@ -692,7 +736,7 @@ def owner_dashboard(request):
         land_id__in=ids,
         status='approved',
         payment_status='paid',
-        booking_date__gte=seven_days_ago
+        created_on__gte=seven_days_ago
     ).aggregate(total=Sum('amount_paid'))['total'] or 0
     
     # All time earnings
@@ -717,6 +761,7 @@ def owner_dashboard(request):
         'weekly_earnings': weekly_earnings,
         'total_earnings': total_earnings,
         'total_bookings': total_bookings,
+        'today': today,
     })
 
 
@@ -731,15 +776,7 @@ def add_land(request):
             land.owner = request.user
             land.save()
             
-            # Handle gallery images
-            gallery_files = request.FILES.getlist('gallery_images')
-            for i, image_file in enumerate(gallery_files):
-                LandImage.objects.create(
-                    land=land,
-                    image=image_file,
-                    is_primary=(i == 0 and not land.image),
-                    order=i
-                )
+            form.save_m2m() # Save ManyToMany relationships (utilities)
 
             messages.success(request, f'"{land.title}" listed successfully.')
             return redirect('lands:owner_dashboard')
@@ -757,7 +794,7 @@ def edit_land(request, pk):
         form = LandForm(request.POST, request.FILES, instance=land)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Listing updated.')
+            messages.success(request, 'Land updated.')
             return redirect('lands:owner_dashboard')
     else:
         form = LandForm(instance=land)
@@ -770,7 +807,7 @@ def delete_land(request, pk):
     land = get_object_or_404(Land, pk=pk, owner=request.user)
     if request.method == 'POST':
         land.delete()
-        messages.success(request, 'Listing deleted.')
+        messages.success(request, 'Land deleted.')
         return redirect('lands:owner_dashboard')
     return render(request, 'lands/delete_land.html', {'land': land})
 
@@ -782,14 +819,16 @@ def reservations_management(request):
     qs            = (Reservation.objects
                      .filter(land__in=lands)
                      .select_related('land', 'customer')
-                     .order_by('-booking_date'))
+                     .order_by('-created_on'))
     pending_count = qs.filter(status='pending').count()
     sf = request.GET.get('status')
     if sf in ['pending', 'approved', 'rejected', 'cancelled']:
         qs = qs.filter(status=sf)
+    from django.utils import timezone
     return render(request, 'lands/reservations_management.html', {
         'reservations': qs,
         'pending_count': pending_count,
+        'today': timezone.now().date(),
     })
 
 
@@ -836,7 +875,7 @@ def update_reservation_status(request, pk, status):
 
     # FIX #2: overlap check before approving rent bookings
     # BUG #3 FIX: Check both APPROVED and PENDING overlaps to prevent double-booking
-    if status == 'approved' and r.land.listing_type == 'rent':
+    if status == 'approved' and r.land.usage == 'rent':
         if r.start_date and r.end_date:
             conflict = Reservation.objects.filter(
                 land=r.land, status__in=['approved', 'pending'],
@@ -866,12 +905,17 @@ def update_reservation_status(request, pk, status):
 
     # SMS on approval
     if status == 'approved' and old_status != 'approved':
-        phone = r.customer_phone or (r.customer.phone if r.customer else None)
-        if phone:
+        customer_phone = r.customer_phone
+        if not customer_phone and r.customer:
+            details = getattr(r.customer, 'personal_details', None)
+            if details:
+                customer_phone = details.phone
+        
+        if customer_phone:
             date_info = ''
             if r.start_date and r.end_date:
                 date_info = f' ({r.start_date} to {r.end_date})'
-            send_sms_notification(phone,
+            send_sms_notification(customer_phone,
                 f"Your booking for '{r.land.title}'{date_info} is approved. "
                 f"Contact owner: {r.land.contact_phone or 'see listing'}.")
         
@@ -887,9 +931,14 @@ def update_reservation_status(request, pk, status):
 
     # SMS on rejection
     if status == 'rejected' and old_status != 'rejected':
-        phone = r.customer_phone or (r.customer.phone if r.customer else None)
-        if phone:
-            send_sms_notification(phone,
+        customer_phone = r.customer_phone
+        if not customer_phone and r.customer:
+            details = getattr(r.customer, 'personal_details', None)
+            if details:
+                customer_phone = details.phone
+        
+        if customer_phone:
+            send_sms_notification(customer_phone,
                 f"Your booking request for '{r.land.title}' was not approved. "
                 f"You may contact the owner or try another listing.")
         
@@ -904,7 +953,8 @@ def update_reservation_status(request, pk, status):
             )
 
     messages.success(request, f'Reservation {status}.')
-    return redirect('lands:reservations_management')
+    next_url = request.META.get('HTTP_REFERER')
+    return safe_redirect(request, next_url, 'lands:reservations_management')
 
 
 @login_required
@@ -988,7 +1038,7 @@ def message_thread(request, user_id):
     thread = Message.objects.filter(
         Q(sender=request.user, recipient=other_user) |
         Q(sender=other_user, recipient=request.user)
-    ).select_related('sender', 'recipient', 'land').order_by('created_at')
+    ).select_related('sender', 'recipient', 'land').order_by('created_on')
     # Mark unread messages as read
     thread.filter(recipient=request.user, is_read=False).update(is_read=True)
     if request.method == 'POST':
@@ -1033,6 +1083,7 @@ def toggle_wishlist(request, pk):
     return safe_redirect(request, next_url, 'lands:land_detail', pk=pk)
 
 
+@customer_required
 @login_required
 def my_wishlist(request):
     items = Wishlist.objects.filter(user=request.user).select_related('land', 'land__owner')

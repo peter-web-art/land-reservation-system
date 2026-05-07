@@ -19,8 +19,8 @@
     <div class="relative">
       <a href="{% url 'lands:land_detail' w.land.id %}" class="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg hover:border-[#1a5c38]/30 transition-all no-underline">
         <div class="aspect-video bg-gray-100 overflow-hidden relative">
-          {% if w.land.image %}
-            <img src="{{ w.land.image.url }}" alt="{{ w.land.title }}" loading="lazy" class="w-full h-full object-cover">
+          {% if w.land.land_image_path %}
+            <img src="{{ w.land.land_image_path.url }}" alt="{{ w.land.title }}" loading="lazy" class="w-full h-full object-cover">
           {% else %}
             <div class="w-full h-full flex items-center justify-center text-4xl">🌿</div>
           {% endif %}
@@ -40,8 +40,8 @@
             {% if w.land.size %} &middot; <span>{{ w.land.size }} {{ w.land.get_size_unit_display }}</span>{% endif %}
           </div>
           <div class="mt-2">
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if w.land.listing_type == 'sale' %}bg-red-100 text-red-700{% else %}bg-sky-100 text-sky-700{% endif %}">
-              {% if w.land.listing_type == 'rent' %}🏡 Rent{% else %}🏷️ Sale{% endif %}
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if w.land.usage == 'sale' %}bg-red-100 text-red-700{% else %}bg-sky-100 text-sky-700{% endif %}">
+              {% if w.land.usage == 'rent' %}🏡 Rent{% else %}🏷️ Sale{% endif %}
             </span>
           </div>
         </div>
@@ -58,7 +58,7 @@
   <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
     <i class="bi bi-heart text-5xl text-gray-300 mb-4"></i>
     <h3 class="text-xl font-semibold text-gray-800 mb-2">No saved lands yet</h3>
-    <p class="text-gray-500 mb-4">Tap the heart icon on any listing to save it here.</p>
+    <p class="text-gray-500 mb-4">Tap the heart icon on any land to save it here.</p>
     <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
       <i class="bi bi-search"></i> Browse Lands
     </a>

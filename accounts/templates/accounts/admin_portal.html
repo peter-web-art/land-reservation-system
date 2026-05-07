@@ -61,19 +61,7 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <div class="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-              <i class="bi bi-exclamation-triangle-fill text-white"></i>
-            </div>
-          </div>
-          <div class="ml-4">
-            <p class="text-sm font-medium text-gray-500">Pending KYC</p>
-            <p class="text-2xl font-bold text-gray-900">{{ kyc_pending|length }}</p>
-          </div>
-        </div>
-      </div>
+
 
       <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div class="flex items-center">
@@ -100,9 +88,7 @@
           <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-primary-dark font-medium text-sm" onclick="showSection('users')">
             <i class="bi bi-people mr-2"></i>Users
           </button>
-          <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-primary-dark font-medium text-sm" onclick="showSection('kyc')">
-            <i class="bi bi-shield-check mr-2"></i>KYC Management
-          </button>
+
           <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-primary-dark font-medium text-sm" onclick="showSection('lands')">
             <i class="bi bi-geo-alt mr-2"></i>Lands
           </button>
@@ -111,6 +97,9 @@
           </button>
           <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-primary-dark font-medium text-sm" onclick="showSection('system')">
             <i class="bi bi-gear mr-2"></i>System
+          </button>
+          <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-primary-dark font-medium text-sm" onclick="showSection('audit')">
+            <i class="bi bi-list-check mr-2"></i>Activity Audit
           </button>
         </nav>
       </div>
@@ -160,13 +149,34 @@
                 </div>
                 <span class="text-xs text-green-600 font-medium">Operational</span>
               </div>
-              <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                <div class="flex items-center space-x-3">
-                  <i class="bi bi-exclamation-triangle-fill text-yellow-600"></i>
-                  <span class="text-sm font-medium text-gray-900">KYC Queue</span>
-                </div>
-                <span class="text-xs text-yellow-600 font-medium">{{ kyc_pending|length }} pending</span>
-              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytics Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 pb-8">
+          <!-- User Registration Trend -->
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">User Registration Trend</h3>
+            <div class="h-64">
+              <canvas id="userTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Booking Distribution -->
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">Booking Status Distribution</h3>
+            <div class="h-64">
+              <canvas id="bookingStatusChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Revenue Trend -->
+          <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm lg:col-span-2">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">Monthly Revenue Trend (TZS)</h3>
+            <div class="h-72">
+              <canvas id="revenueTrendChart"></canvas>
             </div>
           </div>
         </div>
@@ -174,16 +184,24 @@
 
       <!-- Users Section -->
       <div class="p-6 hidden" id="section-users">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-900">User Management</h2>
-          <div class="flex space-x-3">
-            <input type="text" placeholder="Search users..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm" id="userSearch">
-            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm" id="userFilter">
-              <option value="">All Roles</option>
-              <option value="customer">Customer</option>
-              <option value="owner">Owner</option>
-              <option value="admin">Admin</option>
-            </select>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">User Management</h2>
+            <p class="text-sm text-gray-500">View and manage all platform users.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button onclick="openRegisterModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors">
+              <i class="bi bi-person-plus-fill"></i> Register User
+            </button>
+            <div class="flex items-center gap-2">
+              <input type="text" placeholder="Search users..." class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" id="userSearch">
+              <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" id="userFilter">
+                <option value="">All Roles</option>
+                <option value="customer">Customer</option>
+                <option value="owner">Owner</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -202,7 +220,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               {% for user in dashboard_users %}
-              <tr class="user-row" data-role="{{ user.role }}" data-phone="{{ user.phone|default:''|escape }}" data-bio="{{ user.bio|default:''|escape }}" data-kyc_status="{{ user.kyc_status }}" data-kyc_notes="{{ user.kyc_notes|default:''|escape }}" data-has_kyc_document="{{ user.kyc_document|yesno:'true,false' }}" data-has_govt_letter="{{ user.govt_letter|yesno:'true,false' }}" data-govt_letter_date="{{ user.govt_letter_date|date:'M d, Y'|default:'' }}" data-is_suspended="{{ user.is_suspended|yesno:'true,false' }}" data-password_set="{{ user.has_usable_password|yesno:'true,false' }}">
+              <tr class="user-row" data-role="{{ user.role }}" data-phone="{{ user.phone|default:''|escape }}" data-bio="{{ user.bio|default:''|escape }}" data-is_suspended="{{ user.is_suspended|yesno:'true,false' }}" data-password_set="{{ user.has_usable_password|yesno:'true,false' }}">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center text-sm font-medium text-gray-700">
@@ -249,40 +267,58 @@
                   {{ user.date_joined|date:"M d, Y" }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div class="flex space-x-2">
-                    {% if user.role != 'owner' and not user.is_owner %}
-                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}">{% csrf_token %}
-                      <input type="hidden" name="action" value="make_owner">
-                      <button class="text-blue-600 hover:text-blue-900 text-sm" title="Promote to Owner">
-                        <i class="bi bi-arrow-up-circle"></i>
-                      </button>
-                    </form>
-                    {% endif %}
-                    <button type="button" class="text-slate-600 hover:text-slate-900 text-sm" title="View details" onclick="openUserDetail(this)">
-                      <i class="bi bi-eye"></i>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors" title="View details" onclick="openUserDetail(this)">
+                      <i class="bi bi-eye"></i> View
                     </button>
-                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}">{% csrf_token %}
-                      <input type="hidden" name="action" value="reset_password">
-                      <button class="text-orange-600 hover:text-orange-900 text-sm" title="Reset Password" onclick="return confirm('Are you sure you want to reset this user\'s password? A new password will be generated.')">
-                        <i class="bi bi-key"></i>
-                      </button>
-                    </form>
-                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}">{% csrf_token %}
-                      {% if user.is_suspended %}
-                        <input type="hidden" name="action" value="unsuspend">
-                        <button class="text-green-600 hover:text-green-900 text-sm" title="Restore">
-                          <i class="bi bi-unlock"></i>
+
+                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}" class="inline">{% csrf_token %}
+                      {% if user.is_verified %}
+                        <input type="hidden" name="action" value="unverify">
+                        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors" title="Remove verification">
+                          <i class="bi bi-patch-minus"></i> Unverify
                         </button>
                       {% else %}
-                        <input type="hidden" name="action" value="suspend">
-                        <button class="text-red-600 hover:text-red-900 text-sm" title="Suspend">
-                          <i class="bi bi-lock"></i>
+                        <input type="hidden" name="action" value="verify">
+                        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors" title="Verify User">
+                          <i class="bi bi-patch-check"></i> Verify
                         </button>
                       {% endif %}
                     </form>
+
+                    {% if user.role != 'owner' and not user.is_owner %}
+                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}" class="inline">{% csrf_token %}
+                      <input type="hidden" name="action" value="make_owner">
+                      <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors" title="Promote to Owner">
+                        <i class="bi bi-arrow-up-circle"></i> Promote
+                      </button>
+                    </form>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}" class="inline">{% csrf_token %}
+                      <input type="hidden" name="action" value="reset_password">
+                      <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors" title="Reset Password" onclick="return confirm('Are you sure you want to reset this user\'s password? A new password will be generated.')">
+                        <i class="bi bi-key"></i> Pass
+                      </button>
+                    </form>
+
+                    <form method="post" action="{% url 'accounts:admin_user_action' user.id %}" class="inline">{% csrf_token %}
+                      {% if user.is_suspended %}
+                        <input type="hidden" name="action" value="unsuspend">
+                        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors" title="Restore">
+                          <i class="bi bi-unlock"></i> Unsuspend
+                        </button>
+                      {% else %}
+                        <input type="hidden" name="action" value="suspend">
+                        <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors" title="Suspend">
+                          <i class="bi bi-lock"></i> Suspend
+                        </button>
+                      {% endif %}
+                    </form>
+
                     {% if user.role != 'admin' and not user.is_staff %}
-                    <button class="text-red-600 hover:text-red-900 text-sm" title="Delete user" onclick="confirmDelete({{ user.id }}, '{{ user.username|escapejs }}')">
-                      <i class="bi bi-trash3"></i>
+                    <button class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors" title="Delete user" onclick="confirmDelete({{ user.id }}, '{{ user.username|escapejs }}')">
+                      <i class="bi bi-trash3"></i> Delete
                     </button>
                     {% endif %}
                   </div>
@@ -294,69 +330,7 @@
         </div>
       </div>
 
-      <!-- KYC Section -->
-      <div class="p-6 hidden" id="section-kyc">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-900">KYC Management</h2>
-          <div class="flex space-x-3">
-            <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm" id="kycFilter">
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
 
-        {% if kyc_pending %}
-        <div class="space-y-4">
-          {% for user in kyc_pending %}
-          <div class="bg-white border border-gray-200 rounded-lg p-6 kyc-item" data-status="{{ user.kyc_status }}">
-            <div class="flex items-start justify-between">
-              <div class="flex items-start space-x-4">
-                <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <i class="bi bi-person-fill text-yellow-600"></i>
-                </div>
-                <div class="flex-1">
-                  <h3 class="text-lg font-medium text-gray-900">{{ user.username }}</h3>
-                  <p class="text-sm text-gray-500">{{ user.email }} • Joined {{ user.date_joined|date:"M d, Y" }}</p>
-                  <div class="mt-3 flex space-x-4">
-                    {% if user.kyc_document %}
-                    <a href="{{ user.kyc_document.url }}" target="_blank" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                      <i class="bi bi-file-earmark-text mr-2"></i>ID Document
-                    </a>
-                    {% endif %}
-                    {% if user.govt_letter %}
-                    <a href="{{ user.govt_letter.url }}" target="_blank" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                      <i class="bi bi-envelope-paper mr-2"></i>Govt Letter
-                    </a>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-              <div class="flex space-x-3">
-                <form method="post" action="{% url 'accounts:review_kyc' user.id %}">{% csrf_token %}
-                  <input type="text" name="kyc_notes" placeholder="Notes (optional)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm mr-2 w-48">
-                  <button type="submit" name="action" value="approve_kyc" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                    <i class="bi bi-check-lg mr-2"></i>Approve
-                  </button>
-                  <button type="submit" name="action" value="reject_kyc" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
-                    <i class="bi bi-x-lg mr-2"></i>Reject
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-12">
-          <i class="bi bi-check-circle-fill text-green-500 text-4xl mb-4"></i>
-          <h3 class="text-lg font-medium text-gray-900 mb-2">All Clear</h3>
-          <p class="text-gray-500">No KYC reviews pending.</p>
-        </div>
-        {% endif %}
-      </div>
 
       <!-- Lands Section -->
       <div class="p-6 hidden" id="section-lands">
@@ -474,7 +448,7 @@
               <tr class="booking-row" data-status="{{ booking.status }}">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm font-medium text-gray-900">#{{ booking.id }}</div>
-                  <div class="text-sm text-gray-500">{{ booking.booking_date|date:"M d, Y" }}</div>
+                  <div class="text-sm text-gray-500">{{ booking.created_on|date:"M d, Y" }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   {% if booking.customer %}
@@ -535,10 +509,13 @@
                   <p class="text-sm font-medium text-gray-900">Maintenance Mode</p>
                   <p class="text-xs text-gray-500">Temporarily disable user access</p>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" class="sr-only peer" id="maintenanceMode">
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                <form method="post" action="{% url 'accounts:admin_system_action' %}" id="form-maintenance">{% csrf_token %}
+                  <input type="hidden" name="action" value="toggle_maintenance">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" id="maintenanceMode" {% if system_settings.maintenance_mode %}checked{% endif %} onchange="this.form.submit()">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </form>
               </div>
 
               <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -546,10 +523,13 @@
                   <p class="text-sm font-medium text-gray-900">Email Notifications</p>
                   <p class="text-xs text-gray-500">Send system notifications</p>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" class="sr-only peer" id="emailNotifications" checked>
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                <form method="post" action="{% url 'accounts:admin_system_action' %}" id="form-emails">{% csrf_token %}
+                  <input type="hidden" name="action" value="toggle_emails">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" id="emailNotifications" {% if system_settings.email_notifications %}checked{% endif %} onchange="this.form.submit()">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </form>
               </div>
             </div>
           </div>
@@ -558,31 +538,106 @@
           <div>
             <h3 class="text-lg font-semibold text-gray-900 mb-4">System Actions</h3>
             <div class="space-y-3">
-              <button class="w-full flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                <div class="flex items-center space-x-3">
-                  <i class="bi bi-download text-blue-600"></i>
-                  <span class="text-sm font-medium text-gray-900">Export Data</span>
-                </div>
-                <i class="bi bi-chevron-right text-gray-400"></i>
-              </button>
+              <form method="post" action="{% url 'accounts:admin_system_action' %}">{% csrf_token %}
+                <input type="hidden" name="action" value="export_data">
+                <button type="submit" class="w-full flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                  <div class="flex items-center space-x-3">
+                    <i class="bi bi-download text-blue-600"></i>
+                    <span class="text-sm font-medium text-gray-900">Export Data (CSV)</span>
+                  </div>
+                  <i class="bi bi-chevron-right text-gray-400"></i>
+                </button>
+              </form>
 
-              <button class="w-full flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                <div class="flex items-center space-x-3">
-                  <i class="bi bi-database text-green-600"></i>
-                  <span class="text-sm font-medium text-gray-900">Backup Database</span>
-                </div>
-                <i class="bi bi-chevron-right text-gray-400"></i>
-              </button>
+              <form method="post" action="{% url 'accounts:admin_system_action' %}">{% csrf_token %}
+                <input type="hidden" name="action" value="backup_db">
+                <button type="submit" class="w-full flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                  <div class="flex items-center space-x-3">
+                    <i class="bi bi-database text-green-600"></i>
+                    <div>
+                      <span class="text-sm font-medium text-gray-900 block">Backup Database</span>
+                      {% if system_settings.last_backup %}
+                        <span class="text-[10px] text-gray-500">Last backup: {{ system_settings.last_backup|date:"M d, Y H:i" }}</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <i class="bi bi-chevron-right text-gray-400"></i>
+                </button>
+              </form>
 
-              <button class="w-full flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors">
+              <button class="w-full flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors" onclick="showSection('overview')">
                 <div class="flex items-center space-x-3">
                   <i class="bi bi-graph-up text-yellow-600"></i>
-                  <span class="text-sm font-medium text-gray-900">View Analytics</span>
+                  <span class="text-sm font-medium text-gray-900">View Platform Analytics</span>
                 </div>
                 <i class="bi bi-chevron-right text-gray-400"></i>
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Audit Section -->
+      <div class="p-6 hidden" id="section-audit">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Activity Audit Log</h2>
+            <p class="text-sm text-gray-500">Transparency report for all creation and update events across the platform.</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model/Activity</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created On</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated By</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated On</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              {% for log in audit_logs %}
+              <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+                      <i class="bi {{ log.icon }}"></i>
+                    </div>
+                    <span class="text-sm font-semibold text-gray-900">{{ log.model }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
+                  {{ log.object }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <span class="inline-flex items-center gap-1">
+                    <i class="bi bi-person-circle"></i> {{ log.created_by }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ log.created_on|date:"M d, Y H:i" }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <span class="inline-flex items-center gap-1">
+                    <i class="bi bi-person-circle"></i> {{ log.updated_by }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ log.updated_on|date:"M d, Y H:i" }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="px-6 py-10 text-center text-gray-500">
+                  No activity logs found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -638,18 +693,7 @@
           <p class="mt-1 text-gray-700" id="detailPasswordStatus"></p>
           <p class="text-xs text-gray-500 mt-1">Raw passwords are never displayed for security.</p>
         </div>
-        <div>
-          <p class="text-xs uppercase tracking-[0.24em] text-gray-500">KYC Status</p>
-          <p class="mt-1 text-gray-700" id="detailKycStatus"></p>
-        </div>
-        <div>
-          <p class="text-xs uppercase tracking-[0.24em] text-gray-500">KYC Notes</p>
-          <p class="mt-1 text-gray-700" id="detailKycNotes"></p>
-        </div>
-        <div>
-          <p class="text-xs uppercase tracking-[0.24em] text-gray-500">Documents</p>
-          <p class="mt-1 text-gray-700" id="detailDocuments"></p>
-        </div>
+
       </div>
     </div>
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
@@ -692,7 +736,81 @@
   </div>
 </div>
 
+<!-- Admin Registration Modal -->
+<div class="fixed inset-0 bg-gray-900 bg-opacity-70 overflow-y-auto h-full w-full hidden z-50" id="registerUserModal">
+  <div class="relative top-16 mx-auto w-full max-w-xl p-5 shadow-2xl rounded-2xl bg-white border border-gray-100">
+    <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#d4e8da] text-[#1a5c38] rounded-xl flex items-center justify-center">
+          <i class="bi bi-person-plus-fill text-xl"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-bold text-gray-900">Register New User</h3>
+          <p class="text-sm text-gray-500">Create a new account manually.</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeRegisterModal()" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'accounts:admin_register_user' %}" class="space-y-5">
+      {% csrf_token %}
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">Username</label>
+          {{ registration_form.username }}
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">Email Address</label>
+          {{ registration_form.email }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">First Name</label>
+          {{ registration_form.first_name }}
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">Last Name</label>
+          {{ registration_form.last_name }}
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="text-sm font-semibold text-gray-700">User Role</label>
+        {{ registration_form.role }}
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">Password</label>
+          {{ registration_form.password1 }}
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-semibold text-gray-700">Confirm Password</label>
+          {{ registration_form.password2 }}
+        </div>
+      </div>
+
+      <div class="pt-6 flex justify-end gap-3 border-t border-gray-100">
+        <button type="button" onclick="closeRegisterModal()" class="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 rounded-full transition-colors border border-gray-300">
+          Cancel
+        </button>
+        <button type="submit" class="px-5 py-2.5 text-sm font-semibold text-white bg-[#1a5c38] hover:bg-[#134428] rounded-full transition-colors">
+          <i class="bi bi-check-lg mr-1"></i> Complete Registration
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 // Tab switching
 function showSection(sectionName, button) {
@@ -781,16 +899,7 @@ document.getElementById('bookingFilter').addEventListener('change', function() {
   });
 });
 
-document.getElementById('kycFilter').addEventListener('change', function() {
-  const filterValue = this.value;
-  document.querySelectorAll('.kyc-item').forEach(item => {
-    if (!filterValue || item.dataset.status === filterValue) {
-      item.style.display = '';
-    } else {
-      item.style.display = 'none';
-    }
-  });
-});
+
 
 // Delete confirmation
 function confirmDelete(userId, username) {
@@ -811,12 +920,7 @@ function openUserDetail(button) {
   document.getElementById('detailStatus').textContent = row.dataset.isSuspended === 'true' ? 'Suspended' : 'Active';
   document.getElementById('detailJoined').textContent = row.querySelector('td:nth-child(6)')?.textContent.trim() || 'Unknown';
   document.getElementById('detailLastLogin').textContent = row.querySelector('td:nth-child(4)')?.textContent.trim() || 'N/A';
-  document.getElementById('detailKycStatus').textContent = row.dataset.kycStatus || 'Not Submitted';
-  document.getElementById('detailKycNotes').textContent = row.dataset.kycNotes || 'None';
-  const docs = [];
-  if (row.dataset.hasKycDocument === 'true') docs.push('KYC document');
-  if (row.dataset.hasGovtLetter === 'true') docs.push('Govt letter');
-  document.getElementById('detailDocuments').textContent = docs.length ? docs.join(', ') : 'None uploaded';
+
   document.getElementById('detailPasswordStatus').textContent = row.dataset.passwordSet === 'true' ? 'Password set and secure' : 'No password set';
   document.getElementById('detailPosts').textContent = row.querySelector('td:nth-child(3) strong')?.textContent || '0';
   document.getElementById('detailBookings').textContent = row.querySelector('td:nth-child(3) div:nth-child(2) strong')?.textContent || '0';
@@ -829,12 +933,103 @@ function closeUserDetail() {
   document.getElementById('userDetailModal').classList.add('hidden');
 }
 
+function openRegisterModal() {
+  document.getElementById('registerUserModal').classList.remove('hidden');
+}
+
+function closeRegisterModal() {
+  document.getElementById('registerUserModal').classList.add('hidden');
+}
+
 document.getElementById('cancelDelete').addEventListener('click', function() {
   document.getElementById('deleteModal').classList.add('hidden');
 });
 
 // Initialize default section
 showSection('overview', document.querySelector('#adminTabs button'));
+
+// --- Analytics Charts ---
+document.addEventListener('DOMContentLoaded', function() {
+    const ctxTrend = document.getElementById('userTrendChart')?.getContext('2d');
+    const ctxStatus = document.getElementById('bookingStatusChart')?.getContext('2d');
+    const ctxRev = document.getElementById('revenueTrendChart')?.getContext('2d');
+
+    if (ctxTrend) {
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: [{% for item in user_trend %}'{{ item.month }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'New Users',
+                    data: [{% for item in user_trend %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    borderColor: '#1a5c38',
+                    backgroundColor: 'rgba(26, 92, 56, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#1a5c38'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [5, 5] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    if (ctxStatus) {
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for item in booking_stats %}'{{ item.status }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for item in booking_stats %}{{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: ['#f59e0b', '#059669', '#dc2626', '#6b7280'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+
+    if (ctxRev) {
+        new Chart(ctxRev, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in revenue_trend %}'{{ item.month }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [{% for item in revenue_trend %}{{ item.revenue }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: '#1a5c38',
+                    borderRadius: 8,
+                    barThickness: 40
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [5, 5] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+});
 </script>
-{% endblock %}
 {% endblock %}

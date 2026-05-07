@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{% if land.listing_type == 'rent' %}Reserve{% else %}Inquire{% endif %} {{ land.title }} — LandReserve{% endblock %}
+{% block title %}{% if land.usage == 'rent' %}Reserve{% else %}Inquire{% endif %} {{ land.title }} — LandReserve{% endblock %}
 {% block body_class %}bg-form-premium{% endblock %}
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -9,13 +9,13 @@
     <span>/</span>
     <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-white no-underline text-white">{{ land.title|truncatechars:30 }}</a>
     <span>/</span>
-    <span class="text-white">{% if land.listing_type == 'rent' %}Reserve{% else %}Inquire{% endif %}</span>
+    <span class="text-white">{% if land.usage == 'rent' %}Reserve{% else %}Inquire{% endif %}</span>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2">
       <h2 class="text-3xl font-extrabold text-white mb-6 drop-shadow-md">
-        {% if land.listing_type == 'rent' %}Confirm Your Reservation{% else %}Make an Enquiry{% endif %}
+        {% if land.usage == 'rent' %}Confirm Your Reservation{% else %}Make an Enquiry{% endif %}
       </h2>
 
       {% if user.is_authenticated %}
@@ -36,7 +36,7 @@
             <h3 class="font-semibold text-lg">{{ land.title }}</h3>
             <p class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ land.location }}</p>
             <div class="flex gap-2 mt-2">
-              {% if land.listing_type == 'rent' %}
+              {% if land.usage == 'rent' %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-100 text-sky-700 rounded-full text-xs font-semibold">For Rent</span>
               {% else %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">For Sale</span>
@@ -54,8 +54,27 @@
       <form method="POST" id="bookingForm" class="space-y-6">
         {% csrf_token %}
 
-        {% if land.listing_type == 'rent' %}
-        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
+        {% if land.size %}
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold"><i class="bi bi-rulers"></i></span>
+              <h3 class="font-semibold">Area Required</h3>
+            </div>
+            <span class="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm">Currently Available: {{ land.current_remaining_size }} {{ land.get_size_unit_display }}</span>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">How much area do you need? <span class="text-gray-400 font-normal">(Leave blank for whole land)</span></label>
+            {{ form.requested_size }}
+            {% if form.requested_size.errors %}<div class="text-red-500 text-sm mt-1">{{ form.requested_size.errors }}</div>{% endif %}
+          </div>
+        </div>
+        {% else %}
+        {{ form.requested_size }}
+        {% endif %}
+
+        {% if land.usage == 'rent' %}
+        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl mb-6">
           <div class="flex items-center gap-3 mb-4">
             <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
             <h3 class="font-semibold">Select Your Dates</h3>
@@ -76,7 +95,18 @@
             </div>
           </div>
 
-          {% if land.listing_type == 'rent' %}
+          {% if land.usage == 'rent' and not land.is_available and not request.GET.start %}
+          <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-start gap-2">
+              <i class="bi bi-info-circle text-blue-500 mt-0.5"></i>
+              <div class="text-sm text-blue-700">
+                <strong>Dates pre-filled:</strong> This land is currently unavailable. We've suggested the next available check-in date based on existing reservations.
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if land.usage == 'rent' %}
           <div id="availabilityInfo" class="mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200 hidden">
             <div class="flex items-start gap-2">
               <i class="bi bi-exclamation-triangle text-amber-500 mt-0.5"></i>
@@ -112,7 +142,7 @@
 
         <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}2{% else %}1{% endif %}</span>
+            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.usage == 'rent' %}2{% else %}1{% endif %}</span>
             <h3 class="font-semibold">Your Information</h3>
           </div>
           
@@ -148,10 +178,10 @@
           </div>
         </div>
 
-        {% if land.listing_type == 'rent' %}
+        {% if land.usage == 'rent' %}
         <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}3{% else %}2{% endif %}</span>
+            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.usage == 'rent' %}3{% else %}2{% endif %}</span>
             <h3 class="font-semibold">Payment Method</h3>
           </div>
           
@@ -177,7 +207,7 @@
 
         <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.listing_type == 'rent' %}4{% else %}2{% endif %}</span>
+            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.usage == 'rent' %}4{% else %}2{% endif %}</span>
             <h3 class="font-semibold">Additional Notes <span class="text-gray-400 text-sm">(optional)</span></h3>
           </div>
           {{ form.notes }}
@@ -185,7 +215,7 @@
 
         <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
           <i class="bi bi-shield-check text-xl text-[#1a5c38] mt-0.5"></i>
-          <div><strong>Booking Protection:</strong> Your request will be <strong>pending</strong> until the owner approves. {% if land.listing_type == 'rent' %}Cancel anytime before approval.{% else %}Payment arranged directly with owner.{% endif %}</div>
+          <div><strong>Booking Protection:</strong> Your request will be <strong>pending</strong> until the owner approves. {% if land.usage == 'rent' %}Cancel anytime before approval.{% else %}Payment arranged directly with owner.{% endif %}</div>
         </div>
 
         <button type="button" id="reviewBookingBtn" class="w-full py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-lg hover:bg-[#134428] transition-colors">
@@ -197,7 +227,7 @@
           <i class="bi bi-arrow-left"></i> Back to dashboard
         </a>
         <a href="{% url 'lands:land_detail' land.id %}" class="block w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm text-center hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
-          <i class="bi bi-arrow-left"></i> Back to listing
+          <i class="bi bi-arrow-left"></i> Back to land
         </a>
       </form>
     </div>
@@ -210,7 +240,7 @@
         <h4 class="font-semibold text-lg mb-2">{{ land.title }}</h4>
         <div class="text-gray-500 text-sm mb-4 flex items-center gap-1"><i class="bi bi-geo-alt-fill"></i> {{ land.location }}</div>
 
-        {% if land.listing_type == 'rent' %}
+        {% if land.usage == 'rent' %}
         <div class="grid grid-cols-2 gap-2 mb-4 pb-4 border-b border-gray-200">
           <div>
             <div class="text-xs text-gray-500">Check-in</div>
@@ -226,9 +256,9 @@
         <div id="priceBreakdown" class="space-y-2 text-sm">
           <div class="flex justify-between">
             <span id="basePriceLabel">
-              {% if land.listing_type == 'rent' %}
-                {% if land.price_unit == 'month' %}Quoted monthly rate{% elif land.price_unit == 'year' %}Quoted yearly rate{% else %}Listing price{% endif %}
-              {% else %}Listing price{% endif %}
+              {% if land.usage == 'rent' %}
+                {% if land.price_unit == 'month' %}Quoted monthly rate{% elif land.price_unit == 'year' %}Quoted yearly rate{% else %}Land price{% endif %}
+              {% else %}Land price{% endif %}
             </span>
             <span id="basePrice" class="font-medium">Tsh {{ land.price }}</span>
           </div>
@@ -257,7 +287,7 @@
         <p class="text-center text-sm text-gray-500 mt-4"><i class="bi bi-shield-check"></i> No charges until owner approval</p>
       </div>
 
-      {% if land.listing_type == 'rent' and land.weekly_discount > 0 or land.monthly_discount > 0 %}
+      {% if land.usage == 'rent' and land.weekly_discount > 0 or land.monthly_discount > 0 %}
       <div class="bg-white border border-gray-200 rounded-xl p-4 mt-4">
         <strong class="text-amber-600 flex items-center gap-2"><i class="bi bi-tag-fill"></i> Available Discounts</strong>
         <div class="mt-2 text-sm">
@@ -286,12 +316,12 @@
         <div>
           <h4 class="font-semibold">{{ land.title }}</h4>
           <p class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ land.location }}</p>
-          {% if land.size %}<p class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-rulers"></i> {{ land.size }} {{ land.get_size_unit_display }}</p>{% endif %}
+          {% if land.size %}<p class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-rulers"></i> <span id="reviewRequestedSize">{{ land.size }}</span> {{ land.get_size_unit_display }}</p>{% endif %}
         </div>
       </div>
       
       <!-- Dates -->
-      {% if land.listing_type == 'rent' %}
+      {% if land.usage == 'rent' %}
       <div class="grid grid-cols-2 gap-4">
         <div class="p-3 bg-gray-50 rounded">
           <div class="text-xs text-gray-500 uppercase">Check-in</div>
@@ -311,7 +341,7 @@
         <div id="reviewContact">—</div>
       </div>
       
-      {% if land.listing_type == 'rent' %}
+      {% if land.usage == 'rent' %}
       <div class="p-3 bg-gray-50 rounded">
         <div class="text-xs text-gray-500 uppercase mb-2">Payment Method</div>
         <div id="reviewPayment">—</div>
@@ -343,7 +373,7 @@
 </div>
 
 <script>
-const isRental = {% if land.listing_type == 'rent' %}true{% else %}false{% endif %};
+const isRental = {% if land.usage == 'rent' %}true{% else %}false{% endif %};
 const pricePerDay = {{ price_per_day|default:0 }};
 const priceUnit = '{{ land.price_unit }}';
 const weeklyDisc  = {{ weekly_discount|default:0 }};
@@ -402,8 +432,21 @@ function updatePricing() {
     return; 
   }
 
-  const base  = pricePerDay * days;
-  const weeks = days / 7;
+  let base = pricePerDay * days;
+  if (!isRental) {
+    base = pricePerDay; // For sale, pricePerDay stores the total base price
+  }
+  
+  // Handle partial size pro-ration
+  const reqSizeEl = document.querySelector('[name="requested_size"]');
+  const reqSize = reqSizeEl && reqSizeEl.value ? parseFloat(reqSizeEl.value) : null;
+  const totalSize = {{ land.size|default:"null" }};
+  
+  if (reqSize && totalSize && reqSize > 0) {
+    base = base * (reqSize / totalSize);
+  }
+
+  const weeks = isRental ? days / 7 : 0;
   let disc    = 0, discLabel = '';
 
   if (weeks >= 4 && monthlyDisc > 0)  { disc = monthlyDisc / 100; discLabel = monthlyDisc + '% monthly'; }
@@ -412,16 +455,23 @@ function updatePricing() {
   const total = base * (1 - disc);
 
   let durStr = '';
-  if (days >= 365) durStr = Math.floor(days/365) + ' yr ' + Math.floor((days%365)/30) + ' mo';
-  else if (days >= 30) durStr = Math.floor(days/30) + ' month' + (Math.floor(days/30)!==1?'s':'');
-  else if (days >= 7)  durStr = Math.floor(days/7) + ' week' + (Math.floor(days/7)!==1?'s':'');
-  else durStr = days + ' day' + (days!==1?'s':'');
+  if (isRental) {
+    if (days >= 365) durStr = Math.floor(days/365) + ' yr ' + Math.floor((days%365)/30) + ' mo';
+    else if (days >= 30) durStr = Math.floor(days/30) + ' month' + (Math.floor(days/30)!==1?'s':'');
+    else if (days >= 7)  durStr = Math.floor(days/7) + ' week' + (Math.floor(days/7)!==1?'s':'');
+    else durStr = days + ' day' + (days!==1?'s':'');
+  }
   
-  showDuration(durStr + (disc>0?' · '+discLabel+' applied':''), false, disc > 0, days);
+  if (isRental) {
+    showDuration(durStr + (disc>0?' · '+discLabel+' applied':''), false, disc > 0, days);
+  }
 
   const baseEl  = document.getElementById('basePrice');
   const totalEl = document.getElementById('totalPrice');
-  if (baseEl)  baseEl.textContent  = formatPrice(base) + ' (' + days + ' days)';
+  if (baseEl) {
+    if (isRental) baseEl.textContent  = formatPrice(base) + ' (' + days + ' days)';
+    else baseEl.textContent = formatPrice(base);
+  }
   if (totalEl) totalEl.textContent = formatPrice(total);
 
   const wdr = document.getElementById('weeklyDiscRow');
@@ -434,7 +484,7 @@ function updatePricing() {
   if (wda && weeks >= 1 && weeklyDisc > 0 && weeks < 4) wda.textContent = '-' + formatPrice(base * weeklyDisc / 100);
   if (mda && weeks >= 4 && monthlyDisc > 0) mda.textContent = '-' + formatPrice(base * monthlyDisc / 100);
   
-  if (sd && minDays) {
+  if (sd && minDays && isRental) {
     const minEnd = new Date(start);
     minEnd.setDate(minEnd.getDate() + minDays);
     endEl.min = minEnd.toISOString().split('T')[0];
@@ -473,12 +523,21 @@ function clearError() {
 function submitBookingForm() {
   const form = document.getElementById('bookingForm');
   if (form) {
+    // Disable the button to prevent double submission
+    const btn = document.querySelector('#reviewModal button[onclick="submitBookingForm()"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Confirming...';
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+    }
     form.submit();
   }
 }
 
 const sd = document.getElementById('startDate');
 const ed = document.getElementById('endDate');
+const rs = document.querySelector('[name="requested_size"]');
+
 if (sd) sd.addEventListener('change', function(){ 
   if(ed && !ed.value) {
     const minEnd = new Date(this.value);
@@ -488,12 +547,21 @@ if (sd) sd.addEventListener('change', function(){
   updatePricing(); 
 });
 if (ed) ed.addEventListener('change', updatePricing);
+if (rs) {
+  rs.addEventListener('input', updatePricing);
+  rs.addEventListener('change', updatePricing);
+}
 
 document.getElementById('reviewBookingBtn').addEventListener('click', function() {
   const startField = document.getElementById('startDate');
   const endField = document.getElementById('endDate');
+  const reqSizeField = document.querySelector('[name="requested_size"]');
   const sd = startField ? startField.value : '';
   const ed = endField ? endField.value : '';
+  const rs = reqSizeField && reqSizeField.value ? reqSizeField.value : '{{ land.size }}';
+  
+  const revSizeEl = document.getElementById('reviewRequestedSize');
+  if (revSizeEl) revSizeEl.textContent = rs;
 
   if (isRental) {
     document.getElementById('reviewStart').textContent = sd ? formatDate(sd) : '—';

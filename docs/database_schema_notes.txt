@@ -43,9 +43,7 @@ Purpose: Stores details for every land listed for rent or sale.
 | location  |       | String        | Physical address or region               |
 | size      |       | Decimal       | Land area (Acres/Hectares/Sqm)           |
 | topography|       | Choice        | Terrain (Flat, Sloped, Hilly, etc.)      |
-| utilities |       | Booleans      | Water, Electricity, Road Access          |
-| is_fenced |       | Boolean       | Improvements: Fenced status              |
-| is_cleared|       | Boolean       | Improvements: Cleared status             |
+| utilities |       | M2M           | Link to lands_utility (Water, Power, etc)|
 | is_active |       | Boolean       | Whether the listing is visible           |
 +-----------+-------+---------------+------------------------------------------+
 
@@ -79,6 +77,18 @@ Purpose: Stores multiple high-quality photos for each property.
 | is_primary|       | Boolean       | Indicates the main cover photo           |
 +-----------+-------+---------------+------------------------------------------+
 
+TABLE: lands_utility (Infrastructure & Features)
+-----------------------------------------------------------------------
+Purpose: Predefined list of utilities like "Piped Water", "Security Guard".
+
++-----------+-------+---------------+------------------------------------------+
+| Field     | Key   | Type          | Description                              |
++-----------+-------+---------------+------------------------------------------+
+| id        | PK    | AutoField     | Unique identifier for the utility        |
+| name      |       | String        | Label (e.g., Solar, Borehole, Fiber)     |
+| icon_class|       | String        | Icon for UI representation               |
++-----------+-------+---------------+------------------------------------------+
+
 =========================================
 3. RELATIONSHIPS & LOGIC
 =========================================
@@ -86,6 +96,7 @@ Purpose: Stores multiple high-quality photos for each property.
 - One User (Owner) can have Many Lands.
 - One Land can have Many Reservations history.
 - One Land can have Many Images in its gallery.
+- One Land can have Many Utilities (Many-to-Many).
 - Reservation Availability Logic: The system automatically blocks dates 
   if a reservation is 'Approved' or 'Pending' to prevent double-booking.
 

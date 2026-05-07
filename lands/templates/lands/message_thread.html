@@ -37,7 +37,7 @@
               {% if msg.land %}
               <div class="mt-1"><span class="text-xs opacity-75 flex items-center gap-1"><i class="bi bi-geo-alt-fill"></i> {{ msg.land.title|truncatechars:25 }}</span></div>
               {% endif %}
-              <div class="text-xs opacity-50 mt-1 text-right">{{ msg.created_at|date:"M d, H:i" }}</div>
+              <div class="text-xs opacity-50 mt-1 text-right">{{ msg.created_on|date:"M d, H:i" }}</div>
             </div>
           </div>
           {% endfor %}
@@ -88,12 +88,12 @@
           <div class="text-sm font-medium text-gray-500 px-4 pt-4">Related listing</div>
           <a href="{% url 'lands:land_detail' msg.land.pk %}" class="block no-underline text-gray-900">
             <div class="aspect-video bg-gray-100 overflow-hidden relative">
-              {% if msg.land.image %}
-                <img src="{{ msg.land.image.url }}" alt="{{ msg.land.title }}" loading="lazy" class="w-full h-full object-cover">
+              {% if msg.land.land_image_path %}
+                <img src="{{ msg.land.land_image_path.url }}" alt="{{ msg.land.title }}" loading="lazy" class="w-full h-full object-cover">
               {% else %}
                 <div class="w-full h-full flex items-center justify-center text-4xl">🏞</div>
               {% endif %}
-              <span class="absolute top-2 left-2 px-2 py-1 bg-white/90 rounded text-xs font-semibold">{{ msg.land.get_listing_type_display }}</span>
+              <span class="absolute top-2 left-2 px-2 py-1 bg-white/90 rounded text-xs font-semibold">{{ msg.land.get_usage_display }}</span>
             </div>
             <div class="p-4">
               <div class="font-semibold truncate">{{ msg.land.title }}</div>

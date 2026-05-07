@@ -1,19 +1,25 @@
 from urllib.parse import urlencode
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login as auth_login, authenticate
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Sum, Count, Avg, Q
+from django.db.models.functions import TruncMonth
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+import re
 from django import forms
 from django.utils.html import strip_tags
-from django.utils.http import url_has_allowed_host_and_scheme
-from django.db.models import Count, Q, Sum
-from django.urls import reverse
-from django.db.models.functions import TruncMonth
+import bleach
+import random
+import string
+import csv
+import json
 from datetime import datetime, timedelta
-import bleach, re, json
-import string, random
+from .models import User, PersonalDetails, SystemSettings
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -22,7 +28,6 @@ except ImportError:
         def decorator(func): return func
         return decorator
 
-from .models import User
 from .decorators import admin_required
 
 
@@ -50,9 +55,6 @@ class UserRegistrationForm(forms.ModelForm):
     email           = forms.EmailField(required=True)
     first_name      = forms.CharField(max_length=30, required=False)
     last_name       = forms.CharField(max_length=150, required=False)
-    phone           = forms.CharField(max_length=20, required=False)
-    profile_picture = forms.ImageField(required=False)
-    bio             = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False)
     password1       = forms.CharField(widget=forms.PasswordInput(), label='Password')
     password2       = forms.CharField(widget=forms.PasswordInput(), label='Confirm Password')
     role            = forms.ChoiceField(
@@ -62,8 +64,7 @@ class UserRegistrationForm(forms.ModelForm):
 
     class Meta:
         model  = User
-        fields = ('username', 'email', 'first_name', 'last_name',
-                  'phone', 'profile_picture', 'bio', 'role')
+        fields = ('username', 'email', 'first_name', 'last_name', 'role')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -113,34 +114,41 @@ class UserRegistrationForm(forms.ModelForm):
         return user
 
 
+class AdminUserRegistrationForm(UserRegistrationForm):
+    role = forms.ChoiceField(
+        choices=User.ROLE_CHOICES,
+        initial=User.ROLE_CUSTOMER
+    )
+
+    class Meta(UserRegistrationForm.Meta):
+        fields = ('username', 'email', 'first_name', 'last_name', 'role')
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password1'])
+        if self.cleaned_data.get('role') == User.ROLE_OWNER:
+            user.is_owner = True
+        elif self.cleaned_data.get('role') == User.ROLE_ADMIN:
+            user.is_staff = True
+            user.is_superuser = False # Keep it as regular admin unless manually changed
+        if commit:
+            user.save()
+        return user
+
+
+
 class ProfileEditForm(forms.ModelForm):
     class Meta:
         model  = User
-        fields = ('first_name', 'last_name', 'email', 'phone', 'bio', 'profile_picture')
+        fields = ('first_name', 'last_name', 'email')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
 
-    def clean_bio(self):        return sanitize(self.cleaned_data.get('bio'))
     def clean_first_name(self): return sanitize(self.cleaned_data.get('first_name'), 30)
     def clean_last_name(self):  return sanitize(self.cleaned_data.get('last_name'), 150)
-
-    def clean_phone(self):
-        phone = self.cleaned_data.get('phone', '').strip()
-        if phone and not re.match(r'^[\d\+\s\-\(\)]{6,20}$', phone):
-            raise forms.ValidationError('Enter a valid phone number.')
-        return phone
-
-    def clean_profile_picture(self):
-        image = self.cleaned_data.get('profile_picture')
-        if image and hasattr(image, 'content_type'):
-            if image.content_type not in ['image/jpeg', 'image/png', 'image/webp']:
-                raise forms.ValidationError('Use JPG, PNG, or WebP.')
-            if image.size > 5 * 1024 * 1024:
-                raise forms.ValidationError('Image must be under 5 MB.')
-        return image
 
 
 # ── Auth Views ────────────────────────────────────────────────────────────────
@@ -174,7 +182,9 @@ def register(request):
 
     form = UserRegistrationForm(request.POST, request.FILES)
     if form.is_valid():
-        user = form.save()
+        user = form.save(commit=False)
+        user.created_by = user  # Self-created
+        user.save()
         messages.success(request, f'Account created successfully! Please log in to continue.')
         # Redirect to login — do NOT auto-login after registration
         return auth_modal_redirect(request, 'login')
@@ -197,8 +207,10 @@ def profile_edit(request):
     if request.method == 'POST':
         form = ProfileEditForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Profile updated successfully!')
+            user = form.save(commit=False)
+            user.updated_by = request.user
+            user.save()
+            messages.success(request, 'Profile updated successfully.')
             return redirect('accounts:profile_edit')
     else:
         form = ProfileEditForm(instance=request.user)
@@ -228,11 +240,10 @@ def admin_portal(request):
     total_revenue = Reservation.objects.filter(payment_status='paid').aggregate(
         total=Sum('amount_paid'))['total'] or 0
     monthly_revenue = Reservation.objects.filter(
-        payment_status='paid', booking_date__gte=datetime.now() - timedelta(days=30)
+        payment_status='paid', created_on__gte=datetime.now() - timedelta(days=30)
     ).aggregate(total=Sum('amount_paid'))['total'] or 0
 
     # Recent data
-    kyc_pending    = User.objects.filter(kyc_status='pending').order_by('-date_joined')
     flagged        = User.objects.filter(is_suspended=True)[:10]
     recent_users   = User.objects.order_by('-date_joined')[:20]
     dashboard_users = User.objects.annotate(
@@ -241,8 +252,8 @@ def admin_portal(request):
         total_messages=Count('sent_messages', distinct=True),
     ).order_by('-date_joined')[:50]
     recent_owners  = User.objects.filter(role=User.ROLE_OWNER).order_by('-date_joined')[:20]
-    recent_lands   = Land.objects.select_related('owner').order_by('-created_at')[:15]
-    recent_bookings = Reservation.objects.select_related('land', 'customer').order_by('-booking_date')[:15]
+    recent_lands   = Land.objects.select_related('owner').order_by('-created_on')[:15]
+    recent_bookings = Reservation.objects.select_related('land', 'customer').order_by('-created_on')[:15]
 
     # Analytics data for charts
     # User registration trend (last 12 months)
@@ -272,7 +283,7 @@ def admin_portal(request):
     revenue_trend_raw = Reservation.objects.filter(
         payment_status='paid'
     ).annotate(
-        month=TruncMonth('booking_date')
+        month=TruncMonth('created_on')
     ).values('month').annotate(
         revenue=Sum('amount_paid')
     ).order_by('-month')[:6]
@@ -298,6 +309,59 @@ def admin_portal(request):
         'error_rate': 0,  # Would need logging system
     }
 
+    # System Settings
+    system_settings = SystemSettings.objects.first()
+    if not system_settings:
+        system_settings = SystemSettings.objects.create()
+
+    # User Registration Form for Admin
+    registration_form = AdminUserRegistrationForm()
+
+    # Aggregate Audit Logs
+    audit_logs = []
+    
+    # Recent User creations/updates
+    for u in User.objects.order_by('-updated_on')[:15]:
+        audit_logs.append({
+            'model': 'User',
+            'icon': 'bi-person',
+            'object': u.username,
+            'created_on': u.created_on,
+            'created_by': u.created_by.username if u.created_by else 'Self/System',
+            'updated_on': u.updated_on,
+            'updated_by': u.updated_by.username if u.updated_by else 'System',
+            'timestamp': u.updated_on
+        })
+
+    # Recent Land creations/updates
+    for l in Land.objects.select_related('created_by', 'updated_by').order_by('-updated_on')[:15]:
+        audit_logs.append({
+            'model': 'Land',
+            'icon': 'bi-geo-alt',
+            'object': l.title,
+            'created_on': l.created_on,
+            'created_by': l.created_by.username if l.created_by else 'Owner',
+            'updated_on': l.updated_on,
+            'updated_by': l.updated_by.username if l.updated_by else 'System',
+            'timestamp': l.updated_on
+        })
+
+    # Recent Reservation creations/updates
+    for r in Reservation.objects.select_related('created_by', 'updated_by', 'land').order_by('-updated_on')[:15]:
+        audit_logs.append({
+            'model': 'Reservation',
+            'icon': 'bi-calendar-check',
+            'object': f"Booking for {r.land.title}",
+            'created_on': r.created_on,
+            'created_by': r.created_by.username if r.created_by else 'System',
+            'updated_on': r.updated_on,
+            'updated_by': r.updated_by.username if r.updated_by else 'System',
+            'timestamp': r.updated_on
+        })
+
+    audit_logs.sort(key=lambda x: x['timestamp'], reverse=True)
+    audit_logs = audit_logs[:40]
+
     return render(request, 'accounts/admin_portal.html', {
         'total_users': total_users, 'total_owners': total_owners,
         'total_customers': total_customers,
@@ -305,7 +369,6 @@ def admin_portal(request):
         'total_lands': total_lands, 'total_bookings': total_bookings,
         'pending_book': pending_book, 'approved_book': approved_book,
         'total_revenue': total_revenue, 'monthly_revenue': monthly_revenue,
-        'kyc_pending': kyc_pending,
         'recent_users': recent_users,
         'dashboard_users': dashboard_users,
         'recent_owners': recent_owners,
@@ -317,7 +380,27 @@ def admin_portal(request):
         'revenue_trend': revenue_trend,
         'top_lands': top_lands,
         'system_health': system_health,
+        'system_settings': system_settings,
+        'audit_logs': audit_logs,
+        'registration_form': registration_form,
     })
+
+
+@admin_required
+def admin_register_user(request):
+    if request.method == 'POST':
+        form = AdminUserRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.created_by = request.user
+            user.save()
+            messages.success(request, f'User {user.username} has been registered successfully.')
+        else:
+            for field, errors in form.errors.items():
+                label = form.fields.get(field).label if field in form.fields else 'Error'
+                for error in errors:
+                    messages.error(request, f'{label}: {error}')
+    return redirect('accounts:admin_portal')
 
 
 @admin_required
@@ -328,31 +411,37 @@ def admin_user_action(request, user_id):
 
     if action == 'verify':
         target.is_verified = True
+        target.updated_by = request.user
         target.save()
         messages.success(request, f'{target.username} verified as trusted owner.')
     elif action == 'unverify':
         target.is_verified = False
+        target.updated_by = request.user
         target.save()
         messages.success(request, f'{target.username} verification removed.')
     elif action == 'suspend':
         target.is_suspended = True
         target.is_active    = False
+        target.updated_by = request.user
         target.save()
         messages.warning(request, f'{target.username} has been suspended.')
     elif action == 'unsuspend':
         target.is_suspended = False
         target.is_active    = True
+        target.updated_by = request.user
         target.save()
         messages.success(request, f'{target.username} has been unsuspended.')
     elif action == 'make_owner':
         target.role     = User.ROLE_OWNER
         target.is_owner = True
+        target.updated_by = request.user
         target.save()
         messages.success(request, f'{target.username} promoted to Land Owner.')
     elif action == 'reset_password':
         # Generate a new random password
         new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
         target.set_password(new_password)
+        target.updated_by = request.user
         target.save()
         messages.success(request, f'Password reset for {target.username}. New password: {new_password} (Please share securely)')
     elif action == 'delete_user':
@@ -375,112 +464,55 @@ def admin_booking_action(request, booking_id):
 
     if action == 'approve':
         booking.status = 'approved'
+        booking.updated_by = request.user
         booking.save()
         messages.success(request, f'Booking #{booking.id} approved.')
     elif action == 'reject':
         booking.status = 'rejected'
+        booking.updated_by = request.user
         booking.save()
         messages.success(request, f'Booking #{booking.id} rejected.')
 
     return redirect('accounts:admin_portal')
 
 
-# ── KYC Views ─────────────────────────────────────────────────────────────────
-
-@login_required
-def submit_kyc(request):
-    if request.method == 'POST':
-        from datetime import date, timedelta
-        doc       = request.FILES.get('kyc_document')
-        ownership_doc = request.FILES.get('ownership_proof')
-        govt_doc  = request.FILES.get('govt_letter')
-        govt_date_str = request.POST.get('govt_letter_date', '').strip()
-        allowed = ['image/jpeg','image/png','image/webp','application/pdf']
-        errors = []
-
-        # Validate identity document
-        if not doc and not request.user.kyc_document:
-            errors.append('Please upload your ID document.')
-        elif doc:
-            if doc.content_type not in allowed:
-                errors.append('ID document: use JPG, PNG, WebP, or PDF only.')
-            elif doc.size > 10 * 1024 * 1024:
-                errors.append('ID document must be under 10 MB.')
-
-        # Validate ownership proof. This can be skipped only when the ID upload
-        # already contains the ownership evidence as a combined document.
-        if ownership_doc:
-            if ownership_doc.content_type not in allowed:
-                errors.append('Ownership proof: use JPG, PNG, WebP, or PDF only.')
-            elif ownership_doc.size > 10 * 1024 * 1024:
-                errors.append('Ownership proof must be under 10 MB.')
-        elif not request.user.ownership_proof and not (doc or request.user.kyc_document):
-            errors.append('Please upload a land ownership proof document or include it in your ID upload.')
-
-        # Validate Barua ya Serikali
-        if not govt_doc and not request.user.govt_letter:
-            errors.append('Please upload a letter from your Local Government (Barua ya Serikali za Mtaa).')
-        elif govt_doc:
-            if govt_doc.content_type not in allowed:
-                errors.append('Govt letter: use JPG, PNG, WebP, or PDF only.')
-            elif govt_doc.size > 10 * 1024 * 1024:
-                errors.append('Govt letter must be under 10 MB.')
-
-        # Validate govt letter date — must be within last 2 months
-        if govt_date_str:
-            try:
-                from datetime import datetime
-                govt_date = datetime.strptime(govt_date_str, '%Y-%m-%d').date()
-                two_months_ago = date.today() - timedelta(days=62)
-                if govt_date < two_months_ago:
-                    errors.append('The Government letter must be dated within the last 2 months. Please obtain a recent letter.')
-                elif govt_date > date.today():
-                    errors.append('Government letter date cannot be in the future.')
-            except ValueError:
-                errors.append('Invalid government letter date.')
-        elif not request.user.govt_letter_date:
-            errors.append('Please enter the date on your government letter.')
-
-        if errors:
-            for e in errors:
-                messages.error(request, e)
-            return redirect('accounts:profile_edit')
-
-        # Save
-        if doc:
-            request.user.kyc_document = doc
-        if ownership_doc:
-            request.user.ownership_proof = ownership_doc
-        if govt_doc:
-            request.user.govt_letter = govt_doc
-        if govt_date_str:
-            from datetime import datetime
-            request.user.govt_letter_date = datetime.strptime(govt_date_str, '%Y-%m-%d').date()
-        request.user.kyc_status = 'pending'
-        request.user.save()
-        messages.success(request, '✅ Documents submitted! Admin will review within 24–48 hours.')
-        return redirect('accounts:profile_edit')
-    return redirect('accounts:profile_edit')
-
-
 @admin_required
 @require_http_methods(['POST'])
-def review_kyc(request, user_id):
-    from django.views.decorators.http import require_http_methods
-    target = get_object_or_404(User, pk=user_id)
+def admin_system_action(request):
     action = request.POST.get('action')
-    notes  = request.POST.get('kyc_notes', '').strip()
-    if action == 'approve_kyc':
-        target.kyc_status  = 'approved'
-        target.is_verified = True
-        target.kyc_notes   = notes
-        target.save()
-        messages.success(request, f'{target.username} KYC approved and account verified.')
-    elif action == 'reject_kyc':
-        target.kyc_status = 'rejected'
-        target.kyc_notes  = notes or 'Document unclear or invalid. Please resubmit.'
-        target.save()
-        messages.warning(request, f'{target.username} KYC rejected.')
+    settings = SystemSettings.objects.first()
+    if not settings:
+        settings = SystemSettings.objects.create()
+
+    if action == 'toggle_maintenance':
+        settings.maintenance_mode = not settings.maintenance_mode
+        settings.save()
+        status = "enabled" if settings.maintenance_mode else "disabled"
+        messages.success(request, f"Maintenance mode {status}.")
+
+    elif action == 'toggle_emails':
+        settings.email_notifications = not settings.email_notifications
+        settings.save()
+        status = "enabled" if settings.email_notifications else "disabled"
+        messages.success(request, f"Email notifications {status}.")
+
+    elif action == 'export_data':
+        # Export users as CSV
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="users_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Username', 'Email', 'Role', 'Joined', 'Verified', 'Suspended'])
+        users = User.objects.all()
+        for u in users:
+            writer.writerow([u.username, u.email, u.role, u.date_joined, u.is_verified, u.is_suspended])
+        return response
+
+    elif action == 'backup_db':
+        # Mock backup for demonstration
+        settings.last_backup = datetime.now()
+        settings.save()
+        messages.success(request, "Database backup initiated successfully. (Mock)")
+
     return redirect('accounts:admin_portal')
 
 

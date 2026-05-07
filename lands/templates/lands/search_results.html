@@ -10,7 +10,7 @@
       <i class="bi bi-lock text-4xl text-[#1a5c38]"></i>
     </div>
     <h2 class="text-2xl font-bold text-gray-900 mb-2">Log in to search lands</h2>
-    <p class="text-gray-500 mb-6">You need to be logged in to search and browse available land listings.</p>
+    <p class="text-gray-500 mb-6">You need to be logged in to search and browse available land.</p>
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
       <button type="button" onclick="openModal('login')" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">Log In</button>
       <button type="button" onclick="openModal('register')" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">Create Account</button>
@@ -41,13 +41,13 @@
         <div id="locationDropdown" class="hidden absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></div>
       </div>
       
-      <!-- Listing Type -->
+      <!-- Land Type -->
       <div class="min-w-[120px]">
         <label class="text-xs font-medium text-gray-500 block mb-1"><i class="bi bi-house-door"></i> Type</label>
-        <select name="listing_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] bg-white">
+        <select name="usage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] bg-white">
           <option value="">Any Type</option>
-          <option value="rent" {% if request.GET.listing_type == 'rent' %}selected{% endif %}>For Rent</option>
-          <option value="sale" {% if request.GET.listing_type == 'sale' %}selected{% endif %}>For Sale</option>
+          <option value="rent" {% if request.GET.usage == 'rent' %}selected{% endif %}>For Rent</option>
+          <option value="sale" {% if request.GET.usage == 'sale' %}selected{% endif %}>For Sale</option>
         </select>
       </div>
       
@@ -147,9 +147,9 @@
       <i class="bi bi-search"></i> "{{ params.keyword }}"
     </span>
     {% endif %}
-    {% if params.listing_type %}
+    {% if params.usage %}
     <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-[#1a5c38]/10 text-[#1a5c38] rounded-full text-xs font-semibold">
-      {% if params.listing_type == 'rent' %}For Rent{% else %}For Sale{% endif %}
+      {% if params.usage == 'rent' %}For Rent{% else %}For Sale{% endif %}
     </span>
     {% endif %}
     {% if params.land_use %}
@@ -223,7 +223,7 @@
             
             <!-- Badges -->
             <div class="absolute top-3 left-3 flex gap-2">
-              {% if land.listing_type == 'rent' %}
+              {% if land.usage == 'rent' %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-500 text-white rounded-full text-xs font-semibold">Rent</span>
               {% else %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#1a5c38] text-white rounded-full text-xs font-semibold">Sale</span>
@@ -250,28 +250,62 @@
             <!-- Status + Posted -->
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-1.5">
-                {% if land.is_available %}
+                {% if not land.has_approved_reservations %}
                 <span class="w-2 h-2 rounded-full bg-green-500"></span>
                 <span class="text-xs font-medium text-green-600">Available</span>
                 {% else %}
-                {% with active_res=land.get_active_reservation %}
                 <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                 <span class="text-xs font-medium text-amber-600">
-                  Reserved{% if active_res %} until {{ active_res.end_date|date:"M d" }}{% endif %}
+                  Reserved (Pre-booking open)
                 </span>
-                {% endwith %}
                 {% endif %}
               </div>
             </div>
 
             <h3 class="text-base font-semibold text-gray-900 mb-1 truncate group-hover:text-[#1a5c38] transition-colors">{{ land.title }}</h3>
             <p class="text-sm text-gray-500 mb-2 flex items-center gap-1 truncate"><i class="bi bi-geo-alt"></i> {{ land.location }}</p>
-            <div class="flex items-center gap-3 text-xs text-gray-500 mb-3">
+            <div class="grid grid-cols-2 gap-y-2 gap-x-2 text-xs text-gray-500 mb-3 border-t border-gray-100 pt-3">
+              {% if land.land_id %}
+              <div class="flex items-center gap-1.5" title="Land ID">
+                <i class="bi bi-hash text-gray-400"></i>
+                <span class="truncate">{{ land.land_id }}</span>
+              </div>
+              {% endif %}
               {% if land.size %}
-              <span class="flex items-center gap-1"><i class="bi bi-rulers"></i> {{ land.size }} {{ land.get_size_unit_display }}</span>
+              <div class="flex items-center gap-1.5" title="Available Size">
+                <i class="bi bi-rulers text-[#1a5c38]"></i>
+                <span class="truncate font-medium text-[#1a5c38]">Remained: {{ land.current_remaining_size }} / {{ land.size }} {{ land.get_size_unit_display }}</span>
+              </div>
               {% endif %}
               {% if land.land_use %}
-              <span>{{ land.get_land_use_display }}</span>
+              <div class="flex items-center gap-1.5" title="Land Use">
+                <i class="bi bi-flower1 text-gray-400"></i>
+                <span class="truncate">{{ land.get_land_use_display }}</span>
+              </div>
+              {% endif %}
+              <div class="flex items-center gap-1.5" title="Topography">
+                <i class="bi bi-mountain text-gray-400"></i>
+                <span class="truncate">{{ land.get_topography_display|default:"Flat" }}</span>
+              </div>
+              {% if land.usage == 'rent' %}
+                {% if land.min_duration_days %}
+                <div class="flex items-center gap-1.5" title="Minimum Duration">
+                  <i class="bi bi-calendar-range text-gray-400"></i>
+                  <span class="truncate">Min {{ land.min_duration_days }} days</span>
+                </div>
+                {% endif %}
+                {% if land.weekly_discount > 0 or land.monthly_discount > 0 %}
+                <div class="flex items-center gap-1.5" title="Discounts available">
+                  <i class="bi bi-tags text-gray-400"></i>
+                  <span class="truncate text-green-600 font-medium">Discounts</span>
+                </div>
+                {% endif %}
+              {% endif %}
+              {% if land.utilities.exists %}
+              <div class="flex items-center gap-1.5" title="Utilities">
+                 <i class="bi bi-plug text-gray-400"></i>
+                 <span class="truncate">{{ land.utilities.count }} Utilities</span>
+              </div>
               {% endif %}
             </div>
             <div class="flex items-baseline gap-1">

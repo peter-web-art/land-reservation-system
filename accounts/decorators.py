@@ -28,6 +28,9 @@ def owner_required(view_func):
         if not request.user.is_authenticated:
             messages.warning(request, 'Please log in to access this page.')
             return redirect('login')
+        if request.user.role == User.ROLE_ADMIN or request.user.is_staff:
+            messages.error(request, 'Admin/staff accounts cannot add or manage land listings.')
+            return redirect('lands:land_list')
         if not (request.user.is_owner or request.user.role == User.ROLE_OWNER):
             messages.error(request, 'Only land owners can access this page.')
             return redirect('lands:land_list')
@@ -42,6 +45,9 @@ def customer_required(view_func):
         if not request.user.is_authenticated:
             messages.warning(request, 'Please log in to access this page.')
             return redirect('login')
+        if request.user.role == User.ROLE_ADMIN or request.user.is_staff:
+            messages.error(request, 'Admin/staff accounts cannot book land or access customer features.')
+            return redirect('lands:land_list')
         if request.user.is_owner or request.user.role == User.ROLE_OWNER:
             messages.info(request, 'This feature is for customers. Switch to customer mode.')
             return redirect('lands:land_list')

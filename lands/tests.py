@@ -26,7 +26,7 @@ class LandAccessTests(TestCase):
             location='Dar es Salaam',
             price='1200.00',
             price_unit='month',
-            listing_type='rent',
+            usage='rent',
             land_use='residential',
         )
 

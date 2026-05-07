@@ -7,15 +7,15 @@
 -- ────────────────────────────────────────────────────────────────────────────
 -- 1. USERS TABLE (Custom User — extends Django AbstractUser)
 -- ────────────────────────────────────────────────────────────────────────────
-CREATE TABLE accounts_user (
+-- ────────────────────────────────────────────────────────────────────────────
+-- 1. USERS TABLE (Custom User — extends Django AbstractUser)
+-- ────────────────────────────────────────────────────────────────────────────
+CREATE TABLE users (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     password        VARCHAR(128)  NOT NULL,
     last_login      DATETIME      NULL,
     is_superuser    BOOLEAN       NOT NULL DEFAULT 0,
-    username            VARCHAR(150)  NOT NULL UNIQUE,
-    first_name      VARCHAR(150)  NOT NULL DEFAULT '',
-    last_name       VARCHAR(150)  NOT NULL DEFAULT '',
-    email           VARCHAR(254)  NOT NULL DEFAULT '',
+    username        VARCHAR(150)  NOT NULL UNIQUE,
     is_staff        BOOLEAN       NOT NULL DEFAULT 0,
     is_active       BOOLEAN       NOT NULL DEFAULT 1,
     date_joined     DATETIME      NOT NULL,
@@ -26,27 +26,23 @@ CREATE TABLE accounts_user (
     is_owner        BOOLEAN       NOT NULL DEFAULT 0,
     is_verified     BOOLEAN       NOT NULL DEFAULT 0,
         -- Owner verified by admin — no scam risk
-    profile_picture VARCHAR(100)  NULL,
-        -- Upload path: profiles/
-    phone           VARCHAR(20)   NOT NULL DEFAULT '',
-    bio             TEXT          NOT NULL DEFAULT '',
     is_suspended    BOOLEAN       NOT NULL DEFAULT 0,
         -- Suspended users cannot log in
 
-    -- KYC / Proof of Ownership
-    kyc_document    VARCHAR(100)  NULL,
-        -- Upload path: kyc/ — ID / Land title / ownership proof document
-    ownership_proof VARCHAR(100)  NULL,
-        -- Upload path: kyc/ownership/ — Separate land title or ownership proof
-    kyc_status      VARCHAR(20)   NOT NULL DEFAULT 'not_submitted',
-        -- CHOICES: 'not_submitted', 'pending', 'approved', 'rejected'
-    kyc_notes       TEXT          NOT NULL DEFAULT '',
-        -- Admin notes on KYC review
-
-    -- Barua ya Serikali za Mtaa
     govt_letter      VARCHAR(100) NULL,
-        -- Upload path: kyc/govt_letters/
-    govt_letter_date DATE         NULL
+    govt_letter_date DATE         NULL,
+
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_user_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_user_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 
@@ -63,7 +59,7 @@ CREATE TABLE lands_land (
         -- GPS latitude for map pin
     longitude         REAL          NULL,
         -- GPS longitude for map pin
-    listing_type      VARCHAR(10)   NOT NULL DEFAULT 'rent',
+    usage             VARCHAR(10)   NOT NULL DEFAULT 'rent',
         -- CHOICES: 'rent' = Rent, 'sale' = Sale
     size              DECIMAL(10,2) NULL,
     size_unit         VARCHAR(10)   NOT NULL DEFAULT 'acres',
@@ -71,7 +67,7 @@ CREATE TABLE lands_land (
     land_use          VARCHAR(20)   NOT NULL DEFAULT 'agricultural',
         -- CHOICES: 'agricultural', 'residential', 'commercial', 'industrial', 'mixed'
 
-    -- Airbnb-style pricing
+    -- 
     price             DECIMAL(12,2) NOT NULL,
         -- Base price in Tsh
     price_unit        VARCHAR(10)   NOT NULL DEFAULT 'month',
@@ -87,43 +83,31 @@ CREATE TABLE lands_land (
 
     contact_phone     VARCHAR(20)   NULL,
     contact_email     VARCHAR(254)  NULL,
-    image             VARCHAR(100)  NULL,
-        -- Upload path: lands/ — Legacy main image
+    land_image_path   VARCHAR(100)  NULL,
+        -- Upload path: lands/
     is_active         BOOLEAN       NOT NULL DEFAULT 1,
-    created_at        DATETIME      NULL,
     view_count        INTEGER UNSIGNED NOT NULL DEFAULT 0,
         -- Number of detail page views
 
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
     CONSTRAINT fk_land_owner
-        FOREIGN KEY (owner_id) REFERENCES accounts_user(id)
-        ON DELETE CASCADE
+        FOREIGN KEY (owner_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_land_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_land_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 3. LAND IMAGES TABLE (Multi-image gallery — Airbnb style)
--- ────────────────────────────────────────────────────────────────────────────
-CREATE TABLE lands_landimage (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    land_id     INTEGER       NOT NULL,
-    image       VARCHAR(100)  NOT NULL,
-        -- Upload path: lands/gallery/
-    caption     VARCHAR(200)  NOT NULL DEFAULT '',
-        -- Optional caption
-    is_primary  BOOLEAN       NOT NULL DEFAULT 0,
-        -- Set as primary/cover image
-    "order"     INTEGER UNSIGNED NOT NULL DEFAULT 0,
-        -- Display order
-    created_at  DATETIME      NOT NULL,
-
-    CONSTRAINT fk_landimage_land
-        FOREIGN KEY (land_id) REFERENCES lands_land(id)
-        ON DELETE CASCADE
-);
-
-
--- ────────────────────────────────────────────────────────────────────────────
--- 4. RESERVATIONS TABLE (Bookings linking customer → land)
+-- 3. RESERVATIONS TABLE (Bookings linking customer → land)
 -- ────────────────────────────────────────────────────────────────────────────
 CREATE TABLE lands_reservation (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,9 +116,7 @@ CREATE TABLE lands_reservation (
     customer_name     VARCHAR(100)  NOT NULL DEFAULT '',
     customer_email    VARCHAR(254)  NOT NULL DEFAULT '',
     customer_phone    VARCHAR(20)   NULL,
-    booking_date      DATETIME      NOT NULL,
-        -- Auto-set when booking is created
-
+    
     -- Date range (for rent bookings)
     start_date        DATE          NULL,
         -- Start date of rental period
@@ -154,13 +136,23 @@ CREATE TABLE lands_reservation (
     agreed_price      DECIMAL(12,2) NULL,
         -- Final agreed price for this booking
     notes             TEXT          NOT NULL DEFAULT '',
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_reservation_land
         FOREIGN KEY (land_id) REFERENCES lands_land(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_reservation_customer
-        FOREIGN KEY (customer_id) REFERENCES accounts_user(id)
-        ON DELETE CASCADE
+        FOREIGN KEY (customer_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_reservation_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_reservation_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 -- Performance indexes for reservation queries
@@ -179,14 +171,23 @@ CREATE TABLE lands_wishlist (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER  NOT NULL,
     land_id     INTEGER  NOT NULL,
-    created_at  DATETIME NOT NULL,
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_wishlist_user
-        FOREIGN KEY (user_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_wishlist_land
         FOREIGN KEY (land_id) REFERENCES lands_land(id)
         ON DELETE CASCADE,
+    CONSTRAINT fk_wishlist_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_wishlist_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
     CONSTRAINT uq_wishlist_user_land
         UNIQUE (user_id, land_id)
 );
@@ -204,17 +205,26 @@ CREATE TABLE lands_message (
     subject       VARCHAR(200)  NOT NULL DEFAULT '',
     body          TEXT          NOT NULL,
     is_read       BOOLEAN       NOT NULL DEFAULT 0,
-    created_at    DATETIME      NOT NULL,
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_message_sender
-        FOREIGN KEY (sender_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (sender_id) REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_message_recipient
-        FOREIGN KEY (recipient_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (recipient_id) REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_message_land
         FOREIGN KEY (land_id) REFERENCES lands_land(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_message_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_message_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 
@@ -227,17 +237,102 @@ CREATE TABLE lands_notification (
     notification_type  VARCHAR(30)   NOT NULL,
         -- CHOICES: 'booking_new', 'booking_approved', 'booking_rejected',
         --          'booking_cancelled', 'payment_received', 'message_received',
-        --          'kyc_status', 'system'
+        --          'payment', 'system'
     title              VARCHAR(200)  NOT NULL,
     message            TEXT          NOT NULL,
     link               VARCHAR(200)  NOT NULL DEFAULT '',
         -- URL to navigate to when clicked
     is_read            BOOLEAN       NOT NULL DEFAULT 0,
-    created_at         DATETIME      NOT NULL,
+    created_by_id      INTEGER       NULL,
+    created_on         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id      INTEGER       NULL,
+    updated_on         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_notification_user
-        FOREIGN KEY (user_id) REFERENCES accounts_user(id)
-        ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_notification_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_notification_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 8. UTILITIES TABLE (Dynamic amenities/infrastructure)
+-- ────────────────────────────────────────────────────────────────────────────
+CREATE TABLE lands_utility (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        VARCHAR(100)  NOT NULL UNIQUE,
+    icon_class  VARCHAR(50)   NULL,
+        -- CSS icon class (e.g., FontAwesome/Bootstrap Icons)
+
+    -- Audit fields
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_utility_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_utility_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 9. LAND UTILITIES LINK TABLE (Many-to-Many junction)
+-- ────────────────────────────────────────────────────────────────────────────
+CREATE TABLE lands_land_utilities (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    land_id     INTEGER NOT NULL,
+    utility_id  INTEGER NOT NULL,
+
+    CONSTRAINT fk_land_utilities_land
+        FOREIGN KEY (land_id) REFERENCES lands_land(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_land_utilities_utility
+        FOREIGN KEY (utility_id) REFERENCES lands_utility(id)
+        ON DELETE CASCADE,
+    CONSTRAINT uq_land_utility
+        UNIQUE (land_id, utility_id)
+);
+
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 10. PERSONAL DETAILS TABLE (Extended user profiles)
+-- ────────────────────────────────────────────────────────────────────────────
+CREATE TABLE accounts_personaldetails (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL UNIQUE,
+    fname       VARCHAR(100) NOT NULL,
+    mname       VARCHAR(100) NULL,
+    surname     VARCHAR(100) NOT NULL,
+    address     TEXT         NULL,
+    phone       VARCHAR(20)  NULL,
+    email       VARCHAR(254) NULL,
+    photo_path  VARCHAR(100) NULL,
+    bio         TEXT         NULL,
+
+    -- Audit fields
+    created_by_id     INTEGER       NULL,
+    created_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by_id     INTEGER       NULL,
+    updated_on        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_details_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_details_created_by
+        FOREIGN KEY (created_by_id) REFERENCES users(id)
+        ON DELETE SET NULL,
+    CONSTRAINT fk_details_updated_by
+        FOREIGN KEY (updated_by_id) REFERENCES users(id)
+        ON DELETE SET NULL
 );
 
 
@@ -252,7 +347,7 @@ CREATE TABLE accounts_user_groups (
     group_id INTEGER NOT NULL,
 
     CONSTRAINT fk_user_groups_user
-        FOREIGN KEY (user_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_user_groups_group
         FOREIGN KEY (group_id) REFERENCES auth_group(id)
@@ -268,7 +363,7 @@ CREATE TABLE accounts_user_user_permissions (
     permission_id INTEGER NOT NULL,
 
     CONSTRAINT fk_user_perms_user
-        FOREIGN KEY (user_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_user_perms_perm
         FOREIGN KEY (permission_id) REFERENCES auth_permission(id)
@@ -347,7 +442,7 @@ CREATE TABLE django_admin_log (
         FOREIGN KEY (content_type_id) REFERENCES django_content_type(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_admin_log_user
-        FOREIGN KEY (user_id) REFERENCES accounts_user(id)
+        FOREIGN KEY (user_id) REFERENCES users(id)
         ON DELETE CASCADE
 );
 

@@ -13,10 +13,10 @@
       <span class="text-white">Edit</span>
     </div>
     
-    <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">Edit Listing</h1>
+    <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">Edit Lands</h1>
     <p class="text-white/90 mb-8 font-medium drop-shadow-sm">Changes are live immediately after saving.</p>
 
-    <form method="post" enctype="multipart/form-data" class="w-full">
+    <form method="post" enctype="multipart/form-data" id="editLandForm" class="w-full">
     {% csrf_token %}
 
     <!-- Basic Info -->
@@ -27,14 +27,19 @@
       </div>
       <div class="space-y-4">
         <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Land ID (Reference #)</label>
+          {{ form.land_id }}
+          {% if form.land_id.errors %}<div class="text-red-500 text-sm mt-1">{{ form.land_id.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.title.label }} <span class="text-red-500">*</span></label>
           {{ form.title }}
           {% if form.title.errors %}<div class="text-red-500 text-sm mt-1">{{ form.title.errors }}</div>{% endif %}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.listing_type.label }}</label>
-            {{ form.listing_type }}
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.usage.label }}</label>
+            {{ form.usage }}
           </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.land_use.label }}</label>
@@ -100,37 +105,23 @@
           <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="space-y-4">
-            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Utilities Availability</h4>
-            <div class="flex flex-col gap-3">
-              <label class="flex items-center gap-3 cursor-pointer group">
-                {{ form.has_water }}
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Water Access (Well/River/City)</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                {{ form.has_electricity }}
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Electricity Grid Access</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                {{ form.road_access }}
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Road/Vehicle Access</span>
-              </label>
-            </div>
+        <div class="col-span-full">
+          <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Utilities & Improvements</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {% for checkbox in form.utilities %}
+            <label class="flex items-center gap-3 cursor-pointer group">
+              {{ checkbox.tag }}
+              <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">{{ checkbox.choice_label }}</span>
+            </label>
+            {% endfor %}
           </div>
-
-          <div class="space-y-4">
-            <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider text-gray-400">Land Improvements</h4>
-            <div class="flex flex-col gap-3">
-              <label class="flex items-center gap-3 cursor-pointer group">
-                {{ form.is_fenced }}
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Is Partially/Fully Fenced</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                {{ form.is_cleared }}
-                <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">Cleared for Construction/Farming</span>
-              </label>
-            </div>
+          {% if form.utilities.errors %}<div class="text-red-500 text-sm mt-1">{{ form.utilities.errors }}</div>{% endif %}
+          <div class="text-sm text-gray-500 mt-2"><i class="bi bi-info-circle"></i> Select all that apply to this property.</div>
+          
+          <div class="mt-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Additional Utility Notes</label>
+            {{ form.additional_utilities_notes }}
+            <div class="text-sm text-gray-500 mt-1">Update notes on utilities or unique features (e.g., specific water source, solar capacity, soil quality)</div>
           </div>
         </div>
       </div>
@@ -191,16 +182,16 @@
         <h3 class="text-lg font-semibold text-gray-900">Photo</h3>
       </div>
       <div class="space-y-4">
-        {% if land.image %}
+        {% if land.land_image_path %}
         <div class="mb-4">
-          <img src="{{ land.image.url }}" class="max-h-40 rounded-lg object-cover" alt="Current">
+          <img src="{{ land.land_image_path.url }}" class="max-h-40 rounded-lg object-cover" alt="Current">
           <div class="text-sm text-gray-500 mt-2">Current photo — upload a new one to replace it.</div>
         </div>
         {% endif %}
         <div class="mb-4">
-          {{ form.image }}
+          {{ form.land_image_path }}
           <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP — max 5 MB</div>
-          {% if form.image.errors %}<div class="text-red-500 text-sm mt-1">{{ form.image.errors }}</div>{% endif %}
+          {% if form.land_image_path.errors %}<div class="text-red-500 text-sm mt-1">{{ form.land_image_path.errors }}</div>{% endif %}
         </div>
       </div>
     </div>
@@ -237,7 +228,16 @@
 </div>
 
 <script>
-const ltEl = document.getElementById('id_listing_type');
+  document.getElementById('editLandForm').addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+    }
+  });
+
+const ltEl = document.getElementById('id_usage');
 const rs   = document.getElementById('rentPricingSection');
 function toggle() { if(rs && ltEl) rs.style.display = ltEl.value === 'rent' ? '' : 'none'; }
 if (ltEl) { ltEl.addEventListener('change', toggle); toggle(); }
