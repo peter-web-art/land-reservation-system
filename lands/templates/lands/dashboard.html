@@ -10,6 +10,9 @@
       <p class="text-gray-500 mt-1">Manage your lands and reservations</p>
     </div>
     <div class="flex gap-3 mt-4 md:mt-0">
+      <a href="{% url 'lands:manage_payments' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+        <i class="bi bi-cash-stack"></i> Manage Payments
+      </a>
       <a href="{% url 'lands:calendar_view' %}" class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
         <i class="bi bi-calendar3"></i> Calendar
       </a>
@@ -21,20 +24,22 @@
     </div>
   </div>
 
-
-
   <!-- Stats -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div class="text-sm text-gray-500">Lands</div>
-      <div class="text-2xl font-bold text-gray-900">{{ lands|length }}</div>
+      <div class="text-sm text-gray-500">Published</div>
+      <div class="text-2xl font-bold text-gray-900">{{ published_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Drafts</div>
+      <div class="text-2xl font-bold text-amber-600">{{ draft_count }}</div>
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div class="text-sm text-gray-500">Available</div>
       <div class="text-2xl font-bold text-green-600">{{ available_count }}</div>
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div class="text-sm text-gray-500">Pending</div>
+      <div class="text-sm text-gray-500">Pending Req.</div>
       <div class="text-2xl font-bold text-amber-600">{{ pending_count }}</div>
     </div>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -67,7 +72,7 @@
   {% if recent_bookings %}
   <div class="mb-8">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold text-gray-900">Pending requests</h2>
+      <h2 class="text-xl font-semibold text-gray-900">Recent Activity</h2>
       <a href="{% url 'lands:reservations_management' %}" class="text-[#1a5c38] hover:underline text-sm">All reservations &rarr;</a>
     </div>
     <div class="space-y-3">
@@ -88,11 +93,6 @@
             {{ r.customer.get_full_name|default:r.customer.username }} &middot; 
             {% if r.start_date %}{{ r.start_date|date:"M d, Y" }} — {{ r.end_date|date:"M d, Y" }}{% else %}Booking request{% endif %}
           </div>
-          {% if r.requested_size %}
-          <div class="text-xs text-[#1a5c38] font-semibold mt-1">
-            <i class="bi bi-rulers"></i> {{ r.requested_size }} {{ r.land.get_size_unit_display }} requested
-          </div>
-          {% endif %}
         </div>
         <div class="font-semibold text-lg text-gray-900">Tsh {{ r.agreed_price|default:r.land.price }}</div>
         <div class="flex gap-2">
@@ -100,19 +100,9 @@
           <form method="post" action="{% url 'lands:update_reservation_status' r.id 'approved' %}">{% csrf_token %}
             <button class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check-lg"></i> Accept</button>
           </form>
-          <form method="post" action="{% url 'lands:update_reservation_status' r.id 'rejected' %}">{% csrf_token %}
-            <button class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors"><i class="bi bi-x-lg"></i> Decline</button>
-          </form>
           {% elif r.status == 'approved' %}
-          <div class="flex flex-col items-end">
-            <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
-              <i class="bi bi-check-circle-fill"></i> Accepted
-            </span>
-            <span class="text-[10px] text-green-600 mt-1">Left: {{ r.land.current_remaining_size }} {{ r.land.get_size_unit_display }}</span>
-          </div>
-          {% elif r.status == 'rejected' %}
-          <span class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-semibold border border-red-200">
-            <i class="bi bi-x-circle-fill"></i> Declined
+          <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
+            <i class="bi bi-check-circle-fill"></i> Accepted
           </span>
           {% else %}
           <span class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold border border-gray-200">
@@ -129,52 +119,69 @@
   <!-- Your Lands -->
   <div>
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold text-gray-900">Your lands</h2>
+      <h2 class="text-xl font-semibold text-gray-900">Your Listings</h2>
       <a href="{% url 'lands:add_land' %}" class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
         <i class="bi bi-plus-lg"></i> Add new
       </a>
     </div>
     {% if lands %}
-    <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl">
+    <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl shadow-sm">
       <table class="w-full">
         <thead>
-          <tr class="border-b border-gray-200">
+          <tr class="border-b border-gray-200 bg-gray-50/50">
             <th class="w-20"></th>
             <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Land</th>
             <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Location</th>
-            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Available Size</th>
-            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Type</th>
-            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Price</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Size</th>
             <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Status</th>
-            <th class="w-32 text-left px-4 py-3 text-sm font-medium text-gray-500">Actions</th>
+            <th class="text-left px-4 py-3 text-sm font-medium text-gray-500">Price</th>
+            <th class="w-32 text-right px-4 py-3 text-sm font-medium text-gray-500">Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for land in lands %}
-          <tr class="border-b border-gray-100 hover:bg-gray-50">
+          <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             <td class="p-4">
               <div class="w-16 h-12 rounded-lg overflow-hidden bg-gray-100">
                 {% if land.primary_image %}<img src="{{ land.primary_image.url }}" class="w-full h-full object-cover">
                 {% else %}<div class="w-full h-full flex items-center justify-center text-xl">🌿</div>{% endif %}
               </div>
             </td>
-            <td class="px-4 py-3"><a href="{% url 'lands:land_detail' land.id %}" class="font-medium text-gray-900 hover:text-[#1a5c38] no-underline">{{ land.title }}</a></td>
-            <td class="px-4 py-3 text-gray-500">{{ land.location }}</td>
-            <td class="px-4 py-3"><span class="truncate text-sm">{{ land.current_remaining_size }} / {{ land.size|default:"—" }} {{ land.get_size_unit_display }}</span></td>
-            <td class="px-4 py-3"><span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{{ land.get_usage_display }}</span></td>
-            <td class="px-4 py-3 font-medium text-gray-900">Tsh {{ land.price }}</td>
             <td class="px-4 py-3">
-              {% if land.is_available %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Available</span>
-              {% else %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Unavailable</span>
+              <a href="{% if land.is_draft %}{% url 'lands:edit_land' land.id %}{% else %}{% url 'lands:land_detail' land.id %}{% endif %}" class="font-medium text-gray-900 hover:text-[#1a5c38] no-underline">
+                {{ land.title|default:"(Untitled Draft)" }}
+              </a>
+              {% if land.is_draft %}
+              <div class="text-[10px] text-amber-600 font-bold uppercase mt-0.5">Click to complete</div>
               {% endif %}
             </td>
+            <td class="px-4 py-3 text-gray-500 text-sm">{{ land.location|default:"Location not set" }}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{ land.size|default:"—" }} {{ land.get_size_unit_display }}</td>
             <td class="px-4 py-3">
-              <div class="flex gap-1">
+              {% if land.is_draft %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold border border-amber-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Draft
+              </span>
+              {% elif land.is_available %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Live
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold border border-gray-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Sold/Reserved
+              </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 font-medium text-gray-900">
+              {% if land.price %}Tsh {{ land.price }}{% else %}<span class="text-gray-400">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex justify-end gap-1">
                 <a href="{% url 'lands:edit_land' land.id %}" class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg transition-colors" title="Edit"><i class="bi bi-pencil"></i></a>
+                {% if not land.is_draft %}
                 <a href="{% url 'lands:land_detail' land.id %}" class="p-2 text-gray-500 hover:text-[#1a5c38] hover:bg-gray-100 rounded-lg transition-colors" title="View"><i class="bi bi-eye"></i></a>
-                <a href="{% url 'lands:delete_land' land.id %}" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete"><i class="bi bi-trash3"></i></a>
+                {% endif %}
+                <a href="{% url 'lands:delete_land' land.id %}" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete" onclick="return confirm('Delete this listing permanently?')"><i class="bi bi-trash3"></i></a>
               </div>
             </td>
           </tr>
@@ -185,10 +192,10 @@
     {% else %}
     <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
       <div class="text-5xl mb-4">🏡</div>
-      <h3 class="text-xl font-semibold text-gray-800 mb-2">No lands yet</h3>
-      <p class="text-gray-500 mb-4">Start hosting by creating your first land.</p>
-      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
-        <i class="bi bi-plus-lg"></i> Create land
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">No listings yet</h3>
+      <p class="text-gray-500 mb-4">Start by creating your first land listing.</p>
+      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center justify-center px-6 py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-base hover:bg-[#134428] transition-all active:scale-95 shadow-lg shadow-green-900/20">
+        <i class="bi bi-plus-lg mr-2"></i> Create Listing
       </a>
     </div>
     {% endif %}

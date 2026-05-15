@@ -47,7 +47,7 @@
           </div>
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }}</label>
           {{ form.description }}
           {% if form.description.errors %}<div class="text-red-500 text-sm mt-1">{{ form.description.errors }}</div>{% endif %}
         </div>
@@ -61,10 +61,37 @@
         <h3 class="text-lg font-semibold text-gray-900">Location & Size</h3>
       </div>
       <div class="space-y-4">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.location.label }} <span class="text-red-500">*</span></label>
-          {{ form.location }}
-          {% if form.location.errors %}<div class="text-red-500 text-sm mt-1">{{ form.location.errors }}</div>{% endif %}
+        <!-- Cascading Location: Region → District → Ward → Street -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-geo-alt"></i> Mkoa (Region) <span class="text-red-500">*</span></label>
+            {{ form.region }}
+            {% if form.region.errors %}<div class="text-red-500 text-sm mt-1">{{ form.region.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-building"></i> Wilaya (District) <span class="text-red-500">*</span></label>
+            {{ form.district }}
+            <div class="text-sm text-gray-500 mt-1" id="districtHint">Chagua mkoa kwanza</div>
+            {% if form.district.errors %}<div class="text-red-500 text-sm mt-1">{{ form.district.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-pin-map"></i> Kata (Ward)</label>
+            {{ form.ward }}
+            {% if form.ward.errors %}<div class="text-red-500 text-sm mt-1">{{ form.ward.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-house-door"></i> Mtaa / Kijiji</label>
+            {{ form.street }}
+            {% if form.street.errors %}<div class="text-red-500 text-sm mt-1">{{ form.street.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="p-3 bg-green-50 border border-green-200 rounded-lg hidden" id="locationPreview">
+          <div class="flex items-center gap-2 text-sm text-green-800">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Mahali: <strong id="locationPreviewText"></strong></span>
+          </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
@@ -99,24 +126,32 @@
       </div>
 
       <div class="space-y-6">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
-          {{ form.topography }}
-          <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
+            {{ form.topography }}
+            <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-moisture"></i> Soil Fertility</label>
+            {{ form.soil_fertility }}
+            <div class="text-sm text-gray-500 mt-1">Helps generate crop recommendations</div>
+          </div>
         </div>
 
         <div class="col-span-full">
           <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Utilities & Improvements</h4>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {% for checkbox in form.utilities %}
-            <label class="flex items-center gap-3 cursor-pointer group">
-              {{ checkbox.tag }}
-              <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">{{ checkbox.choice_label }}</span>
+            <label class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-[#1a5c38] hover:bg-green-50/30 transition-all group">
+              <div class="relative flex items-center">
+                {{ checkbox.tag }}
+              </div>
+              <span class="text-sm text-gray-700 font-medium">{{ checkbox.choice_label }}</span>
             </label>
             {% endfor %}
           </div>
           {% if form.utilities.errors %}<div class="text-red-500 text-sm mt-1">{{ form.utilities.errors }}</div>{% endif %}
-          <div class="text-sm text-gray-500 mt-2"><i class="bi bi-info-circle"></i> Select all that apply to this property.</div>
           
           <div class="mt-6">
             <label class="block text-sm font-medium text-gray-700 mb-1">Additional Utility Notes</label>
@@ -160,39 +195,76 @@
               {% if form.monthly_discount.errors %}<div class="text-red-500 text-sm mt-1">{{ form.monthly_discount.errors }}</div>{% endif %}
             </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.min_duration_days.label }} (days)</label>
-              {{ form.min_duration_days }}
-            </div>
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.max_duration_days.label }}</label>
-              {{ form.max_duration_days }}
-              <div class="text-sm text-gray-500 mt-1">Leave blank for no limit</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- 5. Photo -->
+    <!-- 5. Photos Gallery -->
     <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
-        <h3 class="text-lg font-semibold text-gray-900">Photo</h3>
+        <h3 class="text-lg font-semibold text-gray-900">Photos Gallery</h3>
       </div>
-      <div class="space-y-4">
-        {% if land.land_image_path %}
-        <div class="mb-4">
-          <img src="{{ land.land_image_path.url }}" class="max-h-40 rounded-lg object-cover" alt="Current">
-          <div class="text-sm text-gray-500 mt-2">Current photo — upload a new one to replace it.</div>
+
+      <!-- Existing Images -->
+      {% if land.images.all %}
+      <div class="mb-6">
+        <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Current Photos</h4>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {% for img in land.images.all %}
+          <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+            <img src="{{ img.image.url }}" class="w-full h-full object-cover">
+            <div class="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] py-1 px-2 flex justify-between">
+              <span>{{ img.get_position_display }}</span>
+              {% if img.is_primary %}<span class="text-yellow-400 font-bold">Cover</span>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
         </div>
-        {% endif %}
-        <div class="mb-4">
-          {{ form.land_image_path }}
-          <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP — max 5 MB</div>
-          {% if form.land_image_path.errors %}<div class="text-red-500 text-sm mt-1">{{ form.land_image_path.errors }}</div>{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <p class="text-sm text-amber-800">
+          <i class="bi bi-info-circle-fill mr-1"></i> Add at least <strong>3 photos</strong> from different angles (North, South, Aerial) for better visibility.
+        </p>
+      </div>
+
+      <div id="image-upload-container" class="space-y-4">
+        <!-- New Image Slots -->
+        <div class="image-upload-row p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Upload New Photo</label>
+              <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction</label>
+              <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                <option value="north">North View</option>
+                <option value="south">South View</option>
+                <option value="east">East View</option>
+                <option value="west">West View</option>
+                <option value="aerial">Aerial View</option>
+                <option value="from_above">From Above</option>
+                <option value="vertical">Vertical View</option>
+                <option value="horizontal">Horizontal / Panoramic</option>
+                <option value="front">Front View</option>
+                <option value="other" selected>Other</option>
+              </select>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <button type="button" id="add-more-images" class="mt-4 px-4 py-2 border border-[#1a5c38] text-[#1a5c38] rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors">
+        <i class="bi bi-plus-lg"></i> Add Another Photo
+      </button>
+
+      <div class="mt-8 pt-6 border-t border-gray-100">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Legacy Cover Photo</label>
+        {{ form.land_image_path }}
+        <p class="text-xs text-gray-500 mt-1">If set, this will be used as the primary image.</p>
       </div>
     </div>
 
@@ -214,28 +286,110 @@
       </div>
     </div>
 
-    <div class="flex gap-2">
-      <button type="submit" class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
-        <i class="bi bi-check-lg"></i> Save Changes
-      </button>
-      <a href="{% url 'lands:owner_dashboard' %}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
-      <a href="{% url 'lands:delete_land' land.id %}" class="ml-auto px-6 py-3 bg-red-600 text-white rounded-lg font-semibold text-lg hover:bg-red-700 transition-colors no-underline" onclick="return confirm('Delete this listing permanently?')">
-        <i class="bi bi-trash"></i> Delete
-      </a>
+    <!-- Persistent Action Bar -->
+    <div class="sticky bottom-4 z-[100] mt-8 pb-4 pt-4 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1)] px-6">
+      <div class="max-w-3xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex gap-3 w-full sm:w-auto">
+          <button type="submit" class="flex-1 sm:flex-none px-10 py-3 bg-gradient-to-r from-[#1a5c38] to-[#134428] text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-green-900/30 hover:-translate-y-0.5 transition-all active:translate-y-0 active:scale-95 shadow-md">
+            <i class="bi bi-check-lg mr-2"></i> Save & Publish
+          </button>
+          <button type="submit" name="save_draft" value="true" formnovalidate class="flex-1 sm:flex-none px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all active:scale-95 shadow-md shadow-amber-200">
+            <i class="bi bi-save mr-2"></i> Save Draft
+          </button>
+          <a href="{% url 'lands:owner_dashboard' %}" class="flex-1 sm:flex-none px-6 py-3 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-all text-center no-underline active:scale-95">Cancel</a>
+        </div>
+        <a href="{% url 'lands:delete_land' land.id %}" class="w-full sm:w-auto px-6 py-3 bg-red-50 text-red-600 border border-red-200 rounded-xl font-semibold text-sm hover:bg-red-600 hover:text-white transition-all text-center no-underline active:scale-95 shadow-sm" onclick="return confirm('Delete this listing permanently?')">
+          <i class="bi bi-trash mr-2"></i> Delete Listing
+        </a>
+      </div>
     </div>
   </form>
   </div>
 </div>
 
 <script>
-  document.getElementById('editLandForm').addEventListener('submit', function(e) {
-    const btn = this.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
-      btn.classList.add('opacity-75', 'cursor-not-allowed');
+/* ── Cascading Location Dropdowns ─────────────────────────────────── */
+(function() {
+  var regionEl = document.getElementById('id_region');
+  var districtEl = document.getElementById('id_district');
+  var wardEl = document.getElementById('id_ward');
+  var streetEl = document.getElementById('id_street');
+  var hint = document.getElementById('districtHint');
+  var preview = document.getElementById('locationPreview');
+  var previewText = document.getElementById('locationPreviewText');
+  var savedDistrict = districtEl ? districtEl.value : '';
+
+  function updateLocationPreview() {
+    var parts = [];
+    if (streetEl && streetEl.value.trim()) parts.push(streetEl.value.trim());
+    if (wardEl && wardEl.value.trim()) parts.push(wardEl.value.trim());
+    if (districtEl && districtEl.value) parts.push(districtEl.value);
+    if (regionEl && regionEl.selectedIndex > 0) {
+      parts.push(regionEl.options[regionEl.selectedIndex].text);
     }
-  });
+    if (parts.length > 0 && preview && previewText) {
+      previewText.textContent = parts.join(', ');
+      preview.classList.remove('hidden');
+    } else if (preview) {
+      preview.classList.add('hidden');
+    }
+  }
+
+  if (regionEl) {
+    regionEl.addEventListener('change', function() {
+      var region = this.value;
+      if (!region) {
+        if (districtEl) { districtEl.innerHTML = '<option value="">-- Chagua Wilaya --</option>'; }
+        if (hint) hint.textContent = 'Chagua mkoa kwanza';
+        updateLocationPreview();
+        return;
+      }
+      if (hint) hint.textContent = 'Inapakia wilaya...';
+      fetch('/lands/api/districts/?region=' + encodeURIComponent(region))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!districtEl) return;
+          districtEl.innerHTML = '<option value="">-- Chagua Wilaya --</option>';
+          (data.districts || []).forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            if (d === savedDistrict) opt.selected = true;
+            districtEl.appendChild(opt);
+          });
+          savedDistrict = '';
+          if (hint) hint.textContent = data.districts.length + ' wilaya zinapatikana';
+          updateLocationPreview();
+        })
+        .catch(function() {
+          if (hint) hint.textContent = 'Hitilafu — jaribu tena';
+        });
+    });
+    if (regionEl.value) {
+      regionEl.dispatchEvent(new Event('change'));
+    }
+  }
+
+  if (districtEl) districtEl.addEventListener('change', updateLocationPreview);
+  if (wardEl) wardEl.addEventListener('input', updateLocationPreview);
+  if (streetEl) streetEl.addEventListener('input', updateLocationPreview);
+  updateLocationPreview();
+})();
+</script>
+
+<script>
+  const editLandForm = document.getElementById('editLandForm');
+  if (editLandForm) {
+    editLandForm.addEventListener('submit', function(e) {
+      const submitter = e.submitter;
+      if (submitter && submitter.type === 'submit') {
+        const isDraft = submitter.name === 'save_draft';
+        const label = isDraft ? 'Saving Draft...' : 'Saving Changes...';
+        submitter.innerHTML = `<i class="bi bi-hourglass-split mr-2"></i> ${label}`;
+        submitter.classList.add('opacity-75', 'cursor-not-allowed');
+      }
+    });
+  }
 
 const ltEl = document.getElementById('id_usage');
 const rs   = document.getElementById('rentPricingSection');
@@ -264,6 +418,51 @@ document.addEventListener('DOMContentLoaded', function(){
     if (latInput) latInput.value = e.latlng.lat.toFixed(6);
     if (lngInput) lngInput.value = e.latlng.lng.toFixed(6);
   });
+});
+
+// Add more images functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const addBtn = document.getElementById('add-more-images');
+  const container = document.getElementById('image-upload-container');
+  
+  if (addBtn && container) {
+    addBtn.addEventListener('click', function() {
+      const rowCount = container.querySelectorAll('.image-upload-row').length + 1;
+      const newRow = document.createElement('div');
+      newRow.className = 'image-upload-row p-4 border border-gray-200 rounded-lg bg-gray-50/50 relative mt-4';
+      newRow.innerHTML = `
+        <button type="button" class="remove-image-row absolute top-2 right-2 text-red-500 hover:text-red-700">
+          <i class="bi bi-trash"></i>
+        </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Photo ${rowCount}</label>
+            <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction</label>
+            <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+              <option value="north">North View</option>
+              <option value="south">South View</option>
+              <option value="east">East View</option>
+              <option value="west">West View</option>
+              <option value="aerial">Aerial View</option>
+              <option value="from_above">From Above</option>
+              <option value="vertical">Vertical View</option>
+              <option value="horizontal">Horizontal / Panoramic</option>
+              <option value="front">Front View</option>
+              <option value="other" selected>Other</option>
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(newRow);
+
+      newRow.querySelector('.remove-image-row').addEventListener('click', function() {
+        newRow.remove();
+      });
+    });
+  }
 });
 </script>
 {% endblock %}

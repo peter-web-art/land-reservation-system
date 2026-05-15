@@ -5,8 +5,9 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django import forms
 from django.http import JsonResponse
-from django.db.models import Q, F
+from django.db.models import Q, F, Sum
 from django.conf import settings
+from django.utils import timezone
 from django.utils.html import strip_tags
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
@@ -15,8 +16,9 @@ import bleach, re
 from datetime import date as date_cls, timedelta
 from decimal import Decimal
 
-from .models import Land, Reservation, Message, Wishlist, Notification, Utility
+from .models import Land, Reservation, PaymentRecord, Message, Wishlist, Notification, Utility, LandImage
 import json
+from accounts.models import SystemSettings
 
 User = get_user_model()
 
@@ -40,6 +42,20 @@ def create_notification(user, notification_type, title, message, link=''):
         message=message,
         link=link
     )
+
+
+def get_platform_fee_percentage():
+    settings_obj = SystemSettings.objects.first()
+    if not settings_obj:
+        settings_obj = SystemSettings.objects.create()
+    return settings_obj.platform_fee_percentage or Decimal('0')
+
+
+def apply_platform_fee(payment):
+    fee_rate = get_platform_fee_percentage()
+    payment.platform_fee_rate = fee_rate
+    payment.platform_fee_amount = round((payment.amount or Decimal('0')) * fee_rate / Decimal('100'), 2)
+    return payment
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -92,35 +108,65 @@ def send_sms_notification(phone_number, message):
 class LandForm(forms.ModelForm):
     class Meta:
         model  = Land
-        fields = ['land_id', 'title', 'description', 'price', 'price_unit', 'location',
+        fields = ['land_id', 'title', 'description', 'price', 'price_unit',
+                  'region', 'district', 'ward', 'street',
                   'latitude', 'longitude',
                   'usage', 'size', 'size_unit', 'land_use',
-                  'topography', 'utilities', 'additional_utilities_notes',
+                  'topography', 'soil_fertility', 'utilities', 'additional_utilities_notes',
                   'weekly_discount', 'monthly_discount',
-                  'min_duration_days', 'max_duration_days',
-                  'contact_phone', 'contact_email', 'land_image_path']
+                  'contact_phone', 'contact_email', 'land_image_path', 'wizard_step']
 
     def __init__(self, *args, **kwargs):
+        self.is_draft = kwargs.pop('is_draft', False)
         super().__init__(*args, **kwargs)
         self.fields['utilities'].widget = forms.CheckboxSelectMultiple()
         self.fields['utilities'].queryset = Utility.objects.all()
+        # District is populated dynamically via JS, so use a plain text-like select
+        self.fields['district'].widget = forms.Select(choices=[('', '-- Chagua Wilaya --')])
+        self.fields['description'].required = False
+        self.fields['additional_utilities_notes'].required = False
+        self.fields['land_id'].required = False
+        self.fields['land_image_path'].required = False
+
+        if self.is_draft:
+            # If saving as draft, only title is strictly required
+            for field_name, field in self.fields.items():
+                if field_name != 'title':
+                    field.required = False
+
+        if self.instance and self.instance.pk:
+            self.fields['land_id'].widget.attrs.update({
+                'readonly': 'readonly',
+                'class': 'w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-900 cursor-not-allowed',
+            })
+        else:
+            self.fields['land_id'].widget = forms.HiddenInput()
+        # Pre-populate districts if editing an existing land
+        if self.instance and self.instance.pk and self.instance.region:
+            from .tanzania_locations import get_districts_for_region
+            districts = get_districts_for_region(self.instance.region)
+            choices = [('', '-- Chagua Wilaya --')] + [(d, d) for d in districts]
+            self.fields['district'].widget = forms.Select(choices=choices)
         owner = getattr(self.instance, 'owner', None)
         if owner:
             self.fields['contact_phone'].initial = getattr(owner, 'phone', '')
             self.fields['contact_email'].initial = getattr(owner, 'email', '')
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
+        self.fields['region'].widget.attrs['id'] = 'id_region'
+        self.fields['district'].widget.attrs['id'] = 'id_district'
+        self.fields['ward'].widget.attrs['placeholder'] = 'e.g. Kata ya Msasani'
+        self.fields['street'].widget.attrs['placeholder'] = 'e.g. Mtaa wa Kimara'
         self.fields['price'].widget.attrs['placeholder']            = 'e.g. 150000'
         self.fields['weekly_discount'].widget.attrs['placeholder']  = 'e.g. 10  (means 10% off)'
         self.fields['monthly_discount'].widget.attrs['placeholder'] = 'e.g. 20  (means 20% off)'
-        self.fields['min_duration_days'].widget.attrs['placeholder'] = 'e.g. 30'
 
     def clean_title(self):        return sanitize_text(self.cleaned_data.get('title'), 200)
     def clean_description(self):  return sanitize_text(self.cleaned_data.get('description'))
-    def clean_location(self):     return sanitize_text(self.cleaned_data.get('location'), 200)
+    def clean_ward(self):         return sanitize_text(self.cleaned_data.get('ward'), 100)
 
-    def clean_image(self):
-        image = self.cleaned_data.get('image')
+    def clean_land_image_path(self):
+        image = self.cleaned_data.get('land_image_path')
         if image and hasattr(image, 'content_type'):
             if image.content_type not in ['image/jpeg', 'image/png', 'image/webp']:
                 raise forms.ValidationError('Use JPG, PNG, or WebP only.')
@@ -141,8 +187,6 @@ class LandForm(forms.ModelForm):
             cleaned['price_unit']        = 'total'
             cleaned['weekly_discount']   = 0
             cleaned['monthly_discount']  = 0
-            cleaned['min_duration_days'] = 1
-            cleaned['max_duration_days'] = None
         return cleaned
 
 
@@ -248,14 +292,6 @@ class ReservationForm(forms.ModelForm):
                 elif start < date_cls.today():
                     self.add_error('start_date', 'Start date cannot be in the past.')
                 else:
-                    days = (end - start).days
-                    if self.land.min_duration_days and days < self.land.min_duration_days:
-                        self.add_error('start_date',
-                            f'Minimum rental is {self.land.min_duration_days} days.')
-                    if self.land.max_duration_days and days > self.land.max_duration_days:
-                        self.add_error('end_date',
-                            f'Maximum rental is {self.land.max_duration_days} days.')
-                    
                     if not self.land.is_available_for_dates(start, end, req_size):
                         remain = self.land.get_remaining_size_for_dates(start, end)
                         self.add_error('requested_size',
@@ -268,10 +304,38 @@ class ReservationForm(forms.ModelForm):
         return cleaned
 
 
+class PaymentSubmissionForm(forms.ModelForm):
+    class Meta:
+        model = PaymentRecord
+        fields = ['amount', 'payment_method', 'payment_reference', 'payment_receipt', 'payment_date', 'notes']
+        widgets = {
+            'payment_date': forms.DateInput(attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Optional: Add any extra details about your payment...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.reservation = kwargs.pop('reservation', None)
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
+        self.fields['amount'].widget.attrs['placeholder'] = 'e.g. 150000'
+        self.fields['payment_reference'].required = True
+        self.fields['payment_date'].required = True
+        self.fields['amount'].required = True
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is None or amount <= 0:
+            raise forms.ValidationError('Enter a valid payment amount.')
+        if self.reservation and amount > self.reservation.remaining_balance:
+            raise forms.ValidationError(f'Amount cannot exceed remaining balance of Tsh {self.reservation.remaining_balance}.')
+        return amount
+
+
 # ── Views ─────────────────────────────────────────────────────────────────────
 
 def land_list(request):
-    lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')
+    lands = Land.objects.filter(is_active=True, is_draft=False).select_related('owner').order_by('-created_on')
     
     # ── Filters from hero search bar & category tabs ──
     usage = request.GET.get('type')
@@ -289,7 +353,7 @@ def land_list(request):
     if land_use in ['agricultural', 'residential', 'commercial', 'industrial', 'mixed']:
         lands = lands.filter(land_use=land_use)
     if location:
-        lands = lands.filter(location__icontains=location)
+        lands = lands.filter(Q(location__icontains=location) | Q(title__icontains=location) | Q(description__icontains=location))
     if keyword:
         lands = lands.filter(Q(title__icontains=keyword) | Q(description__icontains=keyword))
     if min_price:
@@ -424,6 +488,14 @@ def location_autocomplete(request):
     return JsonResponse({'suggestions': suggestions[:10]})
 
 
+def districts_api(request):
+    """Return districts for a given region (for cascading dropdown)."""
+    from .tanzania_locations import get_districts_for_region
+    region = request.GET.get('region', '').strip()
+    districts = get_districts_for_region(region)
+    return JsonResponse({'districts': districts})
+
+
 @ratelimit(key='ip', rate='30/m', method='GET', block=True)
 def search_lands(request):
     form  = SearchForm(request.GET)
@@ -451,7 +523,7 @@ def search_lands(request):
         kw  = form.cleaned_data.get('keyword')
         lu  = form.cleaned_data.get('land_use')
         
-        if loc: lands = lands.filter(location__icontains=loc)
+        if loc: lands = lands.filter(Q(location__icontains=loc) | Q(title__icontains=loc) | Q(description__icontains=loc))
         if mn is not None: lands = lands.filter(price__gte=mn)
         if mx is not None: lands = lands.filter(price__lte=mx)
         if min_s is not None: lands = lands.filter(size__gte=min_s)
@@ -534,12 +606,44 @@ def land_detail(request, pk):
                 'status': period['status'],
             })
 
+    # Build crop suggestions for agricultural/mixed land
+    from .crop_suggestions import get_crop_suggestions
+    crop_suggestions = get_crop_suggestions(
+        location=land.location,
+        soil_fertility=land.soil_fertility or 'moderate',
+        topography=land.topography or 'flat',
+        land_use=land.land_use or 'agricultural',
+        region_key=land.region or None,
+    )
+
     return render(request, 'lands/land_detail.html', {
         'land': land, 'similar_lands': similar, 'is_wishlisted': is_wishlisted,
         'booked_periods_json': json.dumps(booked_periods),
         'next_available_date': land.next_available_date.isoformat(),
+        'crop_suggestions': crop_suggestions,
+        'crop_suggestions_json': json.dumps(crop_suggestions),
     })
 
+
+def crop_suggestions_api(request, pk):
+    """JSON API endpoint returning crop suggestions for a specific land."""
+    land = get_object_or_404(Land, pk=pk, is_active=True)
+    from .crop_suggestions import get_crop_suggestions
+    suggestions = get_crop_suggestions(
+        location=land.location,
+        soil_fertility=land.soil_fertility or 'moderate',
+        topography=land.topography or 'flat',
+        land_use=land.land_use or 'agricultural',
+        region_key=land.region or None,
+    )
+    return JsonResponse({
+        'land_id': land.pk,
+        'location': land.location,
+        'soil_fertility': land.get_soil_fertility_display(),
+        'topography': land.get_topography_display(),
+        'land_use': land.get_land_use_display(),
+        'suggestions': suggestions,
+    })
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def book_land(request, pk):
@@ -633,8 +737,6 @@ def book_land(request, pk):
             else land.price),
         'weekly_discount':  float(land.weekly_discount),
         'monthly_discount': float(land.monthly_discount),
-        'min_days': land.min_duration_days,
-        'max_days': land.max_duration_days or 'null',
     })
 
 
@@ -706,11 +808,32 @@ def owner_dashboard(request):
     from django.utils import timezone
     from datetime import timedelta
     
-    lands          = Land.objects.filter(owner=request.user).prefetch_related('reservations')
-    ids            = lands.values_list('id', flat=True)
+    # Contextual Filtering for Owner Dashboard
+    keyword = request.GET.get('keyword', '')
+    status = request.GET.get('status', '')  # 'published', 'draft'
+    usage = request.GET.get('usage', '')    # 'rent', 'sale'
+
+    lands = Land.objects.filter(owner=request.user).prefetch_related('reservations', 'images')
+    
+    if keyword:
+        lands = lands.filter(Q(title__icontains=keyword) | Q(location__icontains=keyword) | Q(description__icontains=keyword))
+    if status == 'published':
+        lands = lands.filter(is_draft=False)
+    elif status == 'draft':
+        lands = lands.filter(is_draft=True)
+    if usage in ['rent', 'sale']:
+        lands = lands.filter(usage=usage)
+
+    ids = lands.values_list('id', flat=True)
+    
+    # Separate drafts from published listings for the stats cards (using unfiltered set)
+    all_lands = Land.objects.filter(owner=request.user)
+    published_lands = all_lands.filter(is_draft=False)
+    draft_lands     = all_lands.filter(is_draft=True)
+    
     pending_count  = Reservation.objects.filter(land_id__in=ids, status='pending').count()
     approved_count = Reservation.objects.filter(land_id__in=ids, status='approved').count()
-    available_count = sum(1 for l in lands if l.is_available)
+    available_count = sum(1 for l in published_lands if l.is_available)
     recent_bookings = (Reservation.objects
                        .filter(land_id__in=ids)
                        .select_related('land', 'customer')
@@ -751,6 +874,8 @@ def owner_dashboard(request):
     
     return render(request, 'lands/dashboard.html', {
         'lands': lands,
+        'draft_count': draft_lands.count(),
+        'published_count': published_lands.count(),
         'pending_count': pending_count,
         'approved_count': approved_count,
         'available_count': available_count,
@@ -770,19 +895,43 @@ def owner_dashboard(request):
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def add_land(request):
     if request.method == 'POST':
-        form = LandForm(request.POST, request.FILES)
+        is_draft = request.POST.get('save_draft') == 'true'
+        form = LandForm(request.POST, request.FILES, is_draft=is_draft)
         if form.is_valid():
             land       = form.save(commit=False)
             land.owner = request.user
+            is_draft = request.POST.get('save_draft') == 'true'
+            land.is_draft = is_draft
+            land.wizard_step = int(request.POST.get('current_step', 1))
             land.save()
-            
-            form.save_m2m() # Save ManyToMany relationships (utilities)
+            form.save_m2m()
 
-            messages.success(request, f'"{land.title}" listed successfully.')
+            # Handle multiple images
+            images = request.FILES.getlist('gallery_images')
+            positions = request.POST.getlist('image_positions')
+            
+            for i, img in enumerate(images):
+                pos = positions[i] if i < len(positions) else 'other'
+                LandImage.objects.create(
+                    land=land,
+                    image=img,
+                    position=pos,
+                    is_primary=(i == 0 and not land.land_image_path),
+                    order=i
+                )
+
+            if is_draft:
+                messages.success(request, f'"{land.title}" saved as draft.')
+            else:
+                messages.success(request, f'"{land.title}" published successfully.')
             return redirect('lands:owner_dashboard')
     else:
-        form = LandForm()
-    return render(request, 'lands/add_land.html', {'form': form})
+        initial = {
+            'contact_phone': getattr(request.user, 'phone', ''),
+            'contact_email': request.user.email,
+        }
+        form = LandForm(initial=initial)
+    return render(request, 'lands/add_land.html', {'form': form, 'land': None, 'initial_step': 1})
 
 
 # FIX #4: owner_required
@@ -791,13 +940,42 @@ def add_land(request):
 def edit_land(request, pk):
     land = get_object_or_404(Land, pk=pk, owner=request.user)
     if request.method == 'POST':
-        form = LandForm(request.POST, request.FILES, instance=land)
+        is_draft = request.POST.get('save_draft') == 'true'
+        form = LandForm(request.POST, request.FILES, instance=land, is_draft=is_draft)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Land updated.')
+            is_draft = request.POST.get('save_draft') == 'true'
+            land = form.save(commit=False)
+            land.is_draft = is_draft
+            land.wizard_step = int(request.POST.get('current_step', 1))
+            land.save()
+            form.save_m2m()
+
+            # Handle multiple images
+            images = request.FILES.getlist('gallery_images')
+            positions = request.POST.getlist('image_positions')
+            
+            for i, img in enumerate(images):
+                pos = positions[i] if i < len(positions) else 'other'
+                LandImage.objects.create(
+                    land=land,
+                    image=img,
+                    position=pos,
+                    order=land.images.count() + i
+                )
+
+            messages.success(request, 'Draft updated.' if is_draft else 'Land published successfully!')
             return redirect('lands:owner_dashboard')
     else:
         form = LandForm(instance=land)
+    
+    # If it's a draft, use the wizard (add_land.html)
+    if land.is_draft:
+        return render(request, 'lands/add_land.html', {
+            'form': form, 
+            'land': land, 
+            'initial_step': land.wizard_step
+        })
+    
     return render(request, 'lands/edit_land.html', {'form': form, 'land': land})
 
 
@@ -893,14 +1071,8 @@ def update_reservation_status(request, pk, status):
     if status == 'approved':
         pm = request.POST.get('payment_method', '').strip()
         pr = request.POST.get('payment_reference', '').strip()
-        # Owner can override payment method/reference during approval
         if pm: r.payment_method = pm
         if pr: r.payment_reference = pr
-        # BUG #1 FIX: Mark as paid if customer already provided payment info (during booking)
-        # OR if owner confirms it during approval
-        if r.payment_reference:
-            r.payment_status = 'paid'
-            r.amount_paid    = r.agreed_price or r.land.price
     r.save()
 
     # SMS on approval
@@ -964,7 +1136,6 @@ def mark_payment(request, pk):
     if r.land.owner != request.user:
         messages.error(request, 'Permission denied.')
         return redirect('lands:reservations_management')
-    # Allow owner to confirm/update payment details
     payment_method = request.POST.get('payment_method', '').strip()
     payment_ref = request.POST.get('payment_reference', '').strip()
     if payment_method:
@@ -972,7 +1143,8 @@ def mark_payment(request, pk):
     if payment_ref:
         r.payment_reference = payment_ref
     r.payment_status = 'paid'
-    r.amount_paid = r.agreed_price or r.land.price
+    r.payment_confirmed = True
+    r.amount_paid = r.agreed_price or r.total_amount or r.land.price
     r.save()
     messages.success(request, 'Payment recorded.')
     return redirect('lands:reservations_management')
@@ -1209,3 +1381,283 @@ def mark_notification_read(request, notification_id):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'status': 'ok'})
     return safe_redirect(request, request.META.get('HTTP_REFERER'), 'lands:my_notifications')
+
+
+def live_search(request):
+    """API for 'Search as you type' functionality."""
+    query = request.GET.get('q', '').strip()
+    mode = request.GET.get('mode', 'customer')  # 'customer' or 'owner'
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    if mode == 'owner' and request.user.is_authenticated:
+        # Search within owner's own lands
+        lands = Land.objects.filter(owner=request.user)
+        status = request.GET.get('status')
+        usage = request.GET.get('usage')
+        
+        if status == 'published': lands = lands.filter(is_draft=False)
+        elif status == 'draft': lands = lands.filter(is_draft=True)
+        if usage in ['rent', 'sale']: lands = lands.filter(usage=usage)
+        
+        lands = lands.filter(Q(title__icontains=query) | Q(location__icontains=query))
+    else:
+        # Public search
+        lands = Land.objects.filter(is_active=True, is_draft=False)
+        usage = request.GET.get('type')
+        max_price = request.GET.get('max_price')
+        
+        if usage in ['rent', 'sale']: lands = lands.filter(usage=usage)
+        if max_price:
+            try: lands = lands.filter(price__lte=float(max_price))
+            except: pass
+            
+        lands = lands.filter(Q(title__icontains=query) | Q(location__icontains=query) | Q(description__icontains=query))
+
+    results = []
+    for land in lands.select_related('owner')[:6]:
+        results.append({
+            'id': land.id,
+            'title': land.title,
+            'location': land.location,
+            'price': land.price_display,
+            'image': land.primary_image.url if land.primary_image else None,
+            'url': f"/lands/{land.id}/",
+            'usage': land.get_usage_display(),
+        })
+
+    return JsonResponse({'results': results})
+    
+
+@login_required
+@customer_required
+def my_bookings(request):
+    """View for customers to track their own land reservations."""
+    bookings = Reservation.objects.filter(customer=request.user).select_related('land').order_by('-created_on')
+    return render(request, 'lands/my_bookings.html', {'bookings': bookings})
+
+
+@login_required
+@customer_required
+def payments_and_bills(request):
+    bookings = (Reservation.objects
+                .filter(customer=request.user)
+                .select_related('land', 'land__owner')
+                .prefetch_related('payments')
+                .order_by('-created_on'))
+    active_bookings = bookings.exclude(status__in=['rejected', 'cancelled'])
+    outstanding_total = sum(
+        booking.remaining_balance
+        for booking in active_bookings
+        if booking.remaining_balance > 0
+    )
+    return render(request, 'lands/payments_and_bills.html', {
+        'bookings': bookings,
+        'unpaid_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'pending'),
+        'under_review_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'submitted'),
+        'confirmed_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'confirmed'),
+        'outstanding_total': outstanding_total,
+    })
+
+
+@login_required
+@customer_required
+def submit_payment(request, pk):
+    """View for customers to submit payment proof (reference/receipt)."""
+    booking = get_object_or_404(Reservation.objects.prefetch_related('payments'), pk=pk, customer=request.user)
+    if booking.status not in ['pending', 'approved']:
+        messages.error(request, 'This booking is no longer open for payment updates.')
+        return redirect('lands:payments_and_bills')
+    if booking.remaining_balance <= 0:
+        messages.info(request, 'This booking is already fully paid.')
+        return redirect('lands:payments_and_bills')
+    
+    if request.method == 'POST':
+        form = PaymentSubmissionForm(request.POST, request.FILES, reservation=booking)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.reservation = booking
+            payment.created_by = request.user
+            payment.updated_by = request.user
+            payment.save()
+
+            booking.payment_status = 'unpaid'
+            booking.payment_confirmed = False
+            booking.payment_reference = payment.payment_reference
+            booking.payment_receipt = payment.payment_receipt
+            booking.payment_date = payment.payment_date
+            booking.payment_method = payment.payment_method
+            booking.updated_by = request.user
+            booking.save()
+            
+            create_notification(
+                user=booking.land.owner,
+                notification_type='payment',
+                title="Payment Submitted",
+                message=f"Customer {request.user.username} submitted Tsh {payment.amount} for {booking.land.title}. Verify reference: {payment.payment_reference}.",
+                link=f"/lands/payments/manage/"
+            )
+            
+            messages.success(request, "Payment details submitted successfully. The owner will verify and confirm receipt shortly.")
+            return redirect('lands:payments_and_bills')
+    else:
+        form = PaymentSubmissionForm(reservation=booking, initial={'payment_method': booking.payment_method})
+        
+    return render(request, 'lands/submit_payment.html', {
+        'form': form,
+        'booking': booking,
+        'payment_history': booking.payments.all()[:5],
+    })
+
+
+@login_required
+@owner_required
+def manage_payments(request):
+    reservations = (Reservation.objects
+                    .filter(land__owner=request.user)
+                    .exclude(status__in=['rejected', 'cancelled'])
+                    .select_related('land', 'customer')
+                    .prefetch_related('payments')
+                    .order_by('-created_on'))
+    payment_filter = request.GET.get('payment', '')
+
+    if payment_filter == 'awaiting':
+        reservations = reservations.filter(Q(payment_reference__isnull=True) | Q(payment_reference=''))
+    elif payment_filter == 'review':
+        reservations = reservations.filter(~Q(payment_reference__isnull=True), ~Q(payment_reference=''), payment_confirmed=False)
+    elif payment_filter == 'confirmed':
+        reservations = reservations.filter(payment_confirmed=True)
+
+    owner_reservations = Reservation.objects.filter(land__owner=request.user).exclude(status__in=['rejected', 'cancelled'])
+    confirmed_income = sum(booking.confirmed_amount_total for booking in owner_reservations.prefetch_related('payments'))
+    platform_fee_total = sum(booking.platform_fee_total for booking in owner_reservations.prefetch_related('payments'))
+    owner_net_total = sum(booking.owner_net_total for booking in owner_reservations.prefetch_related('payments'))
+    expected_income = sum(
+        (booking.total_amount or Decimal('0'))
+        for booking in owner_reservations
+        if booking.status in ['pending', 'approved']
+    )
+
+    return render(request, 'lands/manage_payments.html', {
+        'reservations': reservations,
+        'awaiting_count': owner_reservations.filter(Q(payment_reference__isnull=True) | Q(payment_reference='')).count(),
+        'review_count': owner_reservations.filter(~Q(payment_reference__isnull=True), ~Q(payment_reference=''), payment_confirmed=False).count(),
+        'confirmed_count': owner_reservations.filter(payment_confirmed=True).count(),
+        'confirmed_income': confirmed_income,
+        'platform_fee_total': platform_fee_total,
+        'owner_net_total': owner_net_total,
+        'expected_income': expected_income,
+    })
+
+
+@login_required
+@owner_required
+def confirm_payment_receipt(request, pk):
+    """View for owners to confirm they have received the funds."""
+    booking = get_object_or_404(Reservation, pk=pk, land__owner=request.user)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        payment_id = request.POST.get('payment_id')
+        payment = None
+        if payment_id:
+            payment = get_object_or_404(PaymentRecord, pk=payment_id, reservation=booking)
+
+        if action == 'confirm':
+            payment_method = request.POST.get('payment_method', '').strip()
+            payment_reference = request.POST.get('payment_reference', '').strip()
+            manual_amount = request.POST.get('amount', '').strip()
+            if payment:
+                if payment_method:
+                    payment.payment_method = payment_method
+                if payment_reference:
+                    payment.payment_reference = payment_reference
+                payment.status = 'confirmed'
+                payment.updated_by = request.user
+                payment.confirmed_on = timezone.now()
+                payment = apply_platform_fee(payment)
+                payment.save()
+            else:
+                try:
+                    amount = Decimal(manual_amount)
+                except Exception:
+                    amount = None
+                if amount is None or amount <= 0:
+                    messages.error(request, 'Enter a valid payment amount before confirming.')
+                    return redirect('lands:manage_payments')
+                if amount > booking.remaining_balance:
+                    messages.error(request, f'Amount cannot exceed remaining balance of Tsh {booking.remaining_balance}.')
+                    return redirect('lands:manage_payments')
+                payment = PaymentRecord(
+                    reservation=booking,
+                    amount=amount,
+                    payment_method=payment_method or None,
+                    payment_reference=payment_reference or f'MANUAL-{booking.id}-{timezone.now().strftime("%Y%m%d%H%M%S")}',
+                    payment_date=booking.payment_date or timezone.now().date(),
+                    notes='Recorded manually by owner.',
+                    status='confirmed',
+                    confirmed_on=timezone.now(),
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                payment = apply_platform_fee(payment)
+                payment.save()
+
+            if payment_method:
+                booking.payment_method = payment_method
+            if payment_reference:
+                booking.payment_reference = payment_reference
+            elif payment:
+                booking.payment_reference = payment.payment_reference
+            if payment:
+                booking.payment_receipt = payment.payment_receipt
+                booking.payment_date = payment.payment_date
+            booking.amount_paid = booking.confirmed_amount_total
+            booking.payment_confirmed = booking.remaining_balance <= 0
+            booking.payment_status = 'paid' if booking.remaining_balance <= 0 else 'unpaid'
+            if booking.status == 'pending':
+                booking.status = 'approved'
+            booking.updated_by = request.user
+            booking.save()
+            
+            if booking.customer:
+                create_notification(
+                    user=booking.customer,
+                    notification_type='payment',
+                    title="Payment Confirmed",
+                    message=f"The owner confirmed Tsh {payment.amount if payment else booking.amount_paid} for {booking.land.title}. Remaining balance: Tsh {booking.remaining_balance}.",
+                    link=f"/lands/payments/"
+                )
+            
+            messages.success(request, f"Payment for booking #{booking.id} has been confirmed.")
+        
+        elif action == 'reject':
+            rejected_amount = None
+            if payment:
+                rejected_amount = payment.amount
+                payment.status = 'rejected'
+                payment.updated_by = request.user
+                payment.save()
+
+            latest_pending = booking.latest_pending_payment
+            booking.payment_reference = latest_pending.payment_reference if latest_pending else ""
+            booking.payment_receipt = latest_pending.payment_receipt if latest_pending else None
+            booking.payment_date = latest_pending.payment_date if latest_pending else None
+            booking.payment_method = latest_pending.payment_method if latest_pending else None
+            booking.payment_confirmed = booking.remaining_balance <= 0
+            booking.payment_status = 'paid' if booking.remaining_balance <= 0 else 'unpaid'
+            booking.amount_paid = booking.confirmed_amount_total or None
+            booking.save()
+            
+            if booking.customer:
+                create_notification(
+                    user=booking.customer,
+                    notification_type='payment',
+                    title="Payment Reference Rejected",
+                    message=f"The owner could not verify your submitted payment of Tsh {rejected_amount or 0} for {booking.land.title}. Please check the details and resubmit.",
+                    link=f"/lands/payments/"
+                )
+            messages.warning(request, "Payment reference rejected. Customer has been notified to resubmit.")
+
+    return redirect('lands:manage_payments')

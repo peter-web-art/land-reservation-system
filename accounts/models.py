@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from decimal import Decimal
 
 class AuditBase(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="%(class)s_created")
@@ -24,6 +25,21 @@ class User(AbstractUser, AuditBase):
     is_owner        = models.BooleanField(default=False)
     is_verified     = models.BooleanField(default=False, help_text="Owner verified by admin — no scam risk")
     is_suspended    = models.BooleanField(default=False, help_text="Suspended users cannot log in")
+
+    @property
+    def profile_picture(self):
+        personal = getattr(self, 'personal_details', None)
+        return getattr(personal, 'photo_path', None)
+
+    @property
+    def phone(self):
+        personal = getattr(self, 'personal_details', None)
+        return getattr(personal, 'phone', '')
+
+    @property
+    def bio(self):
+        personal = getattr(self, 'personal_details', None)
+        return getattr(personal, 'bio', '')
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
@@ -49,6 +65,7 @@ class PersonalDetails(AuditBase):
 class SystemSettings(models.Model):
     maintenance_mode = models.BooleanField(default=False)
     email_notifications = models.BooleanField(default=True)
+    platform_fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('5.00'))
     last_backup = models.DateTimeField(null=True, blank=True)
 
     class Meta:

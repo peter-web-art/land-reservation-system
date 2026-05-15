@@ -4,8 +4,20 @@ from functools import wraps
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.utils.http import url_has_allowed_host_and_scheme
 
 User = get_user_model()
+
+
+def safe_redirect_back(request, fallback):
+    referer = request.META.get('HTTP_REFERER')
+    if referer and url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(referer)
+    return redirect(fallback)
 
 
 def admin_required(view_func):
@@ -16,7 +28,7 @@ def admin_required(view_func):
             return redirect('accounts:admin_login')
         if not (request.user.is_staff or request.user.role == User.ROLE_ADMIN):
             messages.error(request, 'Access denied — Admin only.')
-            return redirect('lands:land_list')
+            return safe_redirect_back(request, 'lands:land_list')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -30,10 +42,10 @@ def owner_required(view_func):
             return redirect('login')
         if request.user.role == User.ROLE_ADMIN or request.user.is_staff:
             messages.error(request, 'Admin/staff accounts cannot add or manage land listings.')
-            return redirect('lands:land_list')
+            return safe_redirect_back(request, 'lands:land_list')
         if not (request.user.is_owner or request.user.role == User.ROLE_OWNER):
             messages.error(request, 'Only land owners can access this page.')
-            return redirect('lands:land_list')
+            return safe_redirect_back(request, 'lands:land_list')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -47,10 +59,10 @@ def customer_required(view_func):
             return redirect('login')
         if request.user.role == User.ROLE_ADMIN or request.user.is_staff:
             messages.error(request, 'Admin/staff accounts cannot book land or access customer features.')
-            return redirect('lands:land_list')
+            return safe_redirect_back(request, 'lands:land_list')
         if request.user.is_owner or request.user.role == User.ROLE_OWNER:
             messages.info(request, 'This feature is for customers. Switch to customer mode.')
-            return redirect('lands:land_list')
+            return safe_redirect_back(request, 'lands:land_list')
         return view_func(request, *args, **kwargs)
     return wrapper
 

@@ -288,12 +288,10 @@
                 <span class="truncate">{{ land.get_topography_display|default:"Flat" }}</span>
               </div>
               {% if land.usage == 'rent' %}
-                {% if land.min_duration_days %}
-                <div class="flex items-center gap-1.5" title="Minimum Duration">
-                  <i class="bi bi-calendar-range text-gray-400"></i>
-                  <span class="truncate">Min {{ land.min_duration_days }} days</span>
+                <div class="flex items-center gap-1 text-gray-500">
+                  <i class="bi bi-geo-alt"></i>
+                  <span class="truncate">{{ land.region }}</span>
                 </div>
-                {% endif %}
                 {% if land.weekly_discount > 0 or land.monthly_discount > 0 %}
                 <div class="flex items-center gap-1.5" title="Discounts available">
                   <i class="bi bi-tags text-gray-400"></i>

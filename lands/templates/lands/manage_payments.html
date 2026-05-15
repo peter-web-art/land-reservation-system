@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Manage Payments - Land Reserve{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <div>
+      <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+        <a href="{% url 'lands:owner_dashboard' %}" class="hover:text-[#1a5c38] no-underline">Hosting Dashboard</a>
+        <span>/</span>
+        <span>Manage Payments</span>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900">Manage Payments</h1>
+      <p class="text-sm text-gray-500 mt-1">Review customer transaction references and confirm when funds are actually received.</p>
+    </div>
+    <a href="{% url 'lands:reservations_management' %}" class="inline-flex items-center justify-center px-5 py-3 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+      <i class="bi bi-kanban mr-2"></i> Booking Requests
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Awaiting Reference</div>
+      <div class="text-2xl font-bold text-amber-600">{{ awaiting_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Need Review</div>
+      <div class="text-2xl font-bold text-blue-600">{{ review_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Confirmed Payments</div>
+      <div class="text-2xl font-bold text-green-600">{{ confirmed_count }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Confirmed Income</div>
+      <div class="text-2xl font-bold text-gray-900">Tsh {{ confirmed_income }}</div>
+      <div class="text-xs text-gray-500 mt-1">Expected active total: Tsh {{ expected_income }}</div>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div class="text-sm text-gray-500">Owner Net Payout</div>
+      <div class="text-2xl font-bold text-[#1a5c38]">Tsh {{ owner_net_total }}</div>
+      <div class="text-xs text-gray-500 mt-1">Platform fee deducted: Tsh {{ platform_fee_total }}</div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mb-6">
+    <a href="{% url 'lands:manage_payments' %}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if not request.GET.payment %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All Active</a>
+    <a href="?payment=awaiting" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'awaiting' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Awaiting Reference</a>
+    <a href="?payment=review" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'review' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Need Review</a>
+    <a href="?payment=confirmed" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'confirmed' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Confirmed</a>
+  </div>
+
+  {% if reservations %}
+  <div class="space-y-5">
+    {% for booking in reservations %}
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="p-6">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-xl font-bold text-gray-900">{{ booking.land.title }}</h2>
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                {% if booking.payment_review_status == 'confirmed' %}bg-green-100 text-green-700
+                {% elif booking.payment_review_status == 'submitted' %}bg-blue-100 text-blue-700
+                {% else %}bg-amber-100 text-amber-700{% endif %}">
+                {% if booking.payment_review_status == 'confirmed' %}Funds Received{% elif booking.payment_review_status == 'submitted' %}Reference Waiting Review{% else %}Waiting for Customer{% endif %}
+              </span>
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if booking.status == 'approved' %}bg-green-50 text-green-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+                {{ booking.get_status_display }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 mt-1">
+              {% if booking.customer %}{{ booking.customer.get_full_name|default:booking.customer.username }}{% else %}{{ booking.customer_name|default:"Guest Customer" }}{% endif %}
+            </p>
+          </div>
+          <div class="text-left lg:text-right">
+            <div class="text-xs text-gray-500 uppercase font-bold tracking-wider">Amount</div>
+            <div class="text-2xl font-black text-[#1a5c38]">Tsh {{ booking.total_amount|default:booking.land.price }}</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6 text-sm">
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Confirmed Paid</div>
+            <div class="font-semibold text-green-700">Tsh {{ booking.confirmed_amount_total }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Platform Fee</div>
+            <div class="font-semibold text-amber-700">Tsh {{ booking.platform_fee_total }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Owner Net</div>
+            <div class="font-semibold text-[#1a5c38]">Tsh {{ booking.owner_net_total }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Remaining</div>
+            <div class="font-semibold {% if booking.remaining_balance > 0 %}text-amber-700{% else %}text-green-700{% endif %}">Tsh {{ booking.remaining_balance }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Reference No.</div>
+            <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_reference|default:booking.payment_reference|default:"Not submitted yet" }}</div>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-1">
+            <div class="text-xs text-gray-500 uppercase">Payment Date</div>
+            <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_date|date:"M d, Y"|default:booking.payment_date|date:"M d, Y"|default:"Not set" }}</div>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-1">
+            <div class="text-xs text-gray-500 uppercase">Phone</div>
+            <div class="font-semibold text-gray-900">{{ booking.customer_phone|default:"Not provided" }}</div>
+          </div>
+          <div class="sm:col-span-2 lg:col-span-1">
+            <div class="text-xs text-gray-500 uppercase">Status</div>
+            <div class="font-semibold text-gray-900">{% if booking.payment_confirmed %}Confirmed{% elif booking.payment_reference %}Waiting your confirmation{% else %}No reference yet{% endif %}</div>
+          </div>
+        </div>
+
+        {% if booking.payment_receipt %}
+        <div class="mt-4">
+          <a href="{{ booking.payment_receipt.url }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
+            <i class="bi bi-file-earmark-image"></i> View Receipt
+          </a>
+        </div>
+        {% endif %}
+
+        <div class="mt-6">
+          {% if booking.payment_confirmed %}
+          <div class="p-4 rounded-xl bg-green-50 border border-green-200 text-sm text-green-800">
+            This payment has already been confirmed and is included in owner income tracking.
+          </div>
+          {% elif booking.payment_reference %}
+          <div class="p-4 rounded-xl bg-blue-50 border border-blue-200">
+            <div class="text-sm text-blue-900 font-semibold mb-3">Customer has submitted a transaction reference.</div>
+            <form method="post" action="{% url 'lands:confirm_payment_receipt' booking.id %}" class="flex flex-wrap gap-3 items-end">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="confirm">
+              <input type="hidden" name="payment_id" value="{{ booking.latest_pending_payment.id }}">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
+                <select name="payment_method" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="">Keep current</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="airtel">Airtel Money</option>
+                  <option value="tigopesa">Tigo Pesa</option>
+                  <option value="bank">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                </select>
+              </div>
+              <button type="submit" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors">
+                <i class="bi bi-check-circle"></i> Confirm Funds Received
+              </button>
+            </form>
+            <form method="post" action="{% url 'lands:confirm_payment_receipt' booking.id %}" class="mt-3">
+              {% csrf_token %}
+              <input type="hidden" name="payment_id" value="{{ booking.latest_pending_payment.id }}">
+              <button type="submit" name="action" value="reject" class="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
+                <i class="bi bi-x-circle"></i> Reject Reference
+              </button>
+            </form>
+          </div>
+          {% else %}
+          <div class="p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <div class="text-sm text-amber-900 font-semibold mb-3">No customer reference has been submitted yet.</div>
+            <form method="post" action="{% url 'lands:confirm_payment_receipt' booking.id %}" class="flex flex-wrap gap-3 items-end">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="confirm">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Amount</label>
+                <input type="number" step="0.01" min="0" max="{{ booking.remaining_balance }}" name="amount" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" placeholder="e.g. 150000">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Payment Method</label>
+                <select name="payment_method" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="airtel">Airtel Money</option>
+                  <option value="tigopesa">Tigo Pesa</option>
+                  <option value="bank">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Reference No.</label>
+                <input type="text" name="payment_reference" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white" placeholder="e.g. NXA8234Y">
+              </div>
+              <button type="submit" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors">
+                <i class="bi bi-check-circle"></i> Record and Confirm
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-5 border border-gray-200 rounded-xl p-4">
+          <h3 class="text-sm font-bold text-gray-900 mb-3">Installment History</h3>
+          <div class="space-y-3 text-sm">
+            {% for payment in booking.payments.all|slice:":5" %}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+              <div>
+                <div class="font-semibold text-gray-900">Tsh {{ payment.amount }} • {{ payment.payment_reference }}</div>
+                <div class="text-gray-500">{{ payment.payment_date|date:"M d, Y" }}</div>
+                {% if payment.status == 'confirmed' %}
+                <div class="text-xs text-gray-600 mt-1">
+                  Gross: Tsh {{ payment.amount }} | Admin Fee: Tsh {{ payment.platform_fee_amount|default:"0" }} | Owner Net: Tsh {{ payment.owner_net_amount }}
+                </div>
+                {% endif %}
+              </div>
+              <div class="text-xs font-semibold px-2.5 py-1 rounded-full {% if payment.status == 'confirmed' %}bg-green-100 text-green-700{% elif payment.status == 'submitted' %}bg-blue-100 text-blue-700{% else %}bg-red-100 text-red-700{% endif %}">
+                {{ payment.get_status_display }}
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-gray-500">No installment records yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white border border-dashed border-gray-300 rounded-2xl py-16 text-center">
+    <h2 class="text-xl font-bold text-gray-900 mb-2">No active payment records</h2>
+    <p class="text-gray-500">Customer payment activity will appear here once bookings start moving.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -24,6 +24,7 @@ def global_context(request):
     unread_messages = 0
     current_mode = 'customer'
     can_switch_mode = False
+    register_form_state = request.session.pop('register_form_state', None)
 
     if request.user.is_authenticated:
         try:
@@ -49,6 +50,7 @@ def global_context(request):
         'unread_messages':        unread_messages,
         'current_mode':           current_mode,
         'can_switch_mode':        can_switch_mode,
+        'register_form_state':    register_form_state,
         'land_type_choices':      LAND_TYPE_CHOICES,
         'site_name':              getattr(settings, 'SITE_NAME', 'LandReserve'),
         'support_email':          getattr(settings, 'SUPPORT_EMAIL', 'support@landreserve.co.tz'),

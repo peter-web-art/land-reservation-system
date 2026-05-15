@@ -29,12 +29,60 @@
     </div>
   </div>
 
-  <!-- Property Image -->
-  <div class="mb-6 rounded-2xl overflow-hidden shadow-lg border border-gray-100">
-    {% if land.land_image_path %}
-    <img src="{{ land.land_image_path.url }}" alt="{{ land.title }}" class="w-full h-[400px] md:h-[500px] object-cover">
-    {% else %}
-    <div class="w-full h-80 rounded-2xl flex items-center justify-center bg-green-50 text-7xl">🌍</div>
+  <!-- Property Image Slider -->
+  <div class="mb-8 relative group">
+    <div id="landSlider" class="relative rounded-2xl overflow-hidden shadow-2xl bg-black aspect-[16/9] md:aspect-[21/9]">
+      <div id="sliderTrack" class="flex transition-transform duration-500 ease-out h-full">
+        {% if land.images.all %}
+          {% for img in land.images.all %}
+          <div class="w-full flex-shrink-0 relative h-full">
+            <img src="{{ img.image.url }}" alt="{{ img.get_position_display }}" class="w-full h-full object-cover">
+            <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pt-12">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-xs font-semibold text-white uppercase tracking-wider">
+                <i class="bi bi-compass"></i> {{ img.get_position_display }}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        {% elif land.land_image_path %}
+          <div class="w-full flex-shrink-0 relative h-full">
+            <img src="{{ land.land_image_path.url }}" alt="{{ land.title }}" class="w-full h-full object-cover">
+          </div>
+        {% else %}
+          <div class="w-full h-full flex flex-col items-center justify-center bg-green-50 text-gray-400">
+            <span class="text-7xl mb-4">🌍</span>
+            <p class="font-medium">No photos available</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Navigation Arrows -->
+      {% if land.image_count > 1 %}
+      <button onclick="moveSlider(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl transition-all border border-white/30 opacity-0 group-hover:opacity-100">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <button onclick="moveSlider(1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl transition-all border border-white/30 opacity-0 group-hover:opacity-100">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+
+      <!-- Dots Indicator -->
+      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        {% for i in "x"|rjust:land.image_count %}
+        <button onclick="goToSlide({{ forloop.counter0 }})" class="slider-dot w-2 h-2 rounded-full bg-white/40 transition-all hover:bg-white" data-index="{{ forloop.counter0 }}"></button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Thumbnail Bar (Below Main Slider) -->
+    {% if land.image_count > 1 %}
+    <div class="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+      {% for img in land.images.all %}
+      <button onclick="goToSlide({{ forloop.counter0 }})" class="thumbnail-btn w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all {% if forloop.first %}border-[#1a5c38] opacity-100{% else %}border-transparent opacity-60{% endif %}" data-index="{{ forloop.counter0 }}">
+        <img src="{{ img.image.url }}" class="w-full h-full object-cover">
+      </button>
+      {% endfor %}
+    </div>
     {% endif %}
   </div>
 
@@ -114,6 +162,12 @@
             <i class="bi bi-mountain text-gray-400"></i>
             <span>{{ land.get_topography_display|default:"Flat" }} terrain</span>
           </div>
+          {% if land.soil_fertility %}
+          <div class="flex items-center gap-2 text-gray-700">
+            <i class="bi bi-moisture text-gray-400"></i>
+            <span>{{ land.get_soil_fertility_display }} soil</span>
+          </div>
+          {% endif %}
           {% for utility in land.utilities.all %}
           <div class="flex items-center gap-2 text-gray-700">
             <i class="bi {{ utility.icon_class|default:'bi-check-circle' }} text-gray-400"></i>
@@ -151,7 +205,128 @@
         </div>
         {% endif %}
       </div>
-      
+
+      <!-- ═══ Crop Suggestions Section ═══ -->
+      {% if crop_suggestions %}
+      <div class="mb-6" id="cropSuggestionsSection">
+        <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
+          <i class="bi bi-flower2 text-[#1a5c38]"></i>
+          Recommended Crops
+        </h2>
+        <p class="text-sm text-gray-500 mb-4">
+          AI-powered suggestions based on <strong>{{ land.location }}</strong>'s climate,
+          <strong>{{ land.get_soil_fertility_display|default:"Moderate" }}</strong> soil fertility,
+          and <strong>{{ land.get_topography_display }}</strong> terrain.
+        </p>
+
+        <!-- Soil & Climate Summary Bar -->
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-800">
+            <i class="bi bi-moisture"></i> Soil: {{ land.get_soil_fertility_display|default:"Moderate" }}
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-xs font-medium text-green-800">
+            <i class="bi bi-mountain"></i> {{ land.get_topography_display|default:"Flat" }} Terrain
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-800">
+            <i class="bi bi-geo-alt"></i> {{ land.location }}
+          </span>
+        </div>
+
+        <!-- Crop Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="cropCardsGrid">
+          {% for crop in crop_suggestions %}
+          <div class="crop-card group relative bg-white border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-[#1a5c38]/30 transition-all duration-300 cursor-pointer"
+               onclick="toggleCropDetail('cropDetail{{ forloop.counter }}')"
+               style="animation: cropFadeIn {{ forloop.counter }}00ms ease-out both;">
+
+            <!-- Top Row: Icon + Name + Score -->
+            <div class="flex items-start gap-3">
+              <div class="text-3xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300">{{ crop.icon }}</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <h4 class="font-semibold text-gray-900 text-sm truncate">{{ crop.name }}</h4>
+                  <!-- Suitability Badge -->
+                  <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold
+                    {% if crop.suitability == 'Excellent' %}bg-green-100 text-green-700
+                    {% elif crop.suitability == 'Good' %}bg-blue-100 text-blue-700
+                    {% elif crop.suitability == 'Moderate' %}bg-amber-100 text-amber-700
+                    {% else %}bg-gray-100 text-gray-600{% endif %}">
+                    {% if crop.suitability == 'Excellent' %}<i class="bi bi-star-fill"></i>{% endif %}
+                    {{ crop.suitability }}
+                  </span>
+                </div>
+                <p class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                  <i class="bi bi-calendar3"></i> {{ crop.season }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Score Bar -->
+            <div class="mt-3">
+              <div class="flex items-center justify-between text-[11px] mb-1">
+                <span class="text-gray-500 font-medium">Suitability</span>
+                <span class="font-bold
+                  {% if crop.score >= 80 %}text-green-600
+                  {% elif crop.score >= 60 %}text-blue-600
+                  {% else %}text-amber-600{% endif %}">{{ crop.score }}%</span>
+              </div>
+              <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700 ease-out
+                  {% if crop.score >= 80 %}bg-gradient-to-r from-green-400 to-green-600
+                  {% elif crop.score >= 60 %}bg-gradient-to-r from-blue-400 to-blue-600
+                  {% else %}bg-gradient-to-r from-amber-400 to-amber-500{% endif %}"
+                     style="width: {{ crop.score }}%;"></div>
+              </div>
+            </div>
+
+            <!-- Expand indicator -->
+            <div class="flex items-center justify-center mt-2">
+              <i class="bi bi-chevron-down text-gray-300 text-xs group-hover:text-[#1a5c38] transition-colors" id="cropChevron{{ forloop.counter }}"></i>
+            </div>
+
+            <!-- Expandable Detail Panel -->
+            <div class="hidden mt-3 pt-3 border-t border-gray-100" id="cropDetail{{ forloop.counter }}">
+              <p class="text-xs text-gray-600 mb-3">{{ crop.description }}</p>
+
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="flex items-center gap-1.5 text-xs">
+                  <i class="bi bi-graph-up-arrow text-green-500"></i>
+                  <span class="text-gray-600">Yield: <strong>{{ crop.yield_potential }}</strong></span>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs">
+                  <i class="bi bi-shop text-blue-500"></i>
+                  <span class="text-gray-600">Demand: <strong>{{ crop.market_demand }}</strong></span>
+                </div>
+              </div>
+
+              <!-- Why this crop? -->
+              {% if crop.reasons %}
+              <div class="space-y-1">
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Why this crop?</p>
+                {% for reason in crop.reasons %}
+                <div class="flex items-start gap-1.5 text-xs text-gray-600">
+                  <i class="bi bi-check-circle-fill text-[#1a5c38] mt-0.5 flex-shrink-0"></i>
+                  <span>{{ reason }}</span>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Disclaimer -->
+        <div class="mt-4 flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+          <i class="bi bi-info-circle text-blue-500 mt-0.5 flex-shrink-0"></i>
+          <p class="text-xs text-blue-700 m-0">
+            Crop suggestions are generated automatically based on regional climate data, soil fertility, and terrain type.
+            For precise recommendations, consult a local agronomist or your district agricultural extension officer.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Contact -->
       <div class="mb-6">
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -355,7 +530,28 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+@keyframes cropFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
 <script>
+/* ── Crop Suggestion Card Toggle ───────────────────────────────────── */
+function toggleCropDetail(id) {
+  var panel = document.getElementById(id);
+  if (!panel) return;
+  var idx = id.replace('cropDetail', '');
+  var chevron = document.getElementById('cropChevron' + idx);
+  if (panel.classList.contains('hidden')) {
+    panel.classList.remove('hidden');
+    if (chevron) { chevron.classList.remove('bi-chevron-down'); chevron.classList.add('bi-chevron-up'); }
+  } else {
+    panel.classList.add('hidden');
+    if (chevron) { chevron.classList.remove('bi-chevron-up'); chevron.classList.add('bi-chevron-down'); }
+  }
+}
+
 const galleryImages = [
   {% for img in land.get_all_images %}
   '{{ img.url }}'{% if not forloop.last %},{% endif %}
@@ -436,6 +632,48 @@ function updateGalleryDots() {
     dot.style.border = i === currentGalleryIndex ? '2px solid #1a5c38' : '2px solid transparent';
   });
 }
+
+/* ── Image Slider ────────────────────────────────────────────────── */
+let currentSlide = 0;
+const totalSlides = {{ land.image_count }};
+const sliderTrack = document.getElementById('sliderTrack');
+const dots = document.querySelectorAll('.slider-dot');
+const thumbs = document.querySelectorAll('.thumbnail-btn');
+
+function updateSlider() {
+  if (!sliderTrack) return;
+  sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+  
+  // Update dots
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('bg-white', i === currentSlide);
+    dot.classList.toggle('bg-white/40', i !== currentSlide);
+    dot.classList.toggle('w-4', i === currentSlide);
+    dot.classList.toggle('w-2', i !== currentSlide);
+  });
+
+  // Update thumbnails
+  thumbs.forEach((thumb, i) => {
+    thumb.classList.toggle('border-[#1a5c38]', i === currentSlide);
+    thumb.classList.toggle('border-transparent', i !== currentSlide);
+    thumb.classList.toggle('opacity-100', i === currentSlide);
+    thumb.classList.toggle('opacity-60', i !== currentSlide);
+    if (i === currentSlide) thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
+}
+
+function moveSlider(dir) {
+  currentSlide = (currentSlide + dir + totalSlides) % totalSlides;
+  updateSlider();
+}
+
+function goToSlide(index) {
+  currentSlide = index;
+  updateSlider();
+}
+
+// Initial state
+updateSlider();
 
 function shareLand() {
   if (navigator.share) {

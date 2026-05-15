@@ -1,113 +1,186 @@
 LAND RESERVATION SYSTEM - DATABASE SCHEMA NOTES
-Report Date: April 18, 2026
+Report Date: May 12, 2026
 
 =========================================
-1. PROJECT OVERVIEW
+1. OVERVIEW
 =========================================
-The Land Reservation System is a marketplace platform for land rentals and sales. 
-The database is structured to handle three main user roles: Customers, Land Owners, and Administrators.
+The database supports a land marketplace with three main actors:
+- Customers
+- Land Owners
+- Administrators
+
+The active schema also includes personal profile details, utility metadata,
+listing image galleries, direct messages, notifications, and platform settings.
 
 =========================================
-2. MAIN DATABASE TABLES
+2. PRIMARY TABLES
 =========================================
 
-TABLE: accounts_user (User Accounts)
+TABLE: users
 -----------------------------------------------------------------------
-Purpose: Manages login credentials, profile info, and security roles.
+Purpose: Custom authentication and role management.
 
-+-----------+-------+---------------+------------------------------------------+
-| Field     | Key   | Type          | Description                              |
-+-----------+-------+---------------+------------------------------------------+
-| id        | PK    | AutoField     | Unique identifier for the user           |
-| username  |       | String        | Unique ID for login                      |
-| role      |       | Choice        | Customer, Land Owner, or Admin           |
-| is_verified|      | Boolean       | Status for trusted owner verification    |
-| phone     |       | String        | Primary contact number                   |
-| kyc_status|       | Choice        | Verification progress (Approved/Pending) |
-| bio       |       | Text          | Short description of the user            |
-+-----------+-------+---------------+------------------------------------------+
+Important fields:
+- username
+- role
+- is_owner
+- is_verified
+- is_suspended
+- created_on / updated_on
 
-TABLE: lands_land (Property Listings)
+TABLE: accounts_personaldetails
 -----------------------------------------------------------------------
-Purpose: Stores details for every land listed for rent or sale.
+Purpose: Extended profile information for each user.
 
-+-----------+-------+---------------+------------------------------------------+
-| Field     | Key   | Type          | Description                              |
-+-----------+-------+---------------+------------------------------------------+
-| id        | PK    | AutoField     | Unique identifier for the property       |
-| owner     | FK    | ForeignKey    | Link to accounts_user                    |
-| title     |       | String        | Name of the property                     |
-| listing   |       | Choice        | 'Rent' or 'Sale'                         |
-| price     |       | Decimal       | Base cost (e.g., 500,000 Tsh)            |
-| unit      |       | Choice        | Frequency (Month/Year/Total)             |
-| location  |       | String        | Physical address or region               |
-| size      |       | Decimal       | Land area (Acres/Hectares/Sqm)           |
-| topography|       | Choice        | Terrain (Flat, Sloped, Hilly, etc.)      |
-| utilities |       | M2M           | Link to lands_utility (Water, Power, etc)|
-| is_active |       | Boolean       | Whether the listing is visible           |
-+-----------+-------+---------------+------------------------------------------+
+Important fields:
+- user_id
+- fname / mname / surname
+- address
+- phone
+- email
+- photo_path
+- bio
 
-TABLE: lands_reservation (Bookings & Transactions)
+TABLE: accounts_systemsettings
 -----------------------------------------------------------------------
-Purpose: Tracks all booking requests and financial statuses.
+Purpose: Admin-controlled global platform toggles.
 
-+-----------+-------+---------------+------------------------------------------+
-| Field     | Key   | Type          | Description                              |
-+-----------+-------+---------------+------------------------------------------+
-| id        | PK    | AutoField     | Unique identifier for the reservation    |
-| land      | FK    | ForeignKey    | Link to lands_land                       |
-| customer  | FK    | ForeignKey    | Link to accounts_user                    |
-| start_date|       | Date          | Rental period start date                 |
-| end_date  |       | Date          | Rental period end date                   |
-| status    |       | Choice        | Pending, Approved, or Rejected           |
-| payment   |       | Choice        | Unpaid, Paid, or Refunded                |
-| amount    |       | Decimal       | Final price agreed for the deal          |
-+-----------+-------+---------------+------------------------------------------+
+Important fields:
+- maintenance_mode
+- email_notifications
+- last_backup
 
-TABLE: lands_landimage (Photo Gallery)
+TABLE: lands_land
 -----------------------------------------------------------------------
-Purpose: Stores multiple high-quality photos for each property.
+Purpose: Stores each land listing for rent or sale.
 
-+-----------+-------+---------------+------------------------------------------+
-| Field     | Key   | Type          | Description                              |
-+-----------+-------+---------------+------------------------------------------+
-| id        | PK    | AutoField     | Unique identifier for the image          |
-| land      | FK    | ForeignKey    | Link to lands_land                       |
-| image     |       | ImageField    | File path to the photo                   |
-| is_primary|       | Boolean       | Indicates the main cover photo           |
-+-----------+-------+---------------+------------------------------------------+
+Important fields:
+- land_id
+- owner_id
+- title
+- description
+- region / district / ward / street / location
+- latitude / longitude
+- usage
+- size / size_unit
+- land_use
+- topography
+- soil_fertility
+- utilities
+- additional_utilities_notes
+- price / price_unit
+- weekly_discount / monthly_discount
+- contact_phone / contact_email
+- land_image_path
+- is_active / is_draft
+- wizard_step
+- view_count
 
-TABLE: lands_utility (Infrastructure & Features)
+TABLE: lands_landimage
 -----------------------------------------------------------------------
-Purpose: Predefined list of utilities like "Piped Water", "Security Guard".
+Purpose: Stores multiple images per land listing.
 
-+-----------+-------+---------------+------------------------------------------+
-| Field     | Key   | Type          | Description                              |
-+-----------+-------+---------------+------------------------------------------+
-| id        | PK    | AutoField     | Unique identifier for the utility        |
-| name      |       | String        | Label (e.g., Solar, Borehole, Fiber)     |
-| icon_class|       | String        | Icon for UI representation               |
-+-----------+-------+---------------+------------------------------------------+
+Important fields:
+- land_id
+- image
+- position
+- caption
+- is_primary
+- order
+
+TABLE: lands_utility
+-----------------------------------------------------------------------
+Purpose: Utility and amenity catalogue plus optional direct utility records.
+
+Important fields:
+- name
+- land
+- description
+- icon_class
+
+TABLE: lands_reservation
+-----------------------------------------------------------------------
+Purpose: Booking requests, lifecycle status, and payment tracking.
+
+Important fields:
+- land_id
+- customer_id
+- customer_name / customer_email / customer_phone
+- start_date / end_date
+- status
+- payment_status
+- payment_method
+- payment_reference
+- payment_receipt
+- payment_date
+- payment_confirmed
+- amount_paid
+- agreed_price
+- requested_size
+- notes
+
+TABLE: lands_wishlist
+-----------------------------------------------------------------------
+Purpose: Customer-saved listings.
+
+Important fields:
+- user_id
+- land_id
+
+TABLE: lands_message
+-----------------------------------------------------------------------
+Purpose: In-app communication between users.
+
+Important fields:
+- sender_id
+- recipient_id
+- land_id
+- subject
+- body
+- is_read
+
+TABLE: lands_notification
+-----------------------------------------------------------------------
+Purpose: System-generated notifications shown in the user interface.
+
+Important fields:
+- user_id
+- notification_type
+- title
+- message
+- link
+- is_read
 
 =========================================
-3. RELATIONSHIPS & LOGIC
+3. KEY RELATIONSHIPS
 =========================================
 
-- One User (Owner) can have Many Lands.
-- One Land can have Many Reservations history.
-- One Land can have Many Images in its gallery.
-- One Land can have Many Utilities (Many-to-Many).
-- Reservation Availability Logic: The system automatically blocks dates 
-  if a reservation is 'Approved' or 'Pending' to prevent double-booking.
+- One owner can have many land listings.
+- One land listing can have many reservations.
+- One land listing can have many gallery images.
+- One land listing can be saved by many users through wishlist entries.
+- One user can have many sent and received messages.
+- One user can have many notifications.
+- One user has one personal details record.
+- Land and utility records are also linked through a many-to-many relation.
 
 =========================================
-4. RECENT OPTIMIZATIONS & FEATURES
+4. APPLICATION-LEVEL LOGIC
 =========================================
-- Advanced Availability Tracking: Dynamic calculation of "Next Available" date.
-- Terrain & Infrastructure Data: Detailed topography and utility tracking.
-- Google OAuth 2.0: One-tap login and signup integration.
-- Automated Password Recovery: Self-service password reset via email.
-- Indexed search fields for faster property filtering.
-- Unique constraints applied to the Wishlist.
+
+- Availability is calculated from reservation overlap and requested land size.
+- Sale listings reduce remaining available size without date overlap logic.
+- Rent listings use date ranges to calculate conflicts and remaining capacity.
+- Payment proof can be submitted by customers and confirmed by owners.
+- Listing reports and support requests are currently logged instead of stored in dedicated tables.
+
+=========================================
+5. INDEXES AND CONSTRAINTS
+=========================================
+
+- Reservation indexes exist for common availability and customer lookup queries.
+- Wishlist has a unique `(user, land)` constraint.
+- Usernames are unique.
+- Land IDs are unique.
 
 --- END OF NOTES ---

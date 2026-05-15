@@ -1,29 +1,32 @@
 # Cleanup Report
 
-## Result
+## Current Documentation Position
 
-The project directory was reduced to active system folders and active project files only.
+The repository currently contains active application code, runtime assets, and project documentation in place. Earlier cleanup reports referenced archive locations outside this workspace; those references have been removed from the active documentation set because they are not reliable for the current environment.
 
-## Active Folders Kept In The App
+## Active Top-Level Folders In This Workspace
 
 - `accounts`
 - `docs`
 - `lands`
 - `land_reservation`
 - `media`
+- `scripts`
 - `static`
 - `templates`
+- `venv`
 
-## Archived To Parent `unused`
+## Active Top-Level Project Files
 
-- Local environment folders such as `venv`
-- Frontend package artifacts such as `node_modules`
-- Old helper and extraction scripts
-- Legacy CSS and JS assets no longer referenced by templates
-- Duplicate template static folders
-- Old archive content that was previously stored inside the project
-- Parent-level stray folders and duplicate outer static assets
+- `.env.example`
+- `.gitignore`
+- `db.sqlite3`
+- `manage.py`
+- `README.md`
+- `requirements.txt`
 
-Archive location:
+## Current Recommendation
 
-`C:\Users\ECHO HEIGHTS AGENCY\Downloads\fixed-land-reservation-system\unused`
+- Treat the text files in `docs/` and `README.md` as the active source of project documentation.
+- Regenerate or archive older binary documentation files if they are no longer maintained.
+- Keep future cleanup notes tied to this workspace only, not to external machine-specific archive paths.

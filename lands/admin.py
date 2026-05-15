@@ -1,20 +1,24 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Land, Reservation, Utility
+from .models import Land, Reservation, Utility, LandImage
+
+class LandImageInline(admin.TabularInline):
+    model = LandImage
+    extra = 3
 
 @admin.register(Land)
 class LandAdmin(admin.ModelAdmin):
     list_display  = ('title', 'owner_display', 'location', 'usage',
-                     'price_display', 'land_use', 'availability', 'is_active', 'reservation_count')
-    list_filter   = ('usage', 'land_use', 'is_active')
+                     'price_display', 'land_use', 'availability', 'is_active', 'is_draft', 'reservation_count')
+    list_filter   = ('usage', 'land_use', 'is_active', 'is_draft')
     search_fields = ('title', 'location', 'owner__username', 'owner__email')
     ordering      = ('-created_on',)
     readonly_fields = ('reservation_count',)
     list_editable  = ('is_active',)
-    inlines = []
+    inlines = [LandImageInline]
     actions = ['delete_selected']  # Enable bulk delete from admin
     fieldsets = (
-        ('Basic',   {'fields': ('title', 'description', 'owner', 'is_active')}),
+        ('Basic',   {'fields': ('title', 'description', 'owner', 'is_active', 'is_draft')}),
         ('Location & Details', {'fields': ('location', 'latitude', 'longitude', 'usage', 'land_use', 'size', 'size_unit', 'topography', 'utilities')}),
         ('Pricing', {'fields': ('price', 'price_unit', 'weekly_discount', 'monthly_discount',
                                 'min_duration_days', 'max_duration_days')}),

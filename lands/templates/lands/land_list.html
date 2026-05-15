@@ -100,25 +100,9 @@
 {% block hero %}
 <section class="landing-hero relative overflow-hidden text-white">
   <div class="hero-backdrop"></div>
-  <div class="hero-inner container mx-auto px-4 py-24 sm:py-28 lg:py-32">
+  <div class="hero-inner container mx-auto px-4 min-h-[500px] flex items-center justify-center pt-32 pb-20">
     <div class="mx-auto max-w-4xl text-center">
-      <p
-        class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#d4e8da] shadow-sm">
-        Tanzania agricultural land reservations</p>
-      <h1 class="mt-8 text-4xl font-black tracking-tight sm:text-6xl">Reserve Prime Land Across Tanzania</h1>
-      <p class="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#d4e8da] sm:text-lg">Browse, book, and manage
-        agricultural land across Tanzania with ease. Whether you’re a smallholder or a commercial farmer, find the right
-        land today.</p>
-      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
-        <button type="button" onclick="openModal('register')"
-          class="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-bold text-[#1a5c38] shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:bg-[#f8f9fa] cursor-pointer min-w-[160px]">
-          <i class="bi bi-person-plus text-base"></i> Create Account
-        </button>
-        <button type="button" onclick="openModal('login')"
-          class="group inline-flex items-center justify-center gap-2 rounded-xl border-2 border-white/60 bg-white/10 px-8 py-4 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:border-white/80 cursor-pointer min-w-[160px]">
-          <i class="bi bi-box-arrow-in-right text-base"></i> Sign in
-        </button>
-      </div>
+      <h1 class="text-4xl font-black tracking-tight sm:text-6xl">Reserve Prime Land Across Tanzania</h1>
     </div>
   </div>
 </section>
@@ -334,12 +318,10 @@
                 <span class="truncate">{{ land.get_topography_display|default:"Flat" }}</span>
               </div>
               {% if land.usage == 'rent' %}
-                {% if land.min_duration_days %}
-                <div class="flex items-center gap-1.5" title="Minimum Duration">
-                  <i class="bi bi-calendar-range text-gray-400"></i>
-                  <span class="truncate">Min {{ land.min_duration_days }} days</span>
-                </div>
-                {% endif %}
+              <div class="flex items-center gap-1.5" title="Location">
+                <i class="bi bi-geo-alt text-gray-400"></i>
+                <span class="truncate">{{ land.region }}</span>
+              </div>
                 {% if land.weekly_discount > 0 or land.monthly_discount > 0 %}
                 <div class="flex items-center gap-1.5" title="Discounts available">
                   <i class="bi bi-tags text-gray-400"></i>

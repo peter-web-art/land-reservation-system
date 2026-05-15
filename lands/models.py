@@ -28,8 +28,21 @@ class Land(AuditBase):
                                help_text='Unique reference ID (e.g. LR-001)')
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lands')
     title = models.CharField(max_length=200)
-    description = models.TextField()
-    location = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+
+    # ── STRUCTURED LOCATION (Tanzania) ────────────────────────────────────────
+    from lands.tanzania_locations import REGION_CHOICES as _REGION_CHOICES
+    region = models.CharField(max_length=30, choices=_REGION_CHOICES, blank=True,
+                              help_text='Mkoa')
+    district = models.CharField(max_length=100, blank=True,
+                                help_text='Wilaya')
+    ward = models.CharField(max_length=100, blank=True,
+                            help_text='Kata')
+    street = models.CharField(max_length=100, blank=True,
+                              help_text='Mtaa / Kijiji')
+    # Legacy free-text field — auto-populated from structured fields on save
+    location = models.CharField(max_length=200, blank=True)
+
     latitude = models.FloatField(null=True, blank=True, help_text='GPS latitude for map pin')
     longitude = models.FloatField(null=True, blank=True, help_text='GPS longitude for map pin')
 
@@ -52,7 +65,19 @@ class Land(AuditBase):
         ('mountainous', 'Mountainous'), ('depressed', 'Depressed/Lowland'),
     ]
     topography = models.CharField(max_length=20, choices=TOPOGRAPHY_CHOICES, default='flat', blank=True)
-    
+
+    SOIL_FERTILITY_CHOICES = [
+        ('very_low', 'Very Low — Degraded / Sandy'),
+        ('low', 'Low — Needs Improvement'),
+        ('moderate', 'Moderate — Average'),
+        ('high', 'High — Fertile'),
+        ('very_high', 'Very High — Rich Volcanic / Alluvial'),
+    ]
+    soil_fertility = models.CharField(
+        max_length=20, choices=SOIL_FERTILITY_CHOICES, default='moderate', blank=True,
+        help_text='Soil fertility level — used for automatic crop suggestions'
+    )
+
     # ── UTILITIES & AMENITIES ────────────────────────────────────────────────
     utilities = models.ManyToManyField(Utility, related_name='lands', blank=True,
                 help_text='Select all available utilities and improvements')
@@ -66,7 +91,7 @@ class Land(AuditBase):
         ('year',  'Per Year'),
         ('total', 'Total / One-time'),
     ]
-    price      = models.DecimalField(max_digits=12, decimal_places=2, help_text='Base price')
+    price      = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text='Base price')
     price_unit = models.CharField(max_length=10, choices=PRICE_UNIT_CHOICES, default='month', blank=True)
 
     # Discount rates (Airbnb-style)
@@ -75,17 +100,35 @@ class Land(AuditBase):
     monthly_discount = models.DecimalField(max_digits=5, decimal_places=2, default=0,
                         help_text='% discount for bookings of 1+ month (rent only)')
 
-    # Minimum/maximum rental duration (rent only)
-    min_duration_days = models.PositiveIntegerField(default=1,
-                         help_text='Minimum rental period in days (rent listings only)')
-    max_duration_days = models.PositiveIntegerField(null=True, blank=True,
-                         help_text='Maximum rental period in days (leave blank for no limit)')
-
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
     land_image_path = models.ImageField(upload_to='lands/', blank=True, null=True)
     is_active     = models.BooleanField(default=True)
+    is_draft      = models.BooleanField(default=False, help_text='Whether this land listing is a draft')
+    wizard_step   = models.PositiveIntegerField(default=1, help_text='The current step in the registration wizard')
     view_count    = models.PositiveIntegerField(default=0, help_text='Number of detail page views')
+
+    def save(self, *args, **kwargs):
+        # Auto-generate land_id if not provided
+        if not self.land_id:
+            # Generate unique land reference like LR-001, LR-002, etc.
+            last_land = Land.objects.order_by('-id').first()
+            if last_land and last_land.land_id and last_land.land_id.startswith('LR-'):
+                try:
+                    last_num = int(last_land.land_id[3:])
+                    self.land_id = f'LR-{last_num + 1:03d}'
+                except ValueError:
+                    self.land_id = 'LR-001'
+            else:
+                self.land_id = 'LR-001'
+        
+        # Auto-build the location string from structured fields
+        if self.region:
+            from lands.tanzania_locations import build_full_location
+            self.location = build_full_location(
+                self.region, self.district, self.ward, self.street
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title
@@ -222,22 +265,44 @@ class Land(AuditBase):
 
     @property
     def price_display(self):
+        if self.price is None:
+            return 'Price not set'
         unit_map = {'month': '/month', 'year': '/year', 'total': ''}
         suffix = unit_map.get(self.price_unit, '')
         return f'Tsh {self.price:,.0f}{suffix}'
 
     @property
     def get_all_images(self):
-        """Get all images for this land (now just returns the single image in a list)"""
+        """Get all images for this land from LandImage model, fallback to legacy field."""
+        images = list(self.images.all().order_by('order', 'id'))
+        if images:
+            return images
+        # Fallback to legacy single-image field
         return [self.land_image_path] if self.land_image_path else []
 
     @property
     def primary_image(self):
-        """Get the primary/cover image for this land"""
+        """Get the primary/cover image for this land."""
+        primary = self.images.filter(is_primary=True).first()
+        if primary:
+            return primary.image
+        first = self.images.first()
+        if first:
+            return first.image
         return self.land_image_path
+
+    @property
+    def image_count(self):
+        """Total number of images uploaded."""
+        count = self.images.count()
+        if count == 0 and self.land_image_path:
+            return 1
+        return count
 
     def calculate_price(self, start_date, end_date):
         """Calculate total price for a date range, applying discounts."""
+        if self.price is None:
+            return None
         if self.usage == 'sale' or not start_date or not end_date:
             return self.price
         days = (end_date - start_date).days
@@ -252,6 +317,7 @@ class Land(AuditBase):
             base = self.price * Decimal(str(years))
         else:
             base = self.price
+        
         # Apply discounts
         weeks = days / 7
         if weeks >= 4 and self.monthly_discount > 0:
@@ -260,8 +326,52 @@ class Land(AuditBase):
             discount = self.weekly_discount / 100
         else:
             discount = Decimal('0')
+            
         total = base * (1 - discount)
         return round(total, 2)
+
+
+class LandImage(AuditBase):
+    """Individual image for a land listing with position/direction metadata."""
+    POSITION_CHOICES = [
+        ('north', 'North View'),
+        ('south', 'South View'),
+        ('east', 'East View'),
+        ('west', 'West View'),
+        ('aerial', 'Aerial View'),
+        ('from_above', 'From Above'),
+        ('vertical', 'Vertical View'),
+        ('horizontal', 'Horizontal / Panoramic'),
+        ('front', 'Front View'),
+        ('other', 'Other'),
+    ]
+
+    land = models.ForeignKey(Land, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='lands/gallery/')
+    position = models.CharField(max_length=20, choices=POSITION_CHOICES, default='other',
+                                help_text='Direction / angle from which the photo was taken')
+    caption = models.CharField(max_length=200, blank=True,
+                               help_text='Optional short description of this photo')
+    is_primary = models.BooleanField(default=False,
+                                     help_text='Use as the cover / thumbnail image')
+    order = models.PositiveIntegerField(default=0, help_text='Display order (lower = first)')
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = 'Land Image'
+        verbose_name_plural = 'Land Images'
+
+    def __str__(self):
+        return f"{self.land.title} — {self.get_position_display()}"
+
+    def save(self, *args, **kwargs):
+        # If this is marked primary, un-mark any other primary images for the same land
+        if self.is_primary:
+            LandImage.objects.filter(land=self.land, is_primary=True).exclude(pk=self.pk).update(is_primary=False)
+        # If this is the first image for the land, auto-mark as primary
+        if not self.pk and not LandImage.objects.filter(land=self.land).exists():
+            self.is_primary = True
+        super().save(*args, **kwargs)
 
 
 class Reservation(AuditBase):
@@ -291,6 +401,9 @@ class Reservation(AuditBase):
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='unpaid')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD, blank=True, null=True)
     payment_reference = models.CharField(max_length=100, blank=True, null=True)
+    payment_receipt   = models.ImageField(upload_to='payments/receipts/', blank=True, null=True, help_text='Upload proof of payment (screenshot/receipt)')
+    payment_date      = models.DateField(null=True, blank=True, help_text='Date when payment was made')
+    payment_confirmed = models.BooleanField(default=False, help_text='True if owner has confirmed receipt of funds')
     amount_paid    = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     agreed_price   = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
                       help_text='Final agreed price for this booking')
@@ -347,6 +460,107 @@ class Reservation(AuditBase):
         if self.start_date and self.end_date:
             return self.land.calculate_price(self.start_date, self.end_date)
         return self.land.price
+
+    @property
+    def confirmed_amount_total(self):
+        if self.payments.exists():
+            return sum(
+                (payment.amount or Decimal('0'))
+                for payment in self.payments.filter(status='confirmed')
+            )
+        confirmed_total = sum(
+            (payment.amount or Decimal('0'))
+            for payment in self.payments.filter(status='confirmed')
+        )
+        legacy_total = self.amount_paid or Decimal('0')
+        return confirmed_total + legacy_total
+
+    @property
+    def submitted_amount_total(self):
+        if self.payments.exists():
+            return sum(
+                (payment.amount or Decimal('0'))
+                for payment in self.payments.filter(status__in=['submitted', 'confirmed'])
+            )
+        submitted_total = sum(
+            (payment.amount or Decimal('0'))
+            for payment in self.payments.filter(status__in=['submitted', 'confirmed'])
+        )
+        legacy_total = self.amount_paid or Decimal('0')
+        return submitted_total + legacy_total
+
+    @property
+    def remaining_balance(self):
+        total = self.total_amount or Decimal('0')
+        remaining = total - self.confirmed_amount_total
+        return max(Decimal('0'), remaining)
+
+    @property
+    def pending_payment_total(self):
+        return sum(
+            (payment.amount or Decimal('0'))
+            for payment in self.payments.filter(status='submitted')
+        )
+
+    @property
+    def platform_fee_total(self):
+        if self.payments.exists():
+            return sum(
+                (payment.platform_fee_amount or Decimal('0'))
+                for payment in self.payments.filter(status='confirmed')
+            )
+        return Decimal('0')
+
+    @property
+    def owner_net_total(self):
+        return max(Decimal('0'), self.confirmed_amount_total - self.platform_fee_total)
+
+    @property
+    def latest_pending_payment(self):
+        return self.payments.filter(status='submitted').order_by('-created_on').first()
+
+    @property
+    def payment_review_status(self):
+        if self.remaining_balance <= 0:
+            return 'confirmed'
+        if self.payments.filter(status='submitted').exists() or self.payment_reference:
+            return 'submitted'
+        return 'pending'
+
+    @property
+    def is_fully_paid(self):
+        return self.remaining_balance <= 0
+
+
+class PaymentRecord(AuditBase):
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('confirmed', 'Confirmed'),
+        ('rejected', 'Rejected'),
+    ]
+
+    reservation = models.ForeignKey(Reservation, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=Reservation.PAYMENT_METHOD, blank=True, null=True)
+    payment_reference = models.CharField(max_length=100)
+    payment_receipt = models.ImageField(upload_to='payments/receipts/', blank=True, null=True)
+    payment_date = models.DateField(help_text='Date when this installment was paid')
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    platform_fee_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    platform_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    confirmed_on = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_on']
+
+    def __str__(self):
+        return f"{self.reservation} - {self.amount} ({self.status})"
+
+    @property
+    def owner_net_amount(self):
+        fee = self.platform_fee_amount or Decimal('0')
+        return max(Decimal('0'), (self.amount or Decimal('0')) - fee)
 
 
 class Wishlist(AuditBase):

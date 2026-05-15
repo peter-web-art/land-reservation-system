@@ -53,6 +53,10 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+# ─── RECAPTCHA SETTINGS (TEST MODE) ──────────────────────────────────────────
+RECAPTCHA_PUBLIC_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'  # Test key
+RECAPTCHA_PRIVATE_KEY = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'  # Test key
+
 # ─── MIDDLEWARE ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -210,6 +214,8 @@ CONTENT_SECURITY_POLICY = {
             "https://cdn.jsdelivr.net",       # Bootstrap JS
             "https://unpkg.com",              # Leaflet.js + plugins
             "https://cdnjs.cloudflare.com",   # Leaflet plugins CDN
+            "https://www.google.com",         # reCAPTCHA API
+            "https://www.gstatic.com",        # reCAPTCHA assets
         ),
         "style-src": (
             "'self'",
@@ -237,6 +243,12 @@ CONTENT_SECURITY_POLICY = {
             "'self'",
             "https://api.open-meteo.com",     # Live weather API
             "https://accounts.google.com",    # Google OAuth
+            "https://www.google.com",         # reCAPTCHA verify/bootstrap
+        ),
+        "frame-src": (
+            "'self'",
+            "https://www.google.com",         # reCAPTCHA challenge frame
+            "https://recaptcha.google.com",
         ),
         "frame-ancestors": ("'none'",),       # No iframing (complements X-Frame-Options)
         "worker-src": ("'self'", "blob:"),   # Required for marker clustering

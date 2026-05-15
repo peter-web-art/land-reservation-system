@@ -1,60 +1,73 @@
 # System Analysis And Improvements
 
-## Current State
+## Current System State
 
-The system is an active Django marketplace for land discovery, reservations, owner operations, and KYC review. It now supports public browsing, owner and customer dashboards, wishlist flows, messaging, reservation management, and an improved landing-page search.
+As of May 12, 2026, the system operates as a role-based Django marketplace for land rental and sale workflows. The implementation currently supports:
 
-## Key Improvements Already Applied
+- Public discovery of active land listings
+- Customer registration, login, profile editing, wishlist, booking, payment submission, and messaging
+- Owner listing creation, editing, deletion, reservation review, payment confirmation, and dashboard analytics
+- Admin user management, booking actions, platform-level toggles, and CSV export
+- Notification generation for booking, payment, and messaging events
 
-- Public users can browse the homepage, search results, and listing detail pages.
-- The homepage hero and primary search entry are more polished and marketplace-focused.
-- Redirect handling was tightened to avoid unsafe external referer redirects.
-- Guest reservation requests now resolve back into the listing flow instead of a separate status-check page.
-- Logout now uses a proper POST request.
-- KYC submission now stores ownership proof uploads.
-- Wishlist actions work correctly with CSRF protection and better guest handling.
-- Registration and profile screens behave better on mobile.
-- Sale and rental booking flows are separated more clearly in the UI.
+## Functional Areas Confirmed In Code
 
-## Current Route Summary
+### Discovery And Search
 
-### Core
-- `/`
-- `/health/`
-- `/admin/`
+- Homepage listing feed served from the main `land_list` view
+- Filtered search by usage, land use, price, size, keyword, and availability
+- Live search endpoint for customer and owner contexts
+- Location autocomplete and district lookup APIs
+- Listing detail pages with booked periods and next available date
+- Crop suggestion API based on location, soil fertility, topography, and land use
 
-### Accounts
-- `/accounts/register/`
-- `/accounts/login/`
-- `/accounts/logout/`
-- `/accounts/profile/edit/`
-- `/accounts/admin-portal/`
-- `/accounts/kyc/submit/`
+### Account And Role Management
 
-### Listings And Reservations
-- `/lands/`
-- `/lands/search/`
-- `/lands/<pk>/`
-- `/lands/<pk>/book/`
-- `/lands/<pk>/wishlist/`
-- `/lands/dashboard/`
-- `/lands/dashboard/customer/`
-- `/lands/reservations/`
-- `/lands/reservations/manage/`
-- `/lands/reservations/calendar/`
-- `/lands/messages/`
-- `/lands/wishlist/`
+- Customer, owner, and admin roles in the custom user model
+- Profile editing with extended personal details
+- Owner upgrade flow for customer accounts
+- Session-based mode switching for owner-capable users
+- Suspended-user login blocking
+- Admin portal for user and booking actions
 
-## Remaining Gaps
+### Listing And Reservation Operations
 
-- Reviews and ratings are still missing.
-- Payment processing is still not integrated.
-- CSP is still permissive because the project uses inline scripts.
-- `lands/views.py` is still too large and should be split by domain.
-- More visual and interaction polish is still possible on cards, filters, and messaging.
+- Rent and sale listings
+- Structured Tanzania location fields
+- Partial-size reservation handling
+- Reservation approval, rejection, cancellation, and payment updates
+- Reservation calendar for owners
+- Customer booking and reservation tracking
 
-## Cleanup Summary
+### Communication And Trust
 
-The repository has been reorganized so the active app directory only keeps code, templates, docs, runtime media, and active static assets. Unused files, duplicate assets, local tooling folders, and legacy helper scripts were moved to:
+- In-app direct messaging
+- Notifications for reservation and payment lifecycle events
+- Help center contact form
+- Listing reporting for suspicious content
+- Wishlist save and remove actions
 
-`C:\Users\ECHO HEIGHTS AGENCY\Downloads\fixed-land-reservation-system\unused`
+## Notable Improvements Reflected By The Current Build
+
+- Public users no longer need to authenticate to browse listings and details.
+- Listing availability is calculated against overlapping reservations and requested land size.
+- Payment handling now includes customer payment proof submission and owner confirmation.
+- Discovery supports structured location data and lightweight search APIs for faster UI interactions.
+- Security hardening includes rate limiting, lockout handling, safe redirects, secure cookie options, and CSP rules.
+
+## Gaps And Risks Still Present
+
+- There is no integrated online payment gateway; payment is tracked through references and receipt uploads.
+- Reported listings and help center requests are logged but do not yet flow into a dedicated case-management module.
+- `lands/views.py` and `accounts/views.py` remain large and would benefit from modularization.
+- Notification delivery is in-app only; email and SMS delivery are not consistently wired into each event path.
+- CSP still allows inline scripts, which limits the strictness of frontend XSS controls.
+- Automated test coverage is limited compared with the breadth of implemented workflows.
+
+## Recommended Next Improvements
+
+1. Split large view modules into domain-specific files for accounts, listings, reservations, messaging, and admin.
+2. Introduce a normalized moderation workflow for listing reports and support requests.
+3. Add service-layer validation around reservation approval, payment confirmation, and availability recalculation.
+4. Expand automated tests for search, partial-size booking, owner payment confirmation, and admin actions.
+5. Replace inline scripts with static modules to tighten the content security policy.

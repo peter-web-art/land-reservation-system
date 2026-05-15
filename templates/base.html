@@ -16,6 +16,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" defer></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <script>
     tailwind.config = {
       theme: {
@@ -115,124 +116,185 @@
     </a>
 
     {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
-    <div class="hidden lg:flex flex-1 justify-center px-6">
-      <div class="nav-search-shell flex max-w-2xl items-center rounded-full border border-gray-200 bg-white p-1.5">
-        <button type="button"
-          class="nav-search-segment flex min-w-[160px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50"
-          onclick="document.getElementById('navSearchWhere')?.focus()">
-          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Where</span>
-          <input type="text" id="navSearchWhere"
-            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400"
-            placeholder="Search location" value="{{ request.GET.location|default:'' }}" autocomplete="off">
+    {% if current_mode == 'owner' %}
+    <!-- OWNER SEARCH (Contextual for Dashboard) -->
+    <div class="hidden md:flex flex-1 justify-center px-6">
+      <form action="{% url 'lands:owner_dashboard' %}" method="GET" class="nav-search-shell flex max-w-2xl items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+        <div class="nav-search-segment flex flex-1 min-w-[120px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Search My Land</span>
+          <input type="text" name="keyword"
+            class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none placeholder:text-gray-400"
+            placeholder="Title or location..." value="{{ request.GET.keyword|default:'' }}" autocomplete="off">
+        </div>
+        <div class="h-7 w-px bg-gray-300"></div>
+        <label class="nav-search-segment hidden sm:flex flex-1 min-w-[90px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Status</span>
+          <select name="status" class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none">
+            <option value="" {% if not request.GET.status %}selected{% endif %}>All Items</option>
+            <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>Published</option>
+            <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Drafts</option>
+          </select>
+        </label>
+        <div class="h-7 w-px bg-gray-300 hidden sm:block"></div>
+        <label class="nav-search-segment hidden md:flex flex-1 min-w-[90px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">Usage</span>
+          <select name="usage" class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none">
+            <option value="" {% if not request.GET.usage %}selected{% endif %}>All Use</option>
+            <option value="rent" {% if request.GET.usage == 'rent' %}selected{% endif %}>Rent</option>
+            <option value="sale" {% if request.GET.usage == 'sale' %}selected{% endif %}>Sale</option>
+          </select>
+        </label>
+        <button type="submit" class="ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-700 shadow-sm hover:scale-105 active:scale-95 z-20">
+          <i class="bi bi-search text-xs font-bold"></i>
         </button>
-        <label
-          class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
-          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Intent</span>
-          <select id="navSearchType"
-            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none">
+      </form>
+    </div>
+    {% else %}
+    <!-- PUBLIC/CUSTOMER SEARCH -->
+    <div class="hidden md:flex flex-1 justify-center px-6">
+      <form action="{% url 'lands:search_lands' %}" method="GET" class="nav-search-shell flex max-w-2xl items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+        <div class="nav-search-segment flex flex-1 min-w-[100px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Where</span>
+          <input type="text" name="location" id="navSearchWhere"
+            class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none placeholder:text-gray-400"
+            placeholder="Search location" value="{{ request.GET.location|default:'' }}" autocomplete="off">
+        </div>
+        <div class="h-7 w-px bg-gray-300"></div>
+        <label class="nav-search-segment hidden sm:flex flex-1 min-w-[80px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">Intent</span>
+          <select name="type" id="navSearchType"
+            class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none">
             <option value="" {% if not request.GET.type %}selected{% endif %}>All stays</option>
             <option value="rent" {% if request.GET.type == 'rent' %}selected{% endif %}>Rent land</option>
             <option value="sale" {% if request.GET.type == 'sale' %}selected{% endif %}>Buy land</option>
           </select>
         </label>
-        <label
-          class="nav-search-segment flex min-w-[132px] flex-col rounded-full px-4 py-2 text-left transition-colors hover:bg-gray-50">
-          <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Budget</span>
-          <input type="number" id="navSearchBudget"
-            class="mt-0.5 w-full border-none bg-transparent p-0 text-sm font-medium text-gray-800 outline-none placeholder:text-gray-400"
+        <div class="h-7 w-px bg-gray-300 hidden sm:block"></div>
+        <label class="nav-search-segment hidden md:flex flex-1 min-w-[80px] flex-col rounded-full px-4 py-1 text-left transition-colors hover:bg-gray-50">
+          <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">Budget</span>
+          <input type="number" name="max_price" id="navSearchBudget"
+            class="mt-0 w-full border-none bg-transparent p-0 text-sm font-bold text-gray-900 outline-none placeholder:text-gray-400"
             placeholder="Max price" value="{{ request.GET.max_price|default:'' }}" min="0">
         </label>
-        <button type="button" id="navSearchButton"
-          class="ml-2 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#d2415a] text-white transition-colors hover:bg-[#b9344b]">
-          <i class="bi bi-search text-base"></i>
+        <button type="submit" id="navSearchButton"
+          class="ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-white transition-all hover:bg-red-700 shadow-sm hover:scale-105 active:scale-95 z-20">
+          <i class="bi bi-search text-xs font-bold"></i>
         </button>
-      </div>
+
+        <!-- Live Search Dropdown -->
+        <div id="liveSearchResults" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-[100] max-h-[400px] overflow-y-auto p-2 scrollbar-hide">
+          <!-- Results will be injected here -->
+        </div>
+      </form>
     </div>
+    {% endif %}
     {% endif %}
 
     <div class="flex items-center gap-2 md:gap-3 shrink-0">
       {% if user.is_authenticated %}
-      {% if unread_messages %}
-      <a href="{% url 'lands:inbox' %}"
-        class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
-        <i class="bi bi-chat-dots text-xl"></i>
-        <span
-          class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{
-          unread_messages }}</span>
-      </a>
-      {% endif %}
-
-      {% if can_switch_mode %}
-      <form method="post" action="{% url 'lands:switch_mode' %}" class="hidden md:block">
-        {% csrf_token %}
-        <button type="submit"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-full text-xs font-medium text-gray-600 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">
-          {% if current_mode == 'owner' %}<i class="bi bi-person"></i> Customer{% else %}<i class="bi bi-house"></i>
-          Owner{% endif %}
-        </button>
-      </form>
-      {% endif %}
-
-      {% if user.role == 'owner' or user.is_owner %}
-      <a class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline"
-        href="{% url 'lands:add_land' %}">
-        <i class="bi bi-plus-lg mr-1"></i>Add new post
-      </a>
-      {% endif %}
-
-      <div class="hidden md:flex flex-col text-right mr-2">
-        <span class="text-sm text-gray-600">Welcome, <strong>{{ user.first_name|default:user.username }}</strong></span>
-        <span class="text-xs uppercase tracking-[0.24em] text-[#1a5c38] font-semibold">
-          {% if current_mode == 'owner' %}Owner Dashboard{% elif current_mode == 'admin' %}Admin Dashboard{% else %}Customer Dashboard{% endif %}
-        </span>
-      </div>
-
-      <div class="relative group">
-        <a class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 hover:border-[#1a5c38] transition-colors"
-          href="{% url 'accounts:profile_edit' %}" title="{{ user.username }}">
-          {% if user.profile_picture %}
-          <img src="{{ user.profile_picture.url }}" alt="Avatar" class="w-full h-full object-cover">
-          {% else %}
-          <i class="bi bi-person text-gray-500 text-base"></i>
-          {% endif %}
+        {% if unread_messages %}
+        <a href="{% url 'lands:inbox' %}"
+          class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
+          <i class="bi bi-chat-dots text-xl"></i>
+          <span
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{
+            unread_messages }}</span>
         </a>
-        <div
-          class="absolute right-0 top-11 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-          <div class="px-4 py-2 border-b border-gray-100">
-            <p class="text-xs font-semibold text-gray-800 truncate">{{ user.username }}</p>
-            <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
-          </div>
-          <a href="{% url 'accounts:profile_edit' %}"
-            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
-              class="bi bi-person-gear w-4"></i> Profile</a>
-          <a href="{% url 'lands:my_reservations' %}"
-            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
-              class="bi bi-calendar-check w-4"></i> My Bookings</a>
-          <a href="{% url 'lands:my_wishlist' %}"
-            class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
-              class="bi bi-heart w-4"></i> Wishlist</a>
-          <div class="border-t border-gray-100 mt-1">
-            <form method="post" action="{% url 'logout' %}">
-              {% csrf_token %}
-              <button type="submit"
-                class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 no-underline"><i
-                  class="bi bi-box-arrow-right w-4"></i> Log out</button>
-            </form>
+        {% endif %}
+
+        {% if can_switch_mode %}
+        <form method="post" action="{% url 'lands:switch_mode' %}" class="hidden md:block">
+          {% csrf_token %}
+          <button type="submit"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-full text-xs font-medium text-gray-600 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">
+            {% if current_mode == 'owner' %}<i class="bi bi-person"></i> Customer{% else %}<i class="bi bi-house"></i>
+            Owner{% endif %}
+          </button>
+        </form>
+        {% endif %}
+
+        {% if request.resolver_match.url_name != 'land_list' and request.resolver_match.url_name != 'home' %}
+          {% if user.role == 'owner' or user.is_owner %}
+          <a class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline"
+            href="{% url 'lands:add_land' %}">
+            <i class="bi bi-plus-lg mr-1"></i>Add new post
+          </a>
+          {% endif %}
+        {% endif %}
+
+        <div class="hidden md:flex flex-col text-right mr-2">
+          <span class="text-sm text-gray-600">Welcome, <strong>{{ user.first_name|default:user.username }}</strong></span>
+          <span class="text-xs uppercase tracking-[0.24em] text-[#1a5c38] font-semibold">
+            {% if current_mode == 'owner' %}Owner Dashboard{% elif current_mode == 'admin' %}Admin Dashboard{% else %}Customer Dashboard{% endif %}
+          </span>
+        </div>
+
+        <div class="relative group">
+          <a class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 hover:border-[#1a5c38] transition-colors"
+            href="{% url 'accounts:profile_edit' %}" title="{{ user.username }}">
+            {% if user.profile_picture %}
+            <img src="{{ user.profile_picture.url }}" alt="Avatar" class="w-full h-full object-cover">
+            {% else %}
+            <i class="bi bi-person text-gray-500 text-base"></i>
+            {% endif %}
+          </a>
+          <div
+            class="absolute right-0 top-11 w-52 bg-white border border-gray-200 rounded-xl shadow-lg py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+            <div class="px-4 py-2 border-b border-gray-100">
+              <p class="text-xs font-semibold text-gray-800 truncate">{{ user.username }}</p>
+              <p class="text-xs text-gray-500 truncate">{{ user.email }}</p>
+            </div>
+            <a href="{% url 'accounts:profile_edit' %}"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+                class="bi bi-person-gear w-4"></i> Profile</a>
+            <a href="{% url 'lands:my_reservations' %}"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+                class="bi bi-calendar-check w-4"></i> My Bookings</a>
+            <a href="{% url 'lands:my_wishlist' %}"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+                class="bi bi-heart w-4"></i> Wishlist</a>
+            {% if user.role == 'owner' or user.is_owner %}
+            <a href="{% url 'lands:owner_dashboard' %}"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+                class="bi bi-file-earmark-text w-4"></i> My Drafts</a>
+            {% endif %}
+            <div class="border-t border-gray-100 mt-1">
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit"
+                  class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 no-underline"><i
+                    class="bi bi-box-arrow-right w-4"></i> Log out</button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
       {% else %}
-      <button type="button"
-        class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors"
-        onclick="openModal('register')">
-        <i class="bi bi-plus-lg mr-1"></i>Add new post
-      </button>
-      <button
-        class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
-        onclick="openModal('login')">
-        <i class="bi bi-list text-base"></i>
-        <i class="bi bi-person-circle text-lg text-gray-400"></i>
-      </button>
+        {% if request.resolver_match.url_name == 'land_list' or request.resolver_match.url_name == 'home' %}
+          <div class="flex items-center gap-3">
+            <button type="button" 
+              class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#1a5c38] transition-colors"
+              onclick="openModal('login')">
+              Sign In
+            </button>
+            <button type="button"
+              class="px-5 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-bold hover:bg-[#134428] transition-all shadow-sm hover:shadow-md"
+              onclick="openModal('register')">
+              Sign Up
+            </button>
+          </div>
+        {% else %}
+          <button type="button"
+            class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors"
+            onclick="openModal('register')">
+            <i class="bi bi-plus-lg mr-1"></i>Add new post
+          </button>
+          <button
+            class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
+            onclick="openModal('login')">
+            <i class="bi bi-list text-base"></i>
+            <i class="bi bi-person-circle text-lg text-gray-400"></i>
+          </button>
+        {% endif %}
       {% endif %}
     </div>
   </nav>
@@ -394,37 +456,67 @@
         <form method="post" action="{% url 'accounts:register' %}">
           {% csrf_token %}
           <div class="space-y-4">
+            {% if register_form_state.errors.non_field_errors %}
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {{ register_form_state.errors.non_field_errors|join:', ' }}
+            </div>
+            {% endif %}
             <div>
               <label for="register_role" class="block text-sm font-medium text-gray-700 mb-1">Register as</label>
               <select id="register_role" name="role"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors">
-                <option value="customer" selected>Customer</option>
-                <option value="owner">Land Owner</option>
+                <option value="customer" {% if register_form_state.values.role|default:'customer' == 'customer' %}selected{% endif %}>Customer</option>
+                <option value="owner" {% if register_form_state.values.role == 'owner' %}selected{% endif %}>Land Owner</option>
               </select>
+              {% if register_form_state.errors.role %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.role|join:', ' }}</p>
+              {% endif %}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
               <input type="text" name="username"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
-                placeholder="Choose a username" required autocomplete="username">
+                placeholder="Choose a username" required autocomplete="username" value="{{ register_form_state.values.username|default:'' }}">
+              {% if register_form_state.errors.username %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.username|join:', ' }}</p>
+              {% endif %}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
               <input type="email" name="email"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
-                placeholder="you@example.com" required autocomplete="email">
+                placeholder="you@example.com" required autocomplete="email" value="{{ register_form_state.values.email|default:'' }}">
+              {% if register_form_state.errors.email %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.email|join:', ' }}</p>
+              {% endif %}
+            </div>
+            <div id="registerPhoneField">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone number</label>
+              <input type="tel" name="phone" id="register_phone"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                placeholder="+255 712 345 678" autocomplete="tel" value="{{ register_form_state.values.phone|default:'' }}">
+              <p class="mt-1 text-xs text-gray-500">Required for customer signup.</p>
+              {% if register_form_state.errors.phone %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.phone|join:', ' }}</p>
+              {% endif %}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input type="password" name="password1"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
                 placeholder="Create a password" required autocomplete="new-password">
+              {% if register_form_state.errors.password1 %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.password1|join:', ' }}</p>
+              {% endif %}
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
               <input type="password" name="password2"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
                 placeholder="Confirm your password" required autocomplete="new-password">
+              {% if register_form_state.errors.password2 %}
+              <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.password2|join:', ' }}</p>
+              {% endif %}
             </div>
             <button type="submit"
               class="w-full py-3 mt-2 bg-[#1a5c38] text-white rounded-xl font-semibold text-sm hover:bg-[#134428] transition-colors">Create
@@ -479,6 +571,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+      function syncRegisterFields() {
+        var role = document.getElementById('register_role');
+        var phone = document.getElementById('register_phone');
+        var phoneWrap = document.getElementById('registerPhoneField');
+        if (!role || !phone || !phoneWrap) return;
+        var isCustomer = role.value === 'customer';
+        phone.required = isCustomer;
+        phoneWrap.classList.toggle('opacity-70', !isCustomer);
+      }
+
       var modal = document.getElementById('authModal');
       if (modal) {
         modal.addEventListener('click', function (e) {
@@ -486,6 +588,12 @@
         });
         showTab('login');
       }
+
+      var registerRole = document.getElementById('register_role');
+      if (registerRole) {
+        registerRole.addEventListener('change', syncRegisterFields);
+      }
+      syncRegisterFields();
 
       function runNavSearch() {
         var params = new URLSearchParams();
@@ -529,6 +637,91 @@
       }
     });
   </script>
-</body>
+    <div id="liveSearchResults" class="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 hidden overflow-hidden"></div>
+    <!-- Live Search Script -->
+    <script>
+      (function() {
+        const searchForms = document.querySelectorAll('.nav-search-shell');
+        const resultsContainer = document.getElementById('liveSearchResults');
+        let debounceTimer;
 
+        searchForms.forEach(form => {
+          const mainInput = form.querySelector('input[type="text"]');
+          const typeSelect = form.querySelector('select[name="type"]') || form.querySelector('select[name="usage"]');
+          const budgetInput = form.querySelector('input[name="max_price"]') || form.querySelector('select[name="status"]');
+
+          const handleInput = () => {
+            clearTimeout(debounceTimer);
+            const query = mainInput.value.trim();
+            
+            if (query.length < 2) {
+              resultsContainer.classList.add('hidden');
+              return;
+            }
+
+            debounceTimer = setTimeout(() => {
+              const params = new URLSearchParams(new FormData(form));
+              params.set('q', query);
+              params.set('mode', '{{ current_mode|default:"customer" }}');
+
+              fetch(`/lands/api/live-search/?${params.toString()}`)
+                .then(res => res.json())
+                .then(data => {
+                  renderResults(data.results);
+                })
+                .catch(err => console.error('Live search error:', err));
+            }, 300);
+          };
+
+          mainInput.addEventListener('input', handleInput);
+          if (typeSelect) typeSelect.addEventListener('change', handleInput);
+          if (budgetInput) budgetInput.addEventListener('change', handleInput);
+
+          // Close dropdown on click outside
+          document.addEventListener('click', (e) => {
+            if (!form.contains(e.target) && !resultsContainer.contains(e.target)) {
+              resultsContainer.classList.add('hidden');
+            }
+          });
+        });
+
+        function renderResults(results) {
+          if (!results || results.length === 0) {
+            resultsContainer.innerHTML = `
+              <div class="p-8 text-center">
+                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <i class="bi bi-search text-gray-400"></i>
+                </div>
+                <p class="text-sm text-gray-500 font-medium">No matches found for your search.</p>
+              </div>
+            `;
+          } else {
+            let html = '<div class="space-y-1">';
+            results.forEach(item => {
+              html += `
+                <a href="${item.url}" class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group no-underline">
+                  <div class="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                    ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-gray-300"><i class="bi bi-image"></i></div>`}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                      <h4 class="text-sm font-bold text-gray-900 truncate group-hover:text-red-600 transition-colors">${item.title}</h4>
+                      <span class="text-xs font-bold text-red-600 shrink-0">${item.price}</span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-1">
+                      <span class="text-[11px] text-gray-500 truncate"><i class="bi bi-geo-alt mr-1"></i>${item.location}</span>
+                      <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider">${item.usage}</span>
+                    </div>
+                  </div>
+                </a>
+              `;
+            });
+            html += '</div>';
+            resultsContainer.innerHTML = html;
+          }
+          resultsContainer.classList.remove('hidden');
+        }
+      })();
+    </script>
+  </body>
 </html>

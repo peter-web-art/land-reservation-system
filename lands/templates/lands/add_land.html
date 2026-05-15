@@ -12,14 +12,39 @@
     </div>
 
     <h1 class="text-4xl font-extrabold text-white mb-2 drop-shadow-md">Add your land</h1>
-    <p class="text-white/90 mb-8 font-medium drop-shadow-sm">Complete all steps. Good photos and clear descriptions get significantly more bookings.</p>
+    <p class="text-white/90 mb-8 font-medium drop-shadow-sm">Complete all steps to list your land for rent or sale.</p>
+
+    <!-- Progress Indicator -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-2">
+          {% for i in "123456" %}
+          <div class="flex items-center">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+              {% if forloop.counter == 1 %}bg-[#1a5c38] text-white
+              {% else %}bg-white/20 text-white/60{% endif %}" id="step-indicator-{{ forloop.counter }}">
+              {{ forloop.counter }}
+            </div>
+            {% if not forloop.last %}
+            <div class="w-12 h-1 bg-white/20 mx-2" id="step-connector-{{ forloop.counter }}"></div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="text-white/80 text-sm">
+        <span id="current-step-text">Step 1: Basic Information</span>
+      </div>
+    </div>
 
 
     <form method="post" enctype="multipart/form-data" id="addLandForm" class="w-full">
     {% csrf_token %}
+    <input type="hidden" name="current_step" id="id_wizard_step" value="{{ initial_step|default:1 }}">
 
-    <!-- 1. Basic Info -->
-    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+    <!-- Step 1: Basic Info -->
+    <div class="form-step" id="step-1">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span
           class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">1</span>
@@ -28,9 +53,9 @@
 
       <div class="space-y-4">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Land ID (Reference #)</label>
           {{ form.land_id }}
-          <div class="text-sm text-gray-500 mt-1">Unique reference code for your internal tracking (e.g. LR-001)</div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Land Reference</label>
+          <div class="text-sm text-gray-500 mt-1">This reference is generated automatically when you save the listing.</div>
           {% if form.land_id.errors %}<div class="text-red-500 text-sm mt-1">{{ form.land_id.errors }}</div>{% endif %}
         </div>
         <div class="mb-4">
@@ -54,8 +79,7 @@
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span
-              class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }}</label>
           {{ form.description }}
           <div class="text-sm text-gray-500 mt-1">Soil type, access roads, water source, boundaries, improvements, and
             any restrictions</div>
@@ -63,9 +87,11 @@
         </div>
       </div>
     </div>
+    </div>
 
-    <!-- 2. Location & Size -->
-    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+    <!-- Step 2: Location & Size -->
+    <div class="form-step hidden" id="step-2">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span
           class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">2</span>
@@ -73,13 +99,39 @@
       </div>
 
       <div class="space-y-4">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.location.label }} <span
-              class="text-red-500">*</span></label>
-          {{ form.location }}
-          <div class="text-sm text-gray-500 mt-1">Region, District, area (e.g. "Arusha, Moshi Road, near Kilimanjaro
-            Airport")</div>
-          {% if form.location.errors %}<div class="text-red-500 text-sm mt-1">{{ form.location.errors }}</div>{% endif %}
+        <!-- Cascading Location: Region → District → Ward → Street -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-geo-alt"></i> Mkoa (Region) <span class="text-red-500">*</span></label>
+            {{ form.region }}
+            {% if form.region.errors %}<div class="text-red-500 text-sm mt-1">{{ form.region.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-building"></i> Wilaya (District) <span class="text-red-500">*</span></label>
+            {{ form.district }}
+            <div class="text-sm text-gray-500 mt-1" id="districtHint">Chagua mkoa kwanza</div>
+            {% if form.district.errors %}<div class="text-red-500 text-sm mt-1">{{ form.district.errors }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-pin-map"></i> Kata (Ward)</label>
+            {{ form.ward }}
+            {% if form.ward.errors %}<div class="text-red-500 text-sm mt-1">{{ form.ward.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-house-door"></i> Mtaa / Kijiji</label>
+            {{ form.street }}
+            {% if form.street.errors %}<div class="text-red-500 text-sm mt-1">{{ form.street.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Generated location preview -->
+        <div class="p-3 bg-green-50 border border-green-200 rounded-lg hidden" id="locationPreview">
+          <div class="flex items-center gap-2 text-sm text-green-800">
+            <i class="bi bi-check-circle-fill"></i>
+            <span>Mahali: <strong id="locationPreviewText"></strong></span>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,33 +164,43 @@
         </div>
       </div>
     </div>
+    </div>
 
-    <!-- 3. Terrain & Utilities -->
-    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+    <!-- Step 3: Terrain & Utilities -->
+    <div class="form-step hidden" id="step-3">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">3</span>
         <h3 class="text-lg font-semibold text-gray-900">Terrain & Utilities</h3>
       </div>
 
       <div class="space-y-6">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
-          {{ form.topography }}
-          <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
+            {{ form.topography }}
+            <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-moisture"></i> Soil Fertility</label>
+            {{ form.soil_fertility }}
+            <div class="text-sm text-gray-500 mt-1">Helps generate crop recommendations for agricultural land</div>
+          </div>
         </div>
 
         <div class="col-span-full">
           <h4 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Utilities & Improvements</h4>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {% for checkbox in form.utilities %}
-            <label class="flex items-center gap-3 cursor-pointer group">
-              {{ checkbox.tag }}
-              <span class="text-sm text-gray-700 group-hover:text-gray-900 font-medium">{{ checkbox.choice_label }}</span>
+            <label class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-[#1a5c38] hover:bg-green-50/30 transition-all group">
+              <div class="relative flex items-center">
+                {{ checkbox.tag }}
+              </div>
+              <span class="text-sm text-gray-700 font-medium">{{ checkbox.choice_label }}</span>
             </label>
             {% endfor %}
           </div>
           {% if form.utilities.errors %}<div class="text-red-500 text-sm mt-1">{{ form.utilities.errors }}</div>{% endif %}
-          <div class="text-sm text-gray-500 mt-2"><i class="bi bi-info-circle"></i> Select all that apply to this property.</div>
           
           <div class="mt-6">
             <label class="block text-sm font-medium text-gray-700 mb-1">Additional Utility Notes</label>
@@ -148,9 +210,11 @@
         </div>
       </div>
     </div>
+    </div>
 
-    <!-- 4. Pricing -->
-    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+    <!-- Step 4: Pricing -->
+    <div class="form-step hidden" id="step-4">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
       <div class="flex items-center gap-3 mb-6">
         <span
           class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">4</span>
@@ -178,9 +242,7 @@
           <div class="bg-green-50 p-4 rounded-lg mb-4">
             <strong><i class="bi bi-tag"></i> Airbnb-style Discounts</strong> — offer discounts for longer bookings to
             attract more tenants and fill your land faster.
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.weekly_discount.label }} (%)</label>
               {{ form.weekly_discount }}
@@ -193,22 +255,7 @@
               <div class="text-sm text-gray-500 mt-1">Discount for 28+ day bookings (e.g. 20 = 20% off)</div>
               {% if form.monthly_discount.errors %}<div class="text-red-500 text-sm mt-1">{{ form.monthly_discount.errors }}</div>{% endif %}
             </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.min_duration_days.label }}
-                (days)</label>
-              {{ form.min_duration_days }}
-              <div class="text-sm text-gray-500 mt-1">Shortest booking you'll accept (e.g. 30 for one month minimum)
-              </div>
-            </div>
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.max_duration_days.label }}</label>
-              {{ form.max_duration_days }}
-              <div class="text-sm text-gray-500 mt-1">Leave blank for no maximum limit</div>
-            </div>
-          </div>
+          </div>      </div>
 
           <!-- Pricing preview -->
           <div class="bg-gray-50 p-4 rounded-lg mt-4">
@@ -231,67 +278,258 @@
         </div>
       </div>
     </div>
-
-    <!-- 5. Photo -->
-    <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
-      <div class="flex items-center gap-3 mb-6">
-        <span
-          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
-        <h3 class="text-lg font-semibold text-gray-900">Photos</h3>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Property Image <span
-            class="text-red-500">*</span></label>
-        {{ form.land_image_path }}
-        <div class="text-sm text-gray-500 mt-1">JPG, PNG, WebP · max 5 MB · Lands with clear photos get <strong>3×
-            more enquiries</strong></div>
-        {% if form.land_image_path.errors %}<div class="text-red-500 text-sm mt-1">{{ form.land_image_path.errors }}</div>{% endif %}
-      </div>
-
     </div>
 
-    <!-- 6. Contact -->
-    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-      <div class="flex items-center gap-3 mb-6">
-        <span
-          class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">6</span>
-        <h3 class="text-lg font-semibold text-gray-900">Contact Details</h3>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_phone.label }}</label>
-          {{ form.contact_phone }}
+    <!-- Step 5: Photos -->
+    <div class="form-step hidden" id="step-5">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">5</span>
+          <h3 class="text-lg font-semibold text-gray-900">Photos Gallery</h3>
         </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_email.label }}</label>
-          {{ form.contact_email }}
+
+        <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <p class="text-sm text-amber-800">
+            <i class="bi bi-info-circle-fill mr-1"></i> <strong>Requirement:</strong> Please upload at least <strong>3 photos</strong> showing different sides of the land (North, South, Aerial, etc.) to help buyers understand the terrain.
+          </p>
+        </div>
+        {% if land and land.images.all %}
+        <div class="mb-6 pb-6 border-b border-gray-100">
+          <label class="block text-sm font-medium text-gray-700 mb-3">Already Uploaded Photos</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {% for img in land.images.all %}
+            <div class="relative aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+              <img src="{{ img.image.url }}" class="w-full h-full object-cover">
+              <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5 backdrop-blur-sm">
+                {{ img.get_position_display }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        
+        <div id="image-upload-container" class="space-y-4">
+          <!-- Initial 3 slots -->
+          {% for i in "123" %}
+          <div class="image-upload-row p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Photo {{ i }} <span class="text-red-500">*</span></label>
+                <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*" required>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction <span class="text-red-500">*</span></label>
+                <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" required>
+                  <option value="north">North View</option>
+                  <option value="south">South View</option>
+                  <option value="east">East View</option>
+                  <option value="west">West View</option>
+                  <option value="aerial">Aerial View</option>
+                  <option value="from_above">From Above</option>
+                  <option value="vertical">Vertical View</option>
+                  <option value="horizontal">Horizontal / Panoramic</option>
+                  <option value="front">Front View</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <button type="button" id="add-more-images" class="mt-4 px-4 py-2 border border-[#1a5c38] text-[#1a5c38] rounded-lg text-sm font-semibold hover:bg-green-50 transition-colors">
+          <i class="bi bi-plus-lg"></i> Add More Photos
+        </button>
+
+        <div class="mt-6 pt-6 border-t border-gray-100">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Main Cover Image (Legacy)</label>
+          {{ form.land_image_path }}
+          <p class="text-xs text-gray-500 mt-1">If you upload a gallery above, the first one will be used as the cover unless you specify this one.</p>
         </div>
       </div>
     </div>
 
-    <div class="flex gap-3">
-      <button type="submit"
-        class="px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
-        <i class="bi bi-check-lg"></i> Publish Land
-      </button>
-      <a href="{% url 'lands:owner_dashboard' %}"
-        class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-lg hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">Cancel</a>
+    <!-- Step 6: Contact & Review -->
+    <div class="form-step hidden" id="step-6">
+      <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">
+        <div class="flex items-center gap-3 mb-6">
+          <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">6</span>
+          <h3 class="text-lg font-semibold text-gray-900">Contact Details & Review</h3>
+        </div>
+
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_phone.label }}</label>
+              {{ form.contact_phone }}
+              <div class="text-sm text-gray-500 mt-1">Receive booking updates via SMS</div>
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.contact_email.label }}</label>
+              {{ form.contact_email }}
+            </div>
+          </div>
+
+          <!-- Review Section -->
+          <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4">Review Your Listing</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Title:</span>
+                <span id="review-title" class="font-medium text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Type:</span>
+                <span id="review-usage" class="font-medium text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Location:</span>
+                <span id="review-location" class="font-medium text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Price:</span>
+                <span id="review-price" class="font-medium text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Size:</span>
+                <span id="review-size" class="font-medium text-[#1a5c38]">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Contact Phone:</span>
+                <span id="review-phone" class="font-medium text-gray-900">-</span>
+              </div>
+              <div class="flex justify-between border-b border-gray-200 pb-2">
+                <span class="text-gray-500">Email:</span>
+                <span id="review-email" class="font-medium text-gray-900">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-sm text-blue-800 flex items-start gap-2">
+              <i class="bi bi-info-circle-fill mt-0.5"></i>
+              <span>
+                <strong>Ready to publish?</strong> You can save this as a draft to edit later, or publish it now to make it visible to potential buyers and renters.
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Persistent Navigation Bar -->
+    <div id="wizardNavigation" class="sticky bottom-4 z-[100] mt-8 pb-4 pt-4 bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.1)] px-6">
+      <div class="max-w-3xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex gap-3 items-center w-full sm:w-auto">
+          <button type="button" id="goBackBtn" onclick="window.location.href='{% url 'lands:owner_dashboard' %}'" class="flex-1 sm:flex-none px-6 py-3 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-all active:scale-95">
+            <i class="bi bi-arrow-left mr-2"></i> Dashboard
+          </button>
+          <button type="button" id="prevBtn" class="flex-1 sm:flex-none px-6 py-3 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="bi bi-chevron-left mr-2"></i> Previous
+          </button>
+        </div>
+        <div class="flex gap-3 items-center w-full sm:w-auto">
+          <button type="submit" id="saveDraftBtn" name="save_draft" value="true" formnovalidate class="flex-1 sm:flex-none px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-all active:scale-95 shadow-md shadow-amber-200">
+            <i class="bi bi-save mr-2"></i> Save Draft
+          </button>
+          <button type="button" id="nextBtn" class="flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-[#1a5c38] to-[#134428] text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-green-900/30 hover:-translate-y-0.5 transition-all active:translate-y-0 active:scale-95 shadow-md">
+            Next <i class="bi bi-arrow-right ml-2"></i>
+          </button>
+          <button type="submit" id="publishBtn" class="hidden flex-1 sm:flex-none px-8 py-3 bg-gradient-to-r from-[#1a5c38] to-[#134428] text-white rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-green-900/30 hover:-translate-y-0.5 transition-all active:translate-y-0 active:scale-95 shadow-md">
+            <i class="bi bi-check-lg mr-2"></i> Publish Now
+          </button>
+        </div>
+      </div>
     </div>
   </form>
   </div>
 </div>
+<script>
+/* ── Cascading Location Dropdowns ─────────────────────────────────── */
+(function() {
+  var regionEl = document.getElementById('id_region');
+  var districtEl = document.getElementById('id_district');
+  var wardEl = document.getElementById('id_ward');
+  var streetEl = document.getElementById('id_street');
+  var hint = document.getElementById('districtHint');
+  var preview = document.getElementById('locationPreview');
+  var previewText = document.getElementById('locationPreviewText');
+  var savedDistrict = districtEl ? districtEl.value : '';
+
+  function updateLocationPreview() {
+    var parts = [];
+    if (streetEl && streetEl.value.trim()) parts.push(streetEl.value.trim());
+    if (wardEl && wardEl.value.trim()) parts.push(wardEl.value.trim());
+    if (districtEl && districtEl.value) parts.push(districtEl.value);
+    if (regionEl && regionEl.selectedIndex > 0) {
+      parts.push(regionEl.options[regionEl.selectedIndex].text);
+    }
+    if (parts.length > 0 && preview && previewText) {
+      previewText.textContent = parts.join(', ');
+      preview.classList.remove('hidden');
+    } else if (preview) {
+      preview.classList.add('hidden');
+    }
+  }
+
+  if (regionEl) {
+    regionEl.addEventListener('change', function() {
+      var region = this.value;
+      if (!region) {
+        if (districtEl) { districtEl.innerHTML = '<option value="">-- Chagua Wilaya --</option>'; }
+        if (hint) hint.textContent = 'Chagua mkoa kwanza';
+        updateLocationPreview();
+        return;
+      }
+      if (hint) hint.textContent = 'Inapakia wilaya...';
+      fetch('/lands/api/districts/?region=' + encodeURIComponent(region))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!districtEl) return;
+          districtEl.innerHTML = '<option value="">-- Chagua Wilaya --</option>';
+          (data.districts || []).forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            if (d === savedDistrict) opt.selected = true;
+            districtEl.appendChild(opt);
+          });
+          savedDistrict = '';
+          if (hint) hint.textContent = data.districts.length + ' wilaya zinapatikana';
+          updateLocationPreview();
+        })
+        .catch(function() {
+          if (hint) hint.textContent = 'Hitilafu — jaribu tena';
+        });
+    });
+    // Trigger on page load if region is pre-selected (edit mode)
+    if (regionEl.value) {
+      regionEl.dispatchEvent(new Event('change'));
+    }
+  }
+
+  if (districtEl) districtEl.addEventListener('change', updateLocationPreview);
+  if (wardEl) wardEl.addEventListener('input', updateLocationPreview);
+  if (streetEl) streetEl.addEventListener('input', updateLocationPreview);
+  updateLocationPreview();
+})();
+</script>
 
 <script>
-  document.getElementById('addLandForm').addEventListener('submit', function(e) {
-    const btn = this.querySelector('button[type="submit"]');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Publishing...';
-      btn.classList.add('opacity-75', 'cursor-not-allowed');
-    }
-  });
+  const addLandForm = document.getElementById('addLandForm');
+  if (addLandForm) {
+    addLandForm.addEventListener('submit', function(e) {
+      const submitter = e.submitter; // The button that triggered the submit
+      if (submitter && (submitter.id === 'saveDraftBtn' || submitter.id === 'publishBtn')) {
+        const label = submitter.name === 'save_draft' ? 'Saving Draft...' : 'Publishing...';
+        submitter.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> ' + label;
+        submitter.classList.add('opacity-75', 'cursor-not-allowed');
+        // We don't disable it immediately to ensure the name/value is sent, 
+        // the browser will handle the form submission and navigate away.
+      }
+    });
+  }
 
   document.addEventListener('DOMContentLoaded', function () {
     var mapEl = document.getElementById('addLandMap');
@@ -362,6 +600,176 @@
   if (wdEl) wdEl.addEventListener('input', updatePreview);
   if (mdEl) mdEl.addEventListener('input', updatePreview);
   updateFormState();
+</script>
+
+<script>
+// Wizard functionality
+let currentStep = parseInt(document.getElementById('id_wizard_step').value) || 1;
+const totalSteps = 6;
+const stepTexts = [
+  'Step 1: Basic Information',
+  'Step 2: Location & Size',
+  'Step 3: Terrain & Utilities',
+  'Step 4: Pricing',
+  'Step 5: Photos',
+  'Step 6: Contact & Review'
+];
+
+function updateStepIndicators() {
+  for (let i = 1; i <= totalSteps; i++) {
+    const indicator = document.getElementById(`step-indicator-${i}`);
+    const connector = document.getElementById(`step-connector-${i}`);
+    
+    if (i <= currentStep) {
+      indicator.className = 'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-[#1a5c38] text-white';
+      if (connector) connector.className = 'w-12 h-1 bg-[#1a5c38] mx-2';
+    } else {
+      indicator.className = 'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-white/20 text-white/60';
+      if (connector) connector.className = 'w-12 h-1 bg-white/20 mx-2';
+    }
+  }
+  
+  document.getElementById('current-step-text').textContent = stepTexts[currentStep - 1];
+}
+
+function showStep(step) {
+  // Navigation is now sticky and outside the steps to stay visible all the time
+  const formSteps = document.querySelectorAll('.form-step');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const publishBtn = document.getElementById('publishBtn');
+
+  formSteps.forEach((s, idx) => {
+    s.classList.toggle('hidden', idx + 1 !== step);
+  });
+
+  // Update status indicators
+  document.querySelectorAll('[id^="status-step-"]').forEach((s, idx) => {
+    const stepNum = idx + 1;
+    if (stepNum < step) {
+      s.innerHTML = '<i class="bi bi-check-lg text-white"></i>';
+      s.classList.replace('bg-white', 'bg-[#1a5c38]');
+      s.classList.replace('text-[#1a5c38]', 'text-white');
+    } else if (stepNum === step) {
+      s.textContent = stepNum;
+      s.classList.replace('bg-[#1a5c38]', 'bg-white');
+      s.classList.replace('text-white', 'text-[#1a5c38]');
+      s.classList.add('ring-4', 'ring-white/30');
+    } else {
+      s.textContent = stepNum;
+      s.classList.remove('bg-[#1a5c38]', 'bg-white', 'text-white', 'text-[#1a5c38]', 'ring-4', 'ring-white/30');
+      s.classList.add('bg-white/30', 'text-white');
+    }
+  });
+
+  prevBtn.disabled = step === 1;
+  if (step === totalSteps) {
+    nextBtn.classList.add('hidden');
+    publishBtn.classList.remove('hidden');
+  } else {
+    nextBtn.classList.remove('hidden');
+    publishBtn.classList.add('hidden');
+  }
+  
+  // Update hidden input
+  document.getElementById('id_wizard_step').value = step;
+  
+  if (step === totalSteps) updateReview();
+  updateStepIndicators();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep() {
+  if (currentStep < totalSteps) {
+    currentStep++;
+    showStep(currentStep);
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    showStep(currentStep);
+  }
+}
+
+function updateReview() {
+  const title = document.getElementById('id_title').value || '-';
+  const usage = document.getElementById('id_usage').value;
+  const usageText = usage === 'rent' ? 'For Rent' : 'For Sale';
+  const region = document.getElementById('id_region').value;
+  const district = document.getElementById('id_district').value;
+  const location = [region, district].filter(Boolean).join(', ') || '-';
+  const price = document.getElementById('id_price').value;
+  const priceUnit = document.getElementById('id_price_unit').value;
+  const priceText = price ? `Tsh ${price} ${priceUnit}` : '-';
+  const size = document.getElementById('id_size').value;
+  const sizeUnit = document.getElementById('id_size_unit').value;
+  const sizeText = size ? `${size} ${sizeUnit}` : '-';
+  const phone = document.getElementById('id_contact_phone').value || '-';
+  const email = document.getElementById('id_contact_email').value || '-';
+  
+  document.getElementById('review-title').textContent = title;
+  document.getElementById('review-usage').textContent = usageText;
+  document.getElementById('review-location').textContent = location;
+  document.getElementById('review-price').textContent = priceText;
+  document.getElementById('review-size').textContent = sizeText;
+  document.getElementById('review-phone').textContent = phone;
+  document.getElementById('review-email').textContent = email;
+}
+
+// Event listeners
+document.getElementById('nextBtn').addEventListener('click', nextStep);
+document.getElementById('prevBtn').addEventListener('click', prevStep);
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  showStep(currentStep);
+
+  // Add more images functionality
+  const addBtn = document.getElementById('add-more-images');
+  const container = document.getElementById('image-upload-container');
+  
+  if (addBtn && container) {
+    addBtn.addEventListener('click', function() {
+      const rowCount = container.querySelectorAll('.image-upload-row').length + 1;
+      const newRow = document.createElement('div');
+      newRow.className = 'image-upload-row p-4 border border-gray-200 rounded-lg bg-gray-50/50 relative';
+      newRow.innerHTML = `
+        <button type="button" class="remove-image-row absolute top-2 right-2 text-red-500 hover:text-red-700">
+          <i class="bi bi-trash"></i>
+        </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Photo ${rowCount}</label>
+            <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction</label>
+            <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+              <option value="north">North View</option>
+              <option value="south">South View</option>
+              <option value="east">East View</option>
+              <option value="west">West View</option>
+              <option value="aerial">Aerial View</option>
+              <option value="from_above">From Above</option>
+              <option value="vertical">Vertical View</option>
+              <option value="horizontal">Horizontal / Panoramic</option>
+              <option value="front">Front View</option>
+              <option value="other" selected>Other</option>
+            </select>
+          </div>
+        </div>
+      `;
+      container.appendChild(newRow);
+
+      // Add remove functionality
+      newRow.querySelector('.remove-image-row').addEventListener('click', function() {
+        newRow.remove();
+      });
+    });
+  }
+});
 </script>
 
 {% endblock %}

@@ -7,8 +7,10 @@ urlpatterns = [
     path('',                                            views.land_list,                 name='land_list'),
     path('search/',                                     views.search_lands,              name='search_lands'),
     path('api/location-autocomplete/',                  views.location_autocomplete,     name='location_autocomplete'),
+    path('api/districts/',                              views.districts_api,             name='districts_api'),
     path('<int:pk>/',                                   views.land_detail,               name='land_detail'),
     path('<int:pk>/book/',                              views.book_land,                 name='book_land'),
+    path('<int:pk>/crop-suggestions/',                  views.crop_suggestions_api,      name='crop_suggestions_api'),
     # Customer
     path('dashboard/customer/',                         views.customer_dashboard,        name='customer_dashboard'),
     path('reservations/',                               views.my_reservations,           name='my_reservations'),
@@ -38,4 +40,12 @@ urlpatterns = [
     # Notifications
     path('notifications/',                              views.my_notifications, name='my_notifications'),
     path('notifications/<int:notification_id>/read/',   views.mark_notification_read, name='mark_notification_read'),
+    path('api/live-search/',                            views.live_search,            name='live_search'),
+    
+    # Payment Movement Tracking
+    path('my-bookings/',                                views.my_bookings,            name='my_bookings'),
+    path('payments/',                                   views.payments_and_bills,     name='payments_and_bills'),
+    path('payments/manage/',                            views.manage_payments,        name='manage_payments'),
+    path('bookings/<int:pk>/submit-payment/',           views.submit_payment,         name='submit_payment'),
+    path('bookings/<int:pk>/confirm-payment/',          views.confirm_payment_receipt, name='confirm_payment_receipt'),
 ]

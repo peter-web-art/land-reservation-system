@@ -21,7 +21,7 @@ def health_check(request):
 
 
 urlpatterns = [
-    path('', land_list),
+    path('', land_list, name='home'),
     path('admin/', admin.site.urls),
     path('health/', health_check, name='health_check'),       # Health check endpoint
     path('accounts/', include('accounts.urls')),

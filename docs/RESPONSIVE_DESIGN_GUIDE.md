@@ -1,33 +1,39 @@
 # Responsive Design Guide
 
-## Overview
+## Current Responsive Strategy
 
-The current responsive strategy relies on the compiled `static/css/styles.css` bundle plus page-level template styles where needed. Earlier one-off responsive helper stylesheets were archived because they were no longer referenced by the running templates.
+The application uses shared CSS from `static/css/styles.css` with page-specific template structures. The responsive behavior is primarily server-rendered and enhanced with lightweight JavaScript for search, booking, and dashboard interactions.
 
-## Active Responsive Patterns
+## Responsive Areas In The Current UI
 
-- Mobile-first spacing and layout classes from the compiled stylesheet
-- Grid stacking for forms on smaller screens
-- Homepage hero search that collapses from multi-column desktop layout to vertical mobile layout
-- Search and card layouts that remain usable on narrow screens
-- Booking flow adjustments that avoid desktop-only assumptions in JavaScript
+- Public landing page and listing grids
+- Search filters and result cards
+- Registration and profile forms
+- Owner listing forms and dashboard tables
+- Reservation management screens
+- Messaging and notification pages
+- Payment submission flow
 
-## Current Breakpoint Direction
+## Confirmed Responsive Patterns
 
-- Mobile: stacked layouts, full-width controls, simpler spacing
-- Tablet: two-column form and card layouts where appropriate
-- Desktop: larger content width, split layouts, richer hero composition
+- Stacked form layouts on smaller screens
+- Grid-to-single-column listing transitions
+- Full-width mobile controls for booking and auth actions
+- Compact navigation behavior inside shared templates
+- Mobile-safe booking flows that do not assume large desktop widths
 
-## Areas That Were Improved
+## Areas That Need Continued Attention
 
-- Registration fields now stack correctly on mobile instead of forcing two columns.
-- The landing page hero search now adapts cleanly between desktop and mobile.
-- Guest browsing flows now work without sign-in interruptions on discovery pages.
-- Sale and rent booking states no longer assume the same field set in frontend logic.
+- Owner dashboard density is still high on narrow screens.
+- Reservation management tables likely need more mobile-specific summarization.
+- Messaging and notification views should be validated for smaller touch devices.
+- Multi-step listing creation should maintain clear progress feedback on phones.
+- Search filters would benefit from a more deliberate mobile presentation pattern.
 
-## Recommended Next Responsive Pass
+## Recommended Responsive Checklist
 
-- Make the mobile navigation more intentional instead of relying on desktop patterns shrinking down.
-- Tighten filter density on small screens so discovery is faster.
-- Reduce long vertical stretches on dashboard screens for phones.
-- Add more consistent touch target sizing in owner-management areas.
+1. Verify all owner dashboard actions remain usable below 768px.
+2. Collapse reservation tables into cards or expandable rows on phones.
+3. Keep tap targets at comfortable mobile sizes in booking and admin actions.
+4. Prevent horizontal overflow in form-heavy templates.
+5. Test live search, wishlist, and payment flows on both mobile and desktop breakpoints.
