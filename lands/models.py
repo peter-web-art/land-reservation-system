@@ -154,9 +154,11 @@ class Land(AuditBase):
         else:
             total = self.size
 
+        active_statuses = ['pending', 'awaiting_payment', 'approved']
+
         if self.usage == 'sale':
-            # Sum all approved and pending sales to avoid overselling
-            sales = self.reservations.filter(status__in=['approved', 'pending'])
+            # Sum all active sales to avoid overselling
+            sales = self.reservations.filter(status__in=active_statuses)
             booked = Decimal('0')
             for s in sales:
                 if s.requested_size is None:
@@ -171,7 +173,7 @@ class Land(AuditBase):
             end_date = start_date + timedelta(days=1)
             
         overlaps = self.reservations.filter(
-            status__in=['approved', 'pending'],
+            status__in=active_statuses,
             start_date__lt=end_date,
             end_date__gt=start_date
         )
@@ -237,7 +239,7 @@ class Land(AuditBase):
         # To not overcomplicate, we'll return all bookings with their requested sizes.
         return list(
             self.reservations.filter(
-                status__in=['approved', 'pending'],
+                status__in=['approved', 'awaiting_payment', 'pending'],
                 start_date__isnull=False,
                 end_date__isnull=False,
                 end_date__gte=today,
@@ -252,7 +254,7 @@ class Land(AuditBase):
             return today
             
         booked = self.reservations.filter(
-            status__in=['approved', 'pending'],
+            status__in=['approved', 'awaiting_payment', 'pending'],
             end_date__gte=today,
         ).order_by('end_date')
         
@@ -376,8 +378,11 @@ class LandImage(AuditBase):
 
 class Reservation(AuditBase):
     RESERVATION_STATUS = [
-        ('pending', 'Pending'), ('approved', 'Approved'),
-        ('rejected', 'Rejected'), ('cancelled', 'Cancelled'),
+        ('pending', 'Pending'),
+        ('awaiting_payment', 'Awaiting Payment'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
     ]
     PAYMENT_STATUS = [
         ('unpaid', 'Unpaid'), ('paid', 'Paid'), ('refunded', 'Refunded'),
@@ -526,6 +531,15 @@ class Reservation(AuditBase):
         if self.payments.filter(status='submitted').exists() or self.payment_reference:
             return 'submitted'
         return 'pending'
+
+    @property
+    def is_awaiting_payment(self):
+        return self.status == 'awaiting_payment'
+
+    @property
+    def access_details_unlocked(self):
+        """True when the customer has both approval and a fully confirmed payment."""
+        return self.status == 'approved' and self.payment_confirmed
 
     @property
     def is_fully_paid(self):

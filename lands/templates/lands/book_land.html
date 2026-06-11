@@ -161,36 +161,9 @@
           </div>
         </div>
 
-        {% if land.usage == 'rent' %}
         <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
           <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.usage == 'rent' %}3{% else %}2{% endif %}</span>
-            <h3 class="font-semibold">Payment Method</h3>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="pmCards">
-            {% for value, label in form.payment_method.field.choices %}{% if value %}
-            <label class="cursor-pointer">
-              <input type="radio" name="payment_method" value="{{ value }}" class="hidden peer" {% if forloop.first %}checked{% endif %}>
-              <div class="p-4 border-2 border-gray-200 rounded-xl text-center transition peer-checked:border-[#1a5c38] peer-checked:bg-green-50">
-                <div class="text-2xl mb-1">{% if value == 'mpesa' %}📱{% elif value == 'airtel' %}📲{% elif value == 'tigopesa' %}💸{% elif value == 'bank' %}🏦{% else %}💵{% endif %}</div>
-                <div class="text-sm font-medium">{{ label }}</div>
-              </div>
-            </label>
-            {% endif %}{% endfor %}
-          </div>
-          
-          <div class="mb-4 mt-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-hash"></i> Transaction Reference <span class="text-gray-400 text-sm">(optional)</span></label>
-            {{ form.payment_reference }}
-            <div class="text-sm text-gray-500 mt-1">Enter your M-Pesa/Airtel confirmation code after sending payment</div>
-          </div>
-        </div>
-        {% endif %}
-
-        <div class="form-glass border border-white/20 rounded-xl p-6 shadow-xl">
-          <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">{% if land.usage == 'rent' %}4{% else %}2{% endif %}</span>
+            <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold">3</span>
             <h3 class="font-semibold">Additional Notes <span class="text-gray-400 text-sm">(optional)</span></h3>
           </div>
           {{ form.notes }}
@@ -198,7 +171,7 @@
 
         <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
           <i class="bi bi-shield-check text-xl text-[#1a5c38] mt-0.5"></i>
-          <div><strong>Booking Protection:</strong> Your request will be <strong>pending</strong> until the owner approves. {% if land.usage == 'rent' %}Cancel anytime before approval.{% else %}Payment arranged directly with owner.{% endif %}</div>
+          <div><strong>Booking Protection:</strong> Your request will be <strong>pending</strong> until the owner approves. After approval, you submit payment in the platform and then unlock owner details.</div>
         </div>
 
         <button type="button" id="reviewBookingBtn" class="w-full py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-lg hover:bg-[#134428] transition-colors">
@@ -324,13 +297,6 @@
         <div id="reviewContact">—</div>
       </div>
       
-      {% if land.usage == 'rent' %}
-      <div class="p-3 bg-gray-50 rounded">
-        <div class="text-xs text-gray-500 uppercase mb-2">Payment Method</div>
-        <div id="reviewPayment">—</div>
-      </div>
-      {% endif %}
-      
       <!-- Total -->
       <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
         <span class="font-semibold">Total Amount</span>
@@ -340,7 +306,7 @@
       <!-- Warning -->
       <div class="flex items-start gap-2 p-3 bg-amber-50 rounded border border-amber-200">
         <i class="bi bi-info-circle text-amber-500 mt-0.5"></i>
-        <p class="text-sm text-amber-700">Your booking request will be <strong>pending</strong> until the owner reviews and approves it. You'll receive an SMS notification once confirmed.</p>
+        <p class="text-sm text-amber-700">Your booking request will be <strong>pending</strong> until the owner reviews and approves it. After approval, you'll submit payment inside the platform and unlock owner contact details.</p>
       </div>
     </div>
     
@@ -532,12 +498,6 @@ document.getElementById('reviewBookingBtn').addEventListener('click', function()
   if (phoneEl && phoneEl.value) contactHtml += '<i class="bi bi-phone"></i> ' + phoneEl.value;
   document.getElementById('reviewContact').innerHTML = contactHtml || '—';
   
-  if (isRental) {
-    const pm = document.querySelector('input[name="payment_method"]:checked');
-    const pmLabel = pm ? pm.parentElement.querySelector('.text-sm').textContent : '—';
-    document.getElementById('reviewPayment').innerHTML = pmLabel;
-  }
-  
   const totalEl = document.getElementById('totalPrice');
   document.getElementById('reviewTotal').textContent = totalEl ? totalEl.textContent : '—';
   
@@ -547,3 +507,4 @@ document.getElementById('reviewBookingBtn').addEventListener('click', function()
 updatePricing();
 </script>
 {% endblock %}
+

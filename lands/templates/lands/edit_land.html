@@ -18,6 +18,11 @@
 
     <form method="post" enctype="multipart/form-data" id="editLandForm" class="w-full">
     {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
 
     <!-- Basic Info -->
     <div class="form-glass border border-white/20 rounded-xl p-6 mb-6 shadow-xl">

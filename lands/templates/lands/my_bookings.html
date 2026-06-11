@@ -48,6 +48,7 @@
                 <h3 class="text-xl font-bold text-gray-900">{{ b.land.title }}</h3>
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full 
                   {% if b.status == 'pending' %}bg-amber-100 text-amber-700
+                  {% elif b.status == 'awaiting_payment' %}bg-sky-100 text-sky-700
                   {% elif b.status == 'approved' %}bg-green-100 text-green-700
                   {% elif b.status == 'rejected' %}bg-red-100 text-red-700
                   {% else %}bg-gray-100 text-gray-700{% endif %}">
@@ -78,7 +79,7 @@
             <div>
               <p class="text-xs text-gray-400 mb-1">Payment Status</p>
               <p class="font-bold {% if b.payment_confirmed %}text-green-600{% else %}text-amber-600{% endif %}">
-                {% if b.payment_confirmed %}Paid & Confirmed{% elif b.payment_reference %}Payment Under Review{% else %}Unpaid{% endif %}
+                {% if b.payment_confirmed %}Paid & Confirmed{% elif b.status == 'awaiting_payment' and b.payment_reference %}Payment Under Review{% elif b.status == 'awaiting_payment' %}Awaiting Payment{% else %}Unpaid{% endif %}
               </p>
             </div>
             <div>
@@ -89,7 +90,13 @@
             </div>
             <div>
               <p class="text-xs text-gray-400 mb-1">Owner Contact</p>
-              <p class="font-bold text-[#1a5c38]">{{ b.land.contact_phone|default:"See Details" }}</p>
+              <p class="font-bold text-[#1a5c38]">
+                {% if b.access_details_unlocked %}
+                  {{ b.land.contact_phone|default:"See Details" }}
+                {% else %}
+                  Locked until payment is confirmed
+                {% endif %}
+              </p>
             </div>
           </div>
 
@@ -98,7 +105,7 @@
               <i class="bi bi-eye"></i> View Details
             </a>
             
-            {% if b.status == 'approved' or b.status == 'pending' %}
+            {% if b.status == 'awaiting_payment' %}
               {% if not b.payment_confirmed %}
                 <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-6 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
                   <i class="bi bi-cash-coin"></i> {% if b.payment_reference %}Update Payment Info{% else %}Submit Payment Proof{% endif %}

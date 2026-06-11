@@ -53,6 +53,7 @@
               </span>
               <span class="px-2.5 py-1 rounded-full text-xs font-semibold
                 {% if booking.status == 'approved' %}bg-green-50 text-green-700
+                {% elif booking.status == 'awaiting_payment' %}bg-sky-50 text-sky-700
                 {% elif booking.status == 'pending' %}bg-amber-50 text-amber-700
                 {% elif booking.status == 'rejected' %}bg-red-50 text-red-700
                 {% else %}bg-gray-100 text-gray-700{% endif %}">
@@ -92,7 +93,13 @@
 
         <div class="mt-4 text-sm">
           <span class="text-xs text-gray-500 uppercase block mb-1">Owner Contact</span>
-          <span class="font-semibold text-[#1a5c38]">{{ booking.land.contact_phone|default:"See listing" }}</span>
+          <span class="font-semibold text-[#1a5c38]">
+            {% if booking.access_details_unlocked %}
+              {{ booking.land.contact_phone|default:"See listing" }}
+            {% else %}
+              Hidden until payment is confirmed
+            {% endif %}
+          </span>
         </div>
 
         {% if booking.payment_review_status == 'submitted' %}
@@ -130,7 +137,7 @@
           <a href="{% url 'lands:land_detail' booking.land.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
             <i class="bi bi-eye"></i> View Land
           </a>
-          {% if booking.status == 'pending' or booking.status == 'approved' %}
+          {% if booking.status == 'awaiting_payment' %}
             {% if not booking.payment_confirmed %}
             <a href="{% url 'lands:submit_payment' booking.id %}" class="inline-flex items-center gap-2 px-5 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">
               <i class="bi bi-receipt"></i> {% if booking.payment_reference %}Update Reference{% else %}Submit Reference{% endif %}

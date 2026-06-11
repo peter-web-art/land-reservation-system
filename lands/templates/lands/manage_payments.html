@@ -64,7 +64,7 @@
                 {% else %}bg-amber-100 text-amber-700{% endif %}">
                 {% if booking.payment_review_status == 'confirmed' %}Funds Received{% elif booking.payment_review_status == 'submitted' %}Reference Waiting Review{% else %}Waiting for Customer{% endif %}
               </span>
-              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if booking.status == 'approved' %}bg-green-50 text-green-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if booking.status == 'approved' %}bg-green-50 text-green-700{% elif booking.status == 'awaiting_payment' %}bg-sky-50 text-sky-700{% else %}bg-amber-50 text-amber-700{% endif %}">
                 {{ booking.get_status_display }}
               </span>
             </div>

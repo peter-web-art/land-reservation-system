@@ -34,7 +34,7 @@
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div class="flex items-stretch">
         <!-- Status bar -->
-        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
+        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'awaiting_payment' %}bg-sky-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
 
         <!-- Thumbnail -->
         <div class="w-24 h-24 flex-shrink-0">
@@ -52,8 +52,8 @@
               <a href="{% url 'lands:land_detail' r.land.id }}" class="font-semibold text-lg text-[#1a5c38] hover:underline no-underline">{{ r.land.title }}</a>
               <div class="text-gray-500 text-sm flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ r.land.location }}</div>
             </div>
-            <span class="mt-2 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-amber-100 text-amber-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
-              {% if r.status == 'pending' %}<i class="bi bi-clock"></i>{% elif r.status == 'approved' %}<i class="bi bi-check-circle-fill"></i>{% elif r.status == 'rejected' %}<i class="bi bi-x-circle"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %}
+            <span class="mt-2 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-amber-100 text-amber-700{% elif r.status == 'awaiting_payment' %}bg-sky-100 text-sky-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+              {% if r.status == 'pending' %}<i class="bi bi-clock"></i>{% elif r.status == 'awaiting_payment' %}<i class="bi bi-cash"></i>{% elif r.status == 'approved' %}<i class="bi bi-check-circle-fill"></i>{% elif r.status == 'rejected' %}<i class="bi bi-x-circle"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %}
               {{ r.get_status_display }}
             </span>
           </div>
@@ -73,8 +73,8 @@
           <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel this pending booking?')">
             {% csrf_token %}<button type="submit" class="w-full px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"><i class="bi bi-x"></i> Cancel</button>
           </form>
-          {% elif r.status == 'approved' %}
-          <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel your APPROVED booking? The owner will be notified.')">
+          {% elif r.status == 'awaiting_payment' %}
+          <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel your booking while awaiting payment? The owner will be notified.')">
             {% csrf_token %}<button type="submit" class="w-full px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"><i class="bi bi-slash-circle"></i> Cancel</button>
           </form>
           {% endif %}

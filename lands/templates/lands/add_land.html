@@ -41,6 +41,11 @@
     <form method="post" enctype="multipart/form-data" id="addLandForm" class="w-full">
     {% csrf_token %}
     <input type="hidden" name="current_step" id="id_wizard_step" value="{{ initial_step|default:1 }}">
+    {% if form.non_field_errors %}
+    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
 
     <!-- Step 1: Basic Info -->
     <div class="form-step" id="step-1">
@@ -79,7 +84,7 @@
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }}</label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.description.label }} <span class="text-gray-500">(optional)</span></label>
           {{ form.description }}
           <div class="text-sm text-gray-500 mt-1">Soil type, access roads, water source, boundaries, improvements, and
             any restrictions</div>
@@ -120,7 +125,7 @@
             {% if form.ward.errors %}<div class="text-red-500 text-sm mt-1">{{ form.ward.errors }}</div>{% endif %}
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-house-door"></i> Mtaa / Kijiji</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-house-door"></i> Mtaa / Kijiji <span class="text-gray-500">(optional)</span></label>
             {{ form.street }}
             {% if form.street.errors %}<div class="text-red-500 text-sm mt-1">{{ form.street.errors }}</div>{% endif %}
           </div>
@@ -177,12 +182,12 @@
       <div class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }}</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.topography.label }} <span class="text-gray-500">(optional)</span></label>
             {{ form.topography }}
             <div class="text-sm text-gray-500 mt-1">General shape and elevation of the land</div>
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-moisture"></i> Soil Fertility</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1"><i class="bi bi-moisture"></i> Soil Fertility <span class="text-gray-500">(optional)</span></label>
             {{ form.soil_fertility }}
             <div class="text-sm text-gray-500 mt-1">Helps generate crop recommendations for agricultural land</div>
           </div>
@@ -290,15 +295,15 @@
 
         <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <p class="text-sm text-amber-800">
-            <i class="bi bi-info-circle-fill mr-1"></i> <strong>Requirement:</strong> Please upload at least <strong>3 photos</strong> showing different sides of the land (North, South, Aerial, etc.) to help buyers understand the terrain.
+            <i class="bi bi-info-circle-fill mr-1"></i> <strong>Requirement:</strong> Please upload at least <strong>3 photos</strong> with different viewing directions (North, South, Aerial, etc.) to help buyers understand the terrain.
           </p>
         </div>
         {% if land and land.images.all %}
         <div class="mb-6 pb-6 border-b border-gray-100">
           <label class="block text-sm font-medium text-gray-700 mb-3">Already Uploaded Photos</label>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="existing-photos-gallery">
             {% for img in land.images.all %}
-            <div class="relative aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+            <div class="relative aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-sm existing-photo" data-position="{{ img.position }}">
               <img src="{{ img.image.url }}" class="w-full h-full object-cover">
               <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-1.5 py-0.5 backdrop-blur-sm">
                 {{ img.get_position_display }}
@@ -316,11 +321,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Photo {{ i }} <span class="text-red-500">*</span></label>
-                <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*" required>
+                <input type="file" name="gallery_images" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1a5c38] file:text-white hover:file:bg-[#134428]" accept="image/*">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction <span class="text-red-500">*</span></label>
-                <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm" required>
+                <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+                  <option value="">Choose a direction</option>
                   <option value="north">North View</option>
                   <option value="south">South View</option>
                   <option value="east">East View</option>
@@ -521,6 +527,24 @@
   if (addLandForm) {
     addLandForm.addEventListener('submit', function(e) {
       const submitter = e.submitter; // The button that triggered the submit
+      if (submitter && submitter.id === 'publishBtn') {
+        // Validate all steps before publishing
+        let allValid = true;
+        for (let i = 1; i <= totalSteps; i++) {
+          if (!validateStep(i)) {
+            allValid = false;
+            currentStep = i;
+            showStep(i);
+            break;
+          }
+        }
+        
+        if (!allValid) {
+          e.preventDefault();
+          return false;
+        }
+      }
+      
       if (submitter && (submitter.id === 'saveDraftBtn' || submitter.id === 'publishBtn')) {
         const label = submitter.name === 'save_draft' ? 'Saving Draft...' : 'Publishing...';
         submitter.innerHTML = '<i class="bi bi-hourglass-split mr-2"></i> ' + label;
@@ -679,10 +703,152 @@ function showStep(step) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// Step validation functions
+function validateStep(stepNumber) {
+  const errorContainer = document.getElementById('step-error-message');
+  
+  // Clear previous error messages
+  if (errorContainer) {
+    errorContainer.remove();
+  }
+  
+  let errors = [];
+  
+  // Step 1: Basic Information
+  if (stepNumber === 1) {
+    const title = document.getElementById('id_title').value.trim();
+    const usage = document.getElementById('id_usage').value;
+    const landUse = document.getElementById('id_land_use').value;
+    
+    if (!title) errors.push('Land title is required.');
+    if (!usage) errors.push('Please select usage (Rent or Sale).');
+    if (!landUse) errors.push('Please select land use type.');
+  }
+  
+  // Step 2: Location & Size
+  if (stepNumber === 2) {
+    const region = document.getElementById('id_region').value;
+    const district = document.getElementById('id_district').value;
+    const ward = document.getElementById('id_ward').value.trim();
+    const size = document.getElementById('id_size').value;
+    const sizeUnit = document.getElementById('id_size_unit').value;
+    
+    if (!region) errors.push('Region is required.');
+    if (!district) errors.push('District is required.');
+    if (!ward) errors.push('Ward is required.');
+    if (!size || size <= 0) errors.push('Plot size must be greater than zero.');
+    if (!sizeUnit) errors.push('Size unit is required.');
+  }
+  
+  // Step 4: Pricing
+  if (stepNumber === 4) {
+    const price = document.getElementById('id_price').value;
+    const priceUnit = document.getElementById('id_price_unit').value;
+    
+    if (!price || price <= 0) errors.push('Price must be greater than zero.');
+    if (!priceUnit) errors.push('Price unit is required.');
+  }
+  
+  // Step 5: Photos
+  if (stepNumber === 5) {
+    const imageRows = document.querySelectorAll('.image-upload-row');
+    const existingPhotosGallery = document.getElementById('existing-photos-gallery');
+    const existingImages = existingPhotosGallery ? existingPhotosGallery.querySelectorAll('.existing-photo').length : 0;
+    const existingPositions = existingPhotosGallery
+      ? Array.from(existingPhotosGallery.querySelectorAll('.existing-photo')).map(photo => photo.dataset.position || '').filter(Boolean)
+      : [];
+    const newPositions = [];
+    let filledImages = 0;
+
+    imageRows.forEach(row => {
+      const fileInput = row.querySelector('input[name="gallery_images"]');
+      const positionSelect = row.querySelector('select[name="image_positions"]');
+      const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+      const position = positionSelect ? positionSelect.value : '';
+
+      if (hasFile && !position) {
+        errors.push('Choose a viewing direction for each uploaded photo.');
+      }
+
+      if (!hasFile && position) {
+        errors.push('Upload a photo for each selected viewing direction.');
+      }
+
+      if (hasFile && position) {
+        filledImages++;
+        newPositions.push(position);
+      }
+    });
+
+    const totalImages = existingImages + filledImages;
+    const allPositions = existingPositions.concat(newPositions);
+
+    if (totalImages < 3) {
+      errors.push(`At least 3 photos are required. You currently have ${totalImages} photo(s).`);
+    }
+    if (allPositions.length >= 3 && new Set(allPositions).size !== allPositions.length) {
+      errors.push('Choose different viewing directions for each photo.');
+    }
+  }
+  
+  // Step 6: Contact & Review
+  if (stepNumber === 6) {
+    const phone = document.getElementById('id_contact_phone').value.trim();
+    const email = document.getElementById('id_contact_email').value.trim();
+    
+    if (!phone) errors.push('Contact phone is required.');
+    if (!email) errors.push('Contact email is required.');
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      errors.push('Please enter a valid email address.');
+    }
+  }
+  
+  // Show errors if any
+  if (errors.length > 0) {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'step-error-message';
+    errorDiv.className = 'bg-red-50 border border-red-200 rounded-lg p-4 mb-6 relative';
+    errorDiv.innerHTML = `
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 text-red-500 text-xl">
+          <i class="bi bi-exclamation-circle-fill"></i>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-semibold text-red-900 mb-2">Please complete this step</h3>
+          <ul class="text-red-700 text-sm space-y-1">
+            ${errors.map(error => `<li>• ${error}</li>`).join('')}
+          </ul>
+        </div>
+        <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-600">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    `;
+    
+    const currentStepDiv = document.getElementById(`step-${stepNumber}`);
+    if (currentStepDiv) {
+      currentStepDiv.insertBefore(errorDiv, currentStepDiv.firstChild);
+    }
+    
+    // Scroll to error message
+    window.scrollTo({ top: errorDiv.offsetTop - 100, behavior: 'smooth' });
+    
+    return false;
+  }
+  
+  return true;
+}
+
 function nextStep() {
   if (currentStep < totalSteps) {
-    currentStep++;
-    showStep(currentStep);
+    // Validate current step before moving to next
+    if (validateStep(currentStep)) {
+      currentStep++;
+      showStep(currentStep);
+    }
   }
 }
 
@@ -747,6 +913,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div>
             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Viewing Direction</label>
             <select name="image_positions" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
+              <option value="">Choose a direction</option>
               <option value="north">North View</option>
               <option value="south">South View</option>
               <option value="east">East View</option>
@@ -756,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <option value="vertical">Vertical View</option>
               <option value="horizontal">Horizontal / Panoramic</option>
               <option value="front">Front View</option>
-              <option value="other" selected>Other</option>
+              <option value="other">Other</option>
             </select>
           </div>
         </div>

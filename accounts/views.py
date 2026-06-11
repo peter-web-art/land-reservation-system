@@ -396,6 +396,7 @@ def admin_portal(request):
 
     # Basic stats
     total_users    = User.objects.count()
+    total_admins   = User.objects.filter(role=User.ROLE_ADMIN).count()
     total_owners   = User.objects.filter(role=User.ROLE_OWNER).count()
     total_customers = User.objects.filter(role=User.ROLE_CUSTOMER).count()
     unverified     = User.objects.filter(role=User.ROLE_OWNER, is_verified=False).count()
@@ -403,6 +404,7 @@ def admin_portal(request):
     total_lands    = Land.objects.count()
     total_bookings = Reservation.objects.count()
     pending_book   = Reservation.objects.filter(status='pending').count()
+    awaiting_payment_book = Reservation.objects.filter(status='awaiting_payment').count()
     approved_book  = Reservation.objects.filter(status='approved').count()
 
     system_settings = SystemSettings.objects.first()
@@ -626,11 +628,11 @@ def admin_portal(request):
     audit_logs = audit_logs[:40]
 
     return render(request, 'accounts/admin_portal.html', {
-        'total_users': total_users, 'total_owners': total_owners,
+        'total_users': total_users, 'total_admins': total_admins, 'total_owners': total_owners,
         'total_customers': total_customers,
         'unverified': unverified, 'suspended': suspended,
         'total_lands': total_lands, 'total_bookings': total_bookings,
-        'pending_book': pending_book, 'approved_book': approved_book,
+        'pending_book': pending_book, 'awaiting_payment_book': awaiting_payment_book, 'approved_book': approved_book,
         'total_revenue': total_revenue, 'monthly_revenue': monthly_revenue,
         'gross_revenue': gross_revenue, 'monthly_gross_revenue': monthly_gross_revenue,
         'owner_payout_total': owner_payout_total, 'monthly_owner_payout': monthly_owner_payout,
@@ -731,10 +733,10 @@ def admin_booking_action(request, booking_id):
     action = request.POST.get('action')
 
     if action == 'approve':
-        booking.status = 'approved'
+        booking.status = 'awaiting_payment'
         booking.updated_by = request.user
         booking.save()
-        messages.success(request, f'Booking #{booking.id} approved.')
+        messages.success(request, f'Booking #{booking.id} moved to awaiting payment.')
     elif action == 'reject':
         booking.status = 'rejected'
         booking.updated_by = request.user

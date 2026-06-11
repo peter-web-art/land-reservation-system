@@ -1,9 +1,21 @@
+import base64
+
 from django.test import TestCase
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from datetime import date
 
 from accounts.models import User, SystemSettings
 from .models import Land, Reservation, PaymentRecord
+
+
+TEST_PNG_BYTES = base64.b64decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/7mQAAAAASUVORK5CYII='
+)
+
+
+def make_test_image(filename):
+    return SimpleUploadedFile(filename, TEST_PNG_BYTES, content_type='image/png')
 
 
 class LandAccessTests(TestCase):
@@ -43,6 +55,15 @@ class LandAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Ocean View Plot')
 
+    def test_book_land_page_handles_missing_price(self):
+        self.land.price = None
+        self.land.save(update_fields=['price'])
+
+        response = self.client.get(reverse('lands:book_land', args=[self.land.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ocean View Plot')
+
     def test_send_message_ignores_external_referer_redirect(self):
         self.client.force_login(self.customer)
 
@@ -58,6 +79,96 @@ class LandAccessTests(TestCase):
         )
 
         self.assertRedirects(response, reverse('lands:inbox'))
+
+
+class LandPublishWizardTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='wizard-owner',
+            password='pass12345',
+            email='wizard-owner@example.com',
+            role=User.ROLE_OWNER,
+            is_owner=True,
+        )
+
+    def test_publish_land_accepts_selected_district(self):
+        self.client.force_login(self.owner)
+
+        payload = {
+            'title': 'Meru Plot',
+            'usage': 'rent',
+            'land_use': 'residential',
+            'region': 'arusha',
+            'district': 'Arusha City',
+            'ward': 'Sekei',
+            'weekly_discount': '0',
+            'monthly_discount': '0',
+            'current_step': '6',
+            'gallery_images': [
+                make_test_image('photo-1.png'),
+                make_test_image('photo-2.png'),
+                make_test_image('photo-3.png'),
+            ],
+            'image_positions': ['north', 'south', 'aerial'],
+        }
+
+        response = self.client.post(reverse('lands:add_land'), payload)
+
+        self.assertRedirects(response, reverse('lands:owner_dashboard'))
+        land = Land.objects.get(title='Meru Plot')
+        self.assertEqual(land.owner, self.owner)
+        self.assertEqual(land.district, 'Arusha City')
+        self.assertFalse(land.is_draft)
+
+    def test_publish_land_rejects_duplicate_image_positions(self):
+        self.client.force_login(self.owner)
+
+        payload = {
+            'title': 'Duplicate Positions Plot',
+            'usage': 'rent',
+            'land_use': 'residential',
+            'region': 'arusha',
+            'district': 'Arusha City',
+            'ward': 'Sekei',
+            'weekly_discount': '0',
+            'monthly_discount': '0',
+            'current_step': '6',
+            'gallery_images': [
+                make_test_image('photo-a.png'),
+                make_test_image('photo-b.png'),
+                make_test_image('photo-c.png'),
+            ],
+            'image_positions': ['north', 'north', 'aerial'],
+        }
+
+        response = self.client.post(reverse('lands:add_land'), payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Choose different viewing directions for each photo.')
+        self.assertFalse(Land.objects.filter(title='Duplicate Positions Plot').exists())
+
+    def test_invalid_publish_keeps_current_step(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('lands:add_land'),
+            {
+                'title': 'Invalid Discount Plot',
+                'usage': 'rent',
+                'land_use': 'residential',
+                'region': 'arusha',
+                'district': 'Arusha City',
+                'topography': 'flat',
+                'soil_fertility': 'moderate',
+                'weekly_discount': '95',
+                'monthly_discount': '0',
+                'current_step': '6',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="6"')
+        self.assertContains(response, 'Must be 0')
 
 
 class PaymentTrackingTests(TestCase):
@@ -94,6 +205,8 @@ class PaymentTrackingTests(TestCase):
         )
 
     def test_customer_reference_submission_stays_unpaid_until_owner_confirms(self):
+        self.reservation.status = 'awaiting_payment'
+        self.reservation.save()
         self.client.force_login(self.customer)
 
         response = self.client.post(
@@ -110,6 +223,7 @@ class PaymentTrackingTests(TestCase):
         self.reservation.refresh_from_db()
         payment = PaymentRecord.objects.get(reservation=self.reservation)
         self.assertRedirects(response, reverse('lands:payments_and_bills'))
+        self.assertEqual(self.reservation.status, 'awaiting_payment')
         self.assertEqual(self.reservation.payment_status, 'unpaid')
         self.assertFalse(self.reservation.payment_confirmed)
         self.assertEqual(self.reservation.payment_reference, 'ABC123XYZ')
@@ -138,7 +252,7 @@ class PaymentTrackingTests(TestCase):
         self.assertRedirects(response, reverse('lands:manage_payments'))
         self.assertFalse(self.reservation.payment_confirmed)
         self.assertEqual(self.reservation.payment_status, 'unpaid')
-        self.assertEqual(self.reservation.status, 'approved')
+        self.assertEqual(self.reservation.status, 'awaiting_payment')
         self.assertEqual(payment.status, 'confirmed')
         self.assertEqual(str(payment.platform_fee_rate), '10.00')
         self.assertEqual(str(payment.platform_fee_amount), '15000.00')
@@ -156,7 +270,7 @@ class PaymentTrackingTests(TestCase):
 
         self.reservation.refresh_from_db()
         self.assertRedirects(response, reverse('lands:reservations_management'))
-        self.assertEqual(self.reservation.status, 'approved')
+        self.assertEqual(self.reservation.status, 'awaiting_payment')
         self.assertEqual(self.reservation.payment_status, 'unpaid')
         self.assertFalse(self.reservation.payment_confirmed)
 
@@ -170,6 +284,7 @@ class PaymentTrackingTests(TestCase):
             status='confirmed',
         )
         self.reservation.amount_paid = '400000.00'
+        self.reservation.status = 'awaiting_payment'
         self.reservation.save()
 
         self.client.force_login(self.customer)
