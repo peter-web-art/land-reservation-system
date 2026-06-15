@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-8">
   <div class="flex items-center gap-2 text-sm text-white/80 mb-6 bg-black/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm">
-    <a href="{% url 'lands:land_list' %}" class="hover:text-white no-underline text-white font-medium">Browse</a>
+    <a href="{% url 'lands:browse_lands' %}" class="hover:text-white no-underline text-white font-medium">Browse</a>
     <span>/</span>
     <a href="{% url 'lands:land_detail' land.id %}" class="hover:text-white no-underline text-white">{{ land.title|truncatechars:30 }}</a>
     <span>/</span>

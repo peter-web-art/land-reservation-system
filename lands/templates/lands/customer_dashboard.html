@@ -67,7 +67,7 @@
         <h2 class="text-xl font-semibold text-gray-900">Fresh lands</h2>
         <p class="text-sm text-gray-500">Browse the latest land posts and book the right property for your needs.</p>
       </div>
-      <a href="{% url 'lands:land_list' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all lands &rarr;</a>
+      <a href="{% url 'lands:browse_lands' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all lands &rarr;</a>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {% for land in featured_lands %}
@@ -148,7 +148,7 @@
       <div class="text-5xl mb-4">📋</div>
       <h3 class="text-xl font-semibold text-gray-800 mb-2">No active reservations yet</h3>
       <p class="text-gray-500 mb-4">Browse available land posts, request booking, and manage your reservation period here.</p>
-      <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+      <a href="{% url 'lands:browse_lands' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
         <i class="bi bi-search"></i> Browse land posts
       </a>
     </div>

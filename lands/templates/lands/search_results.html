@@ -24,7 +24,7 @@
     <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
       <a href="/" class="hover:text-[#1a5c38] no-underline">Home</a>
       <span>/</span>
-      <a href="{% url 'lands:land_list' %}" class="hover:text-[#1a5c38] no-underline">Browse</a>
+      <a href="{% url 'lands:browse_lands' %}" class="hover:text-[#1a5c38] no-underline">Browse</a>
       <span>/</span>
       <span>Search Results</span>
     </div>
@@ -112,7 +112,7 @@
         <button type="submit" class="px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors flex items-center gap-2">
           <i class="bi bi-search"></i> Search
         </button>
-        <a href="{% url 'lands:land_list' %}" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center gap-2 no-underline">
+        <a href="{% url 'lands:browse_lands' %}" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center gap-2 no-underline">
           <i class="bi bi-x-circle"></i> Clear
         </a>
       </div>
@@ -378,7 +378,7 @@
     </div>
     <h3 class="text-xl font-semibold text-gray-800 mb-2">No results found</h3>
     <p class="text-gray-500 mb-4">Try a different region, keyword, or adjust your filters.</p>
-    <a href="{% url 'lands:land_list' %}" class="px-6 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors flex items-center gap-2 no-underline">
+    <a href="{% url 'lands:browse_lands' %}" class="px-6 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors flex items-center gap-2 no-underline">
       <i class="bi bi-grid"></i> Browse All Lands
     </a>
   </div>

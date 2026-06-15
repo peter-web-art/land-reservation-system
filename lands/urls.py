@@ -5,6 +5,7 @@ app_name = "lands"
 
 urlpatterns = [
     path('',                                            views.land_list,                 name='land_list'),
+    path('browse/',                                     views.browse_lands,               name='browse_lands'),
     path('search/',                                     views.search_lands,              name='search_lands'),
     path('api/location-autocomplete/',                  views.location_autocomplete,     name='location_autocomplete'),
     path('api/districts/',                              views.districts_api,             name='districts_api'),
@@ -47,5 +48,11 @@ urlpatterns = [
     path('payments/',                                   views.payments_and_bills,     name='payments_and_bills'),
     path('payments/manage/',                            views.manage_payments,        name='manage_payments'),
     path('bookings/<int:pk>/submit-payment/',           views.submit_payment,         name='submit_payment'),
+    path('reservations/<int:pk>/payment-options/',       views.reservation_payment_options, name='reservation_payment_options'),
     path('bookings/<int:pk>/confirm-payment/',          views.confirm_payment_receipt, name='confirm_payment_receipt'),
+    path('payments/<int:payment_id>/acknowledge-payout/', views.acknowledge_payout_received, name='acknowledge_payout_received'),
+    
+    # Admin Reported Lands
+    path('admin/reported-lands/',                       views.admin_reported_lands,    name='admin_reported_lands'),
+    path('admin/reported-lands/<int:report_id>/',       views.admin_report_detail,     name='admin_report_detail'),
 ]

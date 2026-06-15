@@ -42,7 +42,6 @@ def global_context(request):
         else:
             current_mode = 'customer'
             can_switch_mode = False
-
     return {
         'tanzania_regions':      TANZANIA_REGIONS,
         'tanzania_regions_json': json.dumps(TANZANIA_REGIONS),

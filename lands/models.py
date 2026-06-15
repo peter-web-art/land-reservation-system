@@ -408,13 +408,14 @@ class Reservation(AuditBase):
     payment_reference = models.CharField(max_length=100, blank=True, null=True)
     payment_receipt   = models.ImageField(upload_to='payments/receipts/', blank=True, null=True, help_text='Upload proof of payment (screenshot/receipt)')
     payment_date      = models.DateField(null=True, blank=True, help_text='Date when payment was made')
-    payment_confirmed = models.BooleanField(default=False, help_text='True if owner has confirmed receipt of funds')
+    payment_confirmed = models.BooleanField(default=False, help_text='True if admin has confirmed the customer payment')
     amount_paid    = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     agreed_price   = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
                       help_text='Final agreed price for this booking')
     requested_size = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                       help_text='Size requested by customer (if partial)')
     notes          = models.TextField(blank=True)
+    selected_operator_payment = models.ForeignKey('accounts.OperatorPaymentConfig', null=True, blank=True, on_delete=models.SET_NULL, related_name='selected_reservations', help_text='Operator payment method chosen by customer')
 
     class Meta:
         # BUG #2 FIX: Add database indexes for faster queries on common filters
@@ -526,7 +527,7 @@ class Reservation(AuditBase):
 
     @property
     def payment_review_status(self):
-        if self.remaining_balance <= 0:
+        if self.payments.filter(status='confirmed').exists():
             return 'confirmed'
         if self.payments.filter(status='submitted').exists() or self.payment_reference:
             return 'submitted'
@@ -564,6 +565,7 @@ class PaymentRecord(AuditBase):
     platform_fee_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     platform_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     confirmed_on = models.DateTimeField(null=True, blank=True)
+    owner_received_on = models.DateTimeField(null=True, blank=True, help_text='When the owner confirmed receipt of released funds')
 
     class Meta:
         ordering = ['-created_on']
@@ -575,6 +577,41 @@ class PaymentRecord(AuditBase):
     def owner_net_amount(self):
         fee = self.platform_fee_amount or Decimal('0')
         return max(Decimal('0'), (self.amount or Decimal('0')) - fee)
+
+    @property
+    def payout_release_available_on(self):
+        if not self.confirmed_on:
+            return None
+        return self.confirmed_on + timedelta(days=1)
+
+    @property
+    def payout_release_due_on(self):
+        if not self.confirmed_on:
+            return None
+        return self.confirmed_on + timedelta(days=7)
+
+    @property
+    def owner_payout_status(self):
+        if self.status != 'confirmed':
+            return 'pending'
+        if self.owner_received_on:
+            return 'received'
+        if not self.confirmed_on:
+            return 'waiting'
+        now = timezone.now()
+        if now < self.payout_release_available_on:
+            return 'holding'
+        if now <= self.payout_release_due_on:
+            return 'release_window'
+        return 'overdue'
+
+    @property
+    def payout_window_display(self):
+        if not self.confirmed_on:
+            return 'Pending admin confirmation'
+        start = self.payout_release_available_on
+        end = self.payout_release_due_on
+        return f'{start:%b %d, %Y %H:%M} - {end:%b %d, %Y %H:%M}'
 
 
 class Wishlist(AuditBase):
@@ -628,3 +665,47 @@ class Notification(AuditBase):
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+
+class LandReport(AuditBase):
+    """
+    Stores reports/flags submitted by users against suspicious land listings.
+    Admin can review and take action on reported lands.
+    """
+    REASON_CHOICES = [
+        ('spam', 'Spam or Misleading'),
+        ('fake', 'Fake or Fraudulent'),
+        ('illegal', 'Illegal Activity'),
+        ('harassment', 'Harassment or Abuse'),
+        ('scam', 'Suspected Scam'),
+        ('inappropriate', 'Inappropriate Content'),
+        ('duplicate', 'Duplicate Listing'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('reviewed', 'Under Review'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+    
+    land = models.ForeignKey(Land, on_delete=models.CASCADE, related_name='reports')
+    reported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='land_reports')
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
+    description = models.TextField(help_text='Detailed explanation of the report')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    admin_notes = models.TextField(blank=True, help_text='Admin notes on investigation or action taken')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='land_reports_reviewed')
+    reviewed_on = models.DateTimeField(null=True, blank=True)
+    is_spam = models.BooleanField(default=False, help_text='Mark as spam report itself')
+
+    class Meta:
+        ordering = ['-created_on']
+        verbose_name = 'Land Report'
+        verbose_name_plural = 'Land Reports'
+        unique_together = ('land', 'reported_by')  # One report per user per land
+
+    def __str__(self):
+        return f"Report: {self.land.title} by {self.reported_by.username} ({self.get_reason_display()})"

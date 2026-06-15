@@ -21,7 +21,7 @@ import csv
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from .models import User, PersonalDetails, SystemSettings
+from .models import User, PersonalDetails, SystemSettings, OperatorPaymentConfig
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -79,6 +79,20 @@ def safe_redirect_back(request, fallback):
     ):
         return redirect(referer)
     return redirect(fallback)
+
+
+def get_platform_fee_percentage():
+    settings_obj = SystemSettings.objects.first()
+    if not settings_obj:
+        settings_obj = SystemSettings.objects.create()
+    return settings_obj.platform_fee_percentage or Decimal('0')
+
+
+def apply_platform_fee_to_payment(payment):
+    fee_rate = get_platform_fee_percentage()
+    payment.platform_fee_rate = fee_rate
+    payment.platform_fee_amount = round((payment.amount or Decimal('0')) * fee_rate / Decimal('100'), 2)
+    return payment
 
 
 # ── Forms ──────────────────────────────────────────────────────────────────────
@@ -393,6 +407,7 @@ def profile_edit(request):
 @admin_required
 def admin_portal(request):
     from lands.models import Land, Reservation, PaymentRecord
+    
 
     # Basic stats
     total_users    = User.objects.count()
@@ -627,6 +642,9 @@ def admin_portal(request):
     audit_logs.sort(key=lambda x: x['timestamp'], reverse=True)
     audit_logs = audit_logs[:40]
 
+    # Operator payment configs to show quick access in portal
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
+
     return render(request, 'accounts/admin_portal.html', {
         'total_users': total_users, 'total_admins': total_admins, 'total_owners': total_owners,
         'total_customers': total_customers,
@@ -653,6 +671,7 @@ def admin_portal(request):
         'system_settings': system_settings,
         'audit_logs': audit_logs,
         'registration_form': registration_form,
+        'operator_payment_configs': operator_payment_configs,
     })
 
 

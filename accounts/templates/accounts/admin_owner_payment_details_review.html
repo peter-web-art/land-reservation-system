@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Review Payout Details — Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-5xl">
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'accounts:admin_owner_payment_details' %}"
+      class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">
+      <i class="bi bi-arrow-left"></i> Back to Payouts
+    </a>
+    <span class="text-gray-300">/</span>
+    <span class="text-sm text-gray-700 font-medium">{{ payment_detail.user.username }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left: Payment Details -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Owner Card -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="bi bi-person-circle text-[#1a5c38]"></i> Owner Information
+        </h2>
+        <div class="flex items-center gap-4 mb-4">
+          {% if payment_detail.user.profile_picture %}
+          <img src="{{ payment_detail.user.profile_picture.url }}" alt=""
+            class="w-16 h-16 rounded-full object-cover border border-gray-200">
+          {% else %}
+          <div class="w-16 h-16 rounded-full bg-[#1a5c38] text-white flex items-center justify-center text-2xl font-bold">
+            {{ payment_detail.user.username|slice:":1"|upper }}
+          </div>
+          {% endif %}
+          <div>
+            <h3 class="text-lg font-bold text-gray-900">{{ payment_detail.user.get_full_name|default:payment_detail.user.username }}</h3>
+            <p class="text-sm text-gray-500">@{{ payment_detail.user.username }} · {{ payment_detail.user.email }}</p>
+            <div class="flex items-center gap-2 mt-2">
+              {% if payment_detail.user.is_verified %}
+              <span class="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                <i class="bi bi-patch-check-fill"></i> Verified Owner
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 text-xs text-gray-500">
+                <i class="bi bi-patch-question"></i> Unverified
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Details Card -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="bi bi-wallet2 text-[#1a5c38]"></i> Payout Method Details
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="text-sm font-semibold text-gray-600 mb-1 block">Payment Method</label>
+            <div class="flex items-center gap-2">
+              <span class="px-3 py-1.5 rounded-full text-sm font-semibold
+                {% if payment_detail.payment_method == 'mpesa' %}bg-green-100 text-green-700
+                {% elif payment_detail.payment_method == 'bank_transfer' %}bg-blue-100 text-blue-700
+                {% elif payment_detail.payment_method == 'airtel' %}bg-red-100 text-red-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ payment_detail.get_payment_method_display }}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-gray-600 mb-1 block">Account Identifier</label>
+            <code class="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono">{{ payment_detail.account_identifier }}</code>
+          </div>
+
+          <div>
+            <label class="text-sm font-semibold text-gray-600 mb-1 block">Account Holder Name</label>
+            <p class="text-gray-900">{{ payment_detail.account_holder_name|default:"Not provided" }}</p>
+          </div>
+
+          {% if payment_detail.bank_name %}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm font-semibold text-gray-600 mb-1 block">Bank Name</label>
+              <p class="text-gray-900">{{ payment_detail.bank_name }}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-600 mb-1 block">Branch</label>
+              <p class="text-gray-900">{{ payment_detail.bank_branch|default:"—" }}</p>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="pt-4 border-t border-gray-100">
+            <label class="text-sm font-semibold text-gray-600 mb-2 block">Status</label>
+            <div class="flex items-center gap-2">
+              {% if payment_detail.is_verified %}
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                <i class="bi bi-check-circle-fill"></i> Verified
+              </span>
+              <span class="text-xs text-gray-500">on {{ payment_detail.verified_on|date:"M d, Y H:i" }}</span>
+              {% else %}
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
+                <i class="bi bi-clock-fill"></i> Pending Review
+              </span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="text-xs text-gray-500 space-y-1">
+            <p>Submitted: {{ payment_detail.created_on|date:"M d, Y H:i" }}</p>
+            <p>Last Updated: {{ payment_detail.updated_on|date:"M d, Y H:i" }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other Payment Methods -->
+      {% if other_methods %}
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="bi bi-credit-card text-[#1a5c38]"></i> Other Payment Methods
+          <span class="ml-auto px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
+            {{ other_methods.count }}
+          </span>
+        </h2>
+        <div class="space-y-3">
+          {% for method in other_methods %}
+          <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-gray-900">{{ method.get_payment_method_display }}</span>
+                <code class="text-xs bg-white px-2 py-1 rounded border border-gray-200">{{ method.account_identifier }}</code>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">{{ method.account_holder_name|default:"No name provided" }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              {% if method.is_verified %}
+              <span class="text-xs font-semibold text-green-700">✔ Verified</span>
+              {% else %}
+              <span class="text-xs font-semibold text-amber-700">⏳ Pending</span>
+              {% endif %}
+              {% if method.is_default %}
+              <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">Default</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Actions -->
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sticky top-20">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="bi bi-lightning-charge text-amber-500"></i> Actions
+        </h3>
+
+        <form method="POST" class="space-y-3">
+          {% csrf_token %}
+
+          {% if not payment_detail.is_verified %}
+          <!-- Verify Button -->
+          <button type="submit" name="action" value="verify"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors">
+            <i class="bi bi-check-circle"></i> Verify Details
+          </button>
+
+          <!-- Reject -->
+          <details class="border border-gray-200 rounded-lg">
+            <summary class="px-4 py-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50">
+              <i class="bi bi-x-circle text-red-600"></i> Reject Details
+            </summary>
+            <div class="px-4 py-3 border-t border-gray-200 bg-red-50 space-y-2">
+              <textarea name="reason" rows="3" placeholder="Explain why these details were rejected..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30"></textarea>
+              <button type="submit" name="action" value="reject"
+                class="w-full px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                Reject & Notify Owner
+              </button>
+            </div>
+          </details>
+          {% else %}
+          <!-- Already Verified Badge -->
+          <div class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-100 text-green-700 rounded-lg font-semibold">
+            <i class="bi bi-check-circle-fill"></i> Already Verified
+          </div>
+          {% endif %}
+
+          <!-- Set as Default -->
+          {% if not payment_detail.is_default %}
+          <button type="submit" name="action" value="set_default"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+            <i class="bi bi-star"></i> Set as Default
+          </button>
+          {% else %}
+          <div class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-100 text-blue-700 rounded-lg font-medium">
+            <i class="bi bi-star-fill"></i> Default Method
+          </div>
+          {% endif %}
+        </form>
+
+        <!-- Info Box -->
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-xs text-blue-800">
+            <i class="bi bi-info-circle mr-1"></i>
+            Once verified, this owner can receive payouts. They'll be notified of the verification.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

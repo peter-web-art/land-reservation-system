@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}My Payments — Land Reservation{% endblock %}
+{% block content %}
+
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Payment Dashboard</h1>
+    <p class="text-gray-600">Track your payments and escrow releases</p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <!-- Held in Escrow -->
+    <div class="bg-white border border-amber-200 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="text-sm text-gray-600 uppercase font-semibold">Held in Escrow</p>
+          <p class="text-2xl font-bold text-amber-700 mt-1">Tsh {{ total_held|floatformat:0 }}</p>
+        </div>
+        <i class="bi bi-hourglass-split text-3xl text-amber-400"></i>
+      </div>
+      <p class="text-xs text-gray-500">{{ held_count }} payment{{ held_count|pluralize }}</p>
+    </div>
+
+    <!-- Available for Release -->
+    <div class="bg-white border border-green-200 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="text-sm text-gray-600 uppercase font-semibold">Ready for Release</p>
+          <p class="text-2xl font-bold text-green-700 mt-1">Tsh {{ total_available|floatformat:0 }}</p>
+        </div>
+        <i class="bi bi-check-circle text-3xl text-green-400"></i>
+      </div>
+      <p class="text-xs text-gray-500">{{ available_count }} payment{{ available_count|pluralize }}</p>
+    </div>
+
+    <!-- Released -->
+    <div class="bg-white border border-blue-200 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="text-sm text-gray-600 uppercase font-semibold">Released</p>
+          <p class="text-2xl font-bold text-blue-700 mt-1">Tsh {{ total_released|floatformat:0 }}</p>
+        </div>
+        <i class="bi bi-check2-all text-3xl text-blue-400"></i>
+      </div>
+      <p class="text-xs text-gray-500">{{ released_count }} payment{{ released_count|pluralize }}</p>
+    </div>
+
+    <!-- Total Pending (Net of Fees) -->
+    <div class="bg-white border border-purple-200 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <p class="text-sm text-gray-600 uppercase font-semibold">Your Net Balance</p>
+          <p class="text-2xl font-bold text-purple-700 mt-1">Tsh {{ total_available_net|floatformat:0 }}</p>
+        </div>
+        <i class="bi bi-wallet2 text-3xl text-purple-400"></i>
+      </div>
+      <p class="text-xs text-gray-500">After platform fees</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mb-6 border-b border-gray-200">
+    <div class="flex gap-8">
+      <button class="py-3 px-1 border-b-2 border-[#1a5c38] text-[#1a5c38] font-semibold tab-btn" data-tab="held">
+        <i class="bi bi-hourglass-split mr-2"></i> Held ({{ held_count }})
+      </button>
+      <button class="py-3 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 font-semibold tab-btn" data-tab="available">
+        <i class="bi bi-check-circle mr-2"></i> Ready for Release ({{ available_count }})
+      </button>
+      <button class="py-3 px-1 border-b-2 border-transparent text-gray-600 hover:text-gray-900 font-semibold tab-btn" data-tab="released">
+        <i class="bi bi-check2-all mr-2"></i> Released ({{ released_count }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Content: Held Payments -->
+  <div class="tab-content" id="held">
+    {% if held_payments %}
+    <div class="space-y-4">
+      {% for item in held_payments %}
+      <div class="bg-white border border-amber-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                <i class="bi bi-hourglass-split text-xl text-amber-600"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">{{ item.payment.reservation.land.title }}</h3>
+                <p class="text-sm text-gray-500">Ref: {{ item.payment.payment_reference }}</p>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 ml-15">
+              Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
+            </p>
+          </div>
+          
+          <div class="flex flex-col items-end gap-2">
+            <div class="text-right">
+              <p class="text-xs text-gray-500 uppercase font-semibold">Amount</p>
+              <p class="text-xl font-bold text-gray-900">Tsh {{ item.payment.amount|floatformat:0 }}</p>
+              <p class="text-xs text-amber-600 mt-1">Net: Tsh {{ item.payment.owner_net_amount|floatformat:0 }}</p>
+            </div>
+            <div class="text-right text-sm">
+              <p class="text-gray-600">Held for <strong class="text-amber-600">{{ item.days_held }} day{{ item.days_held|pluralize }}</strong></p>
+              <p class="text-amber-700 font-semibold">Available in {{ item.days_until_release }} day{{ item.days_until_release|pluralize }}</p>
+            </div>
+          </div>
+
+          <div class="md:text-right">
+            <a href="{% url 'accounts:owner_payment_detail' item.payment.pk %}" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors inline-block">
+              <i class="bi bi-eye mr-1"></i> View Details
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+      <i class="bi bi-inbox text-4xl text-amber-400 mb-3 block"></i>
+      <p class="text-gray-600">No payments currently held in escrow</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tab Content: Available Payments -->
+  <div class="tab-content hidden" id="available">
+    {% if available_payments %}
+    <div class="space-y-4">
+      {% for item in available_payments %}
+      <div class="bg-white border border-green-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="bi bi-check-circle text-xl text-green-600"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">{{ item.payment.reservation.land.title }}</h3>
+                <p class="text-sm text-gray-500">Ref: {{ item.payment.payment_reference }}</p>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 ml-15">
+              Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
+            </p>
+          </div>
+          
+          <div class="flex flex-col items-end gap-2">
+            <div class="text-right">
+              <p class="text-xs text-gray-500 uppercase font-semibold">Amount</p>
+              <p class="text-xl font-bold text-gray-900">Tsh {{ item.payment.amount|floatformat:0 }}</p>
+              <p class="text-xs text-green-600 mt-1">Net: Tsh {{ item.payment.owner_net_amount|floatformat:0 }}</p>
+            </div>
+            <div class="text-right text-sm">
+              <p class="text-green-700 font-semibold">Ready to release!</p>
+              <p class="text-gray-600">Due by {{ item.due_on|date:"M d, Y" }}</p>
+            </div>
+          </div>
+
+          <div class="md:text-right">
+            <a href="{% url 'accounts:owner_payment_detail' item.payment.pk %}" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors inline-block">
+              <i class="bi bi-eye mr-1"></i> Request Release
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+      <i class="bi bi-inbox text-4xl text-green-400 mb-3 block"></i>
+      <p class="text-gray-600">No payments ready for release yet</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tab Content: Released Payments -->
+  <div class="tab-content hidden" id="released">
+    {% if released_payments %}
+    <div class="space-y-4">
+      {% for item in released_payments %}
+      <div class="bg-white border border-blue-200 rounded-xl p-6 hover:shadow-lg transition-shadow opacity-75">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="bi bi-check2-all text-xl text-blue-600"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">{{ item.payment.reservation.land.title }}</h3>
+                <p class="text-sm text-gray-500">Ref: {{ item.payment.payment_reference }}</p>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 ml-15">
+              Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
+            </p>
+          </div>
+          
+          <div class="flex flex-col items-end gap-2">
+            <div class="text-right">
+              <p class="text-xs text-gray-500 uppercase font-semibold">Amount</p>
+              <p class="text-xl font-bold text-gray-900">Tsh {{ item.payment.amount|floatformat:0 }}</p>
+              <p class="text-xs text-blue-600 mt-1">Net: Tsh {{ item.payment.owner_net_amount|floatformat:0 }}</p>
+            </div>
+            <div class="text-right text-sm">
+              <p class="text-blue-700 font-semibold">Released</p>
+              <p class="text-gray-600">Confirmed: {{ item.payment.confirmed_on|date:"M d, Y" }}</p>
+            </div>
+          </div>
+
+          <div class="md:text-right">
+            <a href="{% url 'accounts:owner_payment_detail' item.payment.pk %}" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors inline-block">
+              <i class="bi bi-eye mr-1"></i> View Details
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
+      <i class="bi bi-inbox text-4xl text-blue-400 mb-3 block"></i>
+      <p class="text-gray-600">No payments released yet</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Help Section -->
+  <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+      <h3 class="font-bold text-blue-900 mb-3 flex items-center gap-2">
+        <i class="bi bi-info-circle"></i> How Payment Hold Works
+      </h3>
+      <ul class="text-sm text-blue-800 space-y-2">
+        <li>• Payments are confirmed and held for <strong>1 day</strong></li>
+        <li>• After 1 day, they become available for release</li>
+        <li>• You have <strong>7 days</strong> to request the release</li>
+        <li>• Platform fee (~5%) is deducted from each payment</li>
+        <li>• You receive the net amount to your verified account</li>
+      </ul>
+    </div>
+
+    <div class="bg-green-50 border border-green-200 rounded-xl p-6">
+      <h3 class="font-bold text-green-900 mb-3 flex items-center gap-2">
+        <i class="bi bi-lightbulb"></i> Tips for Faster Payments
+      </h3>
+      <ul class="text-sm text-green-800 space-y-2">
+        <li>• Verify your payment details in account settings</li>
+        <li>• Use the "Request Release" button to notify operator</li>
+        <li>• Include your land and reservation details in requests</li>
+        <li>• Check communication history for payment status</li>
+        <li>• Contact support if payment is overdue</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const tabName = this.dataset.tab;
+      
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Show selected tab
+      document.getElementById(tabName).classList.remove('hidden');
+      
+      // Update button styles
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-[#1a5c38]', 'text-[#1a5c38]');
+        b.classList.add('border-transparent', 'text-gray-600');
+      });
+      this.classList.remove('border-transparent', 'text-gray-600');
+      this.classList.add('border-[#1a5c38]', 'text-[#1a5c38]');
+    });
+  });
+</script>
+
+{% endblock %}

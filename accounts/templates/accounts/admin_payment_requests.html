@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Owner Requests — Admin{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-4">Owner Payment Requests</h1>
+  {% if page_obj %}
+    <ul class="space-y-3">
+      {% for m in page_obj %}
+        <li class="border rounded p-4 flex justify-between items-start">
+          <div>
+            <div class="text-sm font-semibold">{{ m.subject|default:'Payment request' }}</div>
+            <div class="text-xs text-gray-500">From {{ m.sender.get_full_name|default:m.sender.username }} • {{ m.created_on|date:'M d, Y H:i' }}</div>
+            <p class="mt-2 text-sm text-gray-700">{{ m.body|truncatechars:200 }}</p>
+            {% if m.land %}<div class="mt-2 text-xs text-gray-500">Land: {{ m.land.title }}</div>{% endif %}
+          </div>
+          <div class="ml-4 flex flex-col items-end">
+            <a href="{% url 'accounts:admin_message_detail' m.pk %}" class="px-3 py-1 bg-[#1a5c38] text-white rounded text-sm no-underline">Open</a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+    <div class="mt-4">{% if page_obj.has_other_pages %}
+      <div class="flex items-center gap-2">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-100 rounded">Prev</a>{% endif %}{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-100 rounded">Next</a>{% endif %}</div>
+    {% endif %}</div>
+  {% else %}
+    <p class="text-sm text-gray-500">No owner requests found.</p>
+  {% endif %}
+</div>
+{% endblock %}

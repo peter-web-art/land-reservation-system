@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Payment Details — Land Reservation{% endblock %}
+{% block content %}
+
+<div class="container mx-auto px-4 py-8 max-w-5xl">
+  <!-- Back Button -->
+  <div class="mb-6">
+    <a href="{% url 'accounts:owner_payment_dashboard' %}" class="text-sm text-gray-500 hover:text-[#1a5c38] no-underline">
+      ← Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Left: Payment & Reservation Details -->
+    <div class="lg:col-span-2">
+      
+      <!-- Payment Info Card -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#1a5c38] to-[#0f3a22] px-6 py-4">
+          <h2 class="text-xl font-bold text-white">Payment Reference #{{ payment.payment_reference }}</h2>
+          <p class="text-sm text-green-100 mt-1">Confirmed: {{ payment.confirmed_on|date:"M d, Y H:i" }}</p>
+        </div>
+        
+        <div class="p-6">
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Amount Confirmed</div>
+              <div class="text-3xl font-bold text-gray-900 mt-1">Tsh {{ payment.amount|floatformat:0 }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Platform Fee</div>
+              <div class="text-lg font-bold text-gray-900 mt-1">Tsh {{ payment.platform_fee_amount|floatformat:0 }}</div>
+              <p class="text-xs text-gray-500 mt-1">({{ payment.platform_fee_rate }}%)</p>
+            </div>
+          </div>
+
+          <div class="border-t border-gray-200 pt-4">
+            <div class="text-xs text-gray-500 uppercase font-semibold mb-2">Your Net Payment</div>
+            <div class="text-2xl font-bold text-green-700">Tsh {{ payment.owner_net_amount|floatformat:0 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escrow Timeline -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">
+          <i class="bi bi-timeline text-[#1a5c38] mr-2"></i> Release Timeline
+        </h3>
+        
+        <div class="space-y-4">
+          <!-- Confirmed -->
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+              <div class="w-1 h-12 bg-gradient-to-b from-green-300 to-amber-300"></div>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Payment Confirmed</p>
+              <p class="text-sm text-gray-600">{{ payment.confirmed_on|date:"M d, Y H:i" }}</p>
+              <p class="text-xs text-gray-500 mt-1">Customer payment verified by operator</p>
+            </div>
+          </div>
+
+          <!-- Hold Period -->
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full {% if escrow_status == 'held' %}bg-amber-100 text-amber-700{% else %}bg-gray-100 text-gray-700{% endif %} flex items-center justify-center font-bold">
+                <i class="bi bi-hourglass-split"></i>
+              </div>
+              <div class="w-1 h-12 {% if escrow_status in 'held,available,overdue' %}bg-gradient-to-b from-amber-300 to-blue-300{% else %}bg-gray-200{% endif %}"></div>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900">1-Day Hold Period</p>
+              <p class="text-sm text-gray-600">Until {{ payment.payout_release_available_on|date:"M d, Y H:i" }}</p>
+              {% if escrow_status == 'held' %}
+              <p class="text-xs text-amber-600 mt-1 font-semibold">🕐 Still in hold — {{ days_until_release }} day{{ days_until_release|pluralize }} remaining</p>
+              {% else %}
+              <p class="text-xs text-gray-500 mt-1">Hold period completed</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Available for Release -->
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full {% if escrow_status in 'available,overdue' %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-700{% endif %} flex items-center justify-center font-bold">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="w-1 h-12 {% if escrow_status == 'overdue' %}bg-gradient-to-b from-green-300 to-red-300{% else %}bg-gray-200{% endif %}"></div>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Available for Release</p>
+              <p class="text-sm text-gray-600">From {{ payment.payout_release_available_on|date:"M d" }} to {{ payment.payout_release_due_on|date:"M d, Y" }}</p>
+              {% if escrow_status == 'available' %}
+              <p class="text-xs text-green-600 mt-1 font-semibold">✓ Ready! Due in {{ days_until_due }} day{{ days_until_due|pluralize }}</p>
+              {% elif escrow_status == 'overdue' %}
+              <p class="text-xs text-red-600 mt-1 font-semibold">⚠️ OVERDUE — {{ days_until_due }} day{{ days_until_due|pluralize }} past due date</p>
+              {% else %}
+              <p class="text-xs text-gray-500 mt-1">Waiting for hold period to end</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Released -->
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-10 h-10 rounded-full {% if payment.owner_received_on %}bg-blue-100 text-blue-700{% else %}bg-gray-100 text-gray-700{% endif %} flex items-center justify-center font-bold">
+                <i class="bi bi-check2-all"></i>
+              </div>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Released to Your Account</p>
+              {% if payment.owner_received_on %}
+              <p class="text-sm text-gray-600">{{ payment.owner_received_on|date:"M d, Y H:i" }}</p>
+              <p class="text-xs text-blue-600 mt-1">Funds have been transferred to your account</p>
+              {% else %}
+              <p class="text-sm text-gray-600">Waiting for release request</p>
+              <p class="text-xs text-gray-500 mt-1">Submit a release request below</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reservation Details -->
+      <div class="bg-white border border-gray-200 rounded-xl shadow-sm mb-6 p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Associated Reservation</h3>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Land</div>
+              <div class="text-sm font-semibold text-gray-900 mt-1">{{ reservation.land.title }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Location</div>
+              <div class="text-sm text-gray-900 mt-1">{{ reservation.land.location }}</div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Booking Status</div>
+              <span class="px-2 py-1 rounded text-xs font-semibold mt-1 inline-block
+                {% if reservation.status == 'approved' %}bg-green-100 text-green-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ reservation.get_status_display }}
+              </span>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Booking Amount</div>
+              <div class="text-sm font-semibold text-gray-900 mt-1">Tsh {{ reservation.total_amount|floatformat:0 }}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Customer</div>
+              <div class="text-sm text-gray-900 mt-1">{{ reservation.customer.get_full_name|default:reservation.customer.username }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Already Confirmed</div>
+              <div class="text-sm font-semibold text-green-700 mt-1">Tsh {{ reservation.confirmed_amount_total|floatformat:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payout Account Info -->
+      {% if owner_payment_details %}
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-blue-900 mb-4">
+          <i class="bi bi-bank text-blue-600 mr-2"></i> Your Verified Payout Account
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm text-blue-800 uppercase font-semibold">Payment Method</p>
+            <p class="text-lg font-semibold text-gray-900 mt-1">{{ owner_payment_details.get_payment_method_display }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-blue-800 uppercase font-semibold">Account Details</p>
+            <p class="text-sm text-gray-900 mt-1">
+              <strong>{{ owner_payment_details.account_identifier }}</strong>
+              {% if owner_payment_details.account_holder_name %}
+              — {{ owner_payment_details.account_holder_name }}
+              {% endif %}
+            </p>
+          </div>
+          {% if owner_payment_details.bank_name %}
+          <div>
+            <p class="text-sm text-blue-800 uppercase font-semibold">Bank</p>
+            <p class="text-sm text-gray-900 mt-1">{{ owner_payment_details.bank_name }}{% if owner_payment_details.bank_branch %} — {{ owner_payment_details.bank_branch }}{% endif %}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-amber-900 mb-2">
+          <i class="bi bi-exclamation-triangle text-amber-600 mr-2"></i> Payment Details Not Verified
+        </h3>
+        <p class="text-sm text-amber-800 mb-4">You haven't submitted or verified your payout account yet. Funds will be held until you do.</p>
+        <a href="{% url 'accounts:owner_payment_details' %}" class="inline-block px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors">
+          <i class="bi bi-pencil mr-1"></i> Add Payment Details
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Actions Panel -->
+    <div class="lg:col-span-1">
+      <!-- Release Request Form -->
+      {% if escrow_status in 'available,overdue' and not payment.owner_received_on %}
+      <div class="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+        <h3 class="text-lg font-bold text-green-900 mb-4">
+          <i class="bi bi-send text-green-600 mr-2"></i> Request Payment Release
+        </h3>
+        <form method="post" action="{% url 'accounts:owner_request_payment' payment.pk %}">
+          {% csrf_token %}
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Message to Operator</label>
+            <textarea name="message" rows="4" placeholder="e.g., Please release my payment for the kipwapwa plot reservation..." 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      maxlength="1000" required></textarea>
+            <p class="text-xs text-gray-500 mt-1">Max 1000 characters</p>
+          </div>
+
+          <div class="bg-green-100 border border-green-300 rounded p-3 mb-4">
+            <p class="text-sm text-green-800">
+              <strong>What happens:</strong> Your request will be sent to the operator. They will review and release your funds to your verified account.
+            </p>
+          </div>
+
+          <button type="submit" class="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors">
+            <i class="bi bi-send mr-2"></i> Send Request
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- Status Badge -->
+      <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <h4 class="text-sm font-bold text-gray-900 uppercase mb-3">Current Status</h4>
+        
+        {% if escrow_status == 'held' %}
+        <div class="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+          <i class="bi bi-hourglass-split text-2xl text-amber-500"></i>
+          <div>
+            <p class="font-semibold text-amber-900">In Hold Period</p>
+            <p class="text-xs text-amber-700">{{ days_until_release }} day{{ days_until_release|pluralize }} until release</p>
+          </div>
+        </div>
+        <p class="text-xs text-gray-600">Funds are securely held. You'll be able to request release soon.</p>
+
+        {% elif escrow_status == 'available' %}
+        <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg mb-3">
+          <i class="bi bi-check-circle text-2xl text-green-600"></i>
+          <div>
+            <p class="font-semibold text-green-900">Ready for Release</p>
+            <p class="text-xs text-green-700">Due in {{ days_until_due }} day{{ days_until_due|pluralize }}</p>
+          </div>
+        </div>
+        <p class="text-xs text-gray-600">Your funds are ready! Submit a request above.</p>
+
+        {% elif escrow_status == 'overdue' %}
+        <div class="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg mb-3">
+          <i class="bi bi-exclamation-triangle text-2xl text-red-600"></i>
+          <div>
+            <p class="font-semibold text-red-900">Payment Overdue</p>
+            <p class="text-xs text-red-700">{{ days_until_due }} day{{ days_until_due|pluralize }} overdue</p>
+          </div>
+        </div>
+        <p class="text-xs text-gray-600">Your payment is past the release deadline. Please contact support.</p>
+
+        {% elif payment.owner_received_on %}
+        <div class="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <i class="bi bi-check2-all text-2xl text-blue-600"></i>
+          <div>
+            <p class="font-semibold text-blue-900">Released</p>
+            <p class="text-xs text-blue-700">{{ payment.owner_received_on|date:"M d, Y" }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Related Payments -->
+      {% if related_payments %}
+      <div class="bg-white border border-gray-200 rounded-xl p-6">
+        <h4 class="font-bold text-gray-900 mb-3">Other Payments</h4>
+        <div class="space-y-2 text-xs">
+          {% for rel_payment in related_payments %}
+          <div class="flex justify-between items-center pb-2 border-b border-gray-200 last:border-b-0">
+            <div>
+              <div class="font-mono text-gray-700">{{ rel_payment.payment_reference }}</div>
+              <div class="text-gray-500">{{ rel_payment.created_on|date:"M d" }}</div>
+            </div>
+            <div class="text-right">
+              <div class="font-semibold">Tsh {{ rel_payment.amount|floatformat:0 }}</div>
+              <span class="px-1.5 py-0.5 rounded text-xs font-semibold
+                {% if rel_payment.status == 'confirmed' %}bg-green-100 text-green-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ rel_payment.status|upper }}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

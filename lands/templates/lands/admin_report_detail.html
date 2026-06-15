@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Report #{{ report.id }} — Admin Review{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-5xl">
+
+  <!-- Breadcrumb / Header -->
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'lands:admin_reported_lands' %}"
+      class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline">
+      <i class="bi bi-arrow-left"></i> All Reports
+    </a>
+    <span class="text-gray-300">/</span>
+    <span class="text-sm text-gray-700 font-medium">Report #{{ report.id }}</span>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+
+    <!-- Left: Report Info -->
+    <div class="flex-1 space-y-5">
+
+      <!-- Status Banner -->
+      <div class="rounded-xl p-4 border flex items-center gap-3
+        {% if report.status == 'submitted' %}bg-red-50 border-red-200
+        {% elif report.status == 'reviewed' %}bg-amber-50 border-amber-200
+        {% elif report.status == 'resolved' %}bg-green-50 border-green-200
+        {% else %}bg-gray-50 border-gray-200{% endif %}">
+        <i class="bi bi-flag-fill text-2xl
+          {% if report.status == 'submitted' %}text-red-500
+          {% elif report.status == 'reviewed' %}text-amber-500
+          {% elif report.status == 'resolved' %}text-green-500
+          {% else %}text-gray-400{% endif %}"></i>
+        <div>
+          <p class="font-semibold text-sm
+            {% if report.status == 'submitted' %}text-red-800
+            {% elif report.status == 'reviewed' %}text-amber-800
+            {% elif report.status == 'resolved' %}text-green-800
+            {% else %}text-gray-700{% endif %}">
+            Status: {{ report.get_status_display }}
+          </p>
+          <p class="text-xs text-gray-500 mt-0.5">Report #{{ report.id }} · Submitted {{ report.created_on|date:"M j, Y" }}</p>
+        </div>
+        {% if report.is_spam %}
+        <span class="ml-auto px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full uppercase">
+          <i class="bi bi-slash-circle"></i> Spam
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Land Info Card -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="flex gap-4 p-5">
+          <div class="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+            {% if report.land.primary_image %}
+            <img src="{{ report.land.primary_image.url }}" alt="" class="w-full h-full object-cover">
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center text-3xl">🌍</div>
+            {% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded uppercase">
+                {{ report.land.get_usage_display }}
+              </span>
+              {% if not report.land.is_active %}
+              <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded uppercase">
+                <i class="bi bi-ban"></i> Suspended
+              </span>
+              {% endif %}
+            </div>
+            <a href="{% url 'lands:land_detail' report.land.id %}" target="_blank"
+              class="font-bold text-lg text-gray-900 hover:text-[#1a5c38] transition-colors no-underline block truncate">
+              {{ report.land.title }}
+            </a>
+            <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+              <i class="bi bi-geo-alt"></i> {{ report.land.location }}
+            </p>
+            <p class="text-sm text-gray-500 mt-1">
+              Land ID: <code class="bg-gray-100 px-1 rounded text-xs">{{ report.land.land_id }}</code>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Owner Info -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i class="bi bi-person-circle text-[#1a5c38]"></i> Land Owner
+        </h3>
+        <div class="flex items-center gap-4">
+          {% if report.land.owner.profile_picture %}
+          <img src="{{ report.land.owner.profile_picture.url }}" alt=""
+            class="w-12 h-12 rounded-full object-cover border border-gray-200">
+          {% else %}
+          <div class="w-12 h-12 rounded-full bg-[#1a5c38] text-white flex items-center justify-center text-xl font-bold">
+            {{ report.land.owner.username|slice:":1"|upper }}
+          </div>
+          {% endif %}
+          <div>
+            <p class="font-semibold text-gray-900">
+              {{ report.land.owner.get_full_name|default:report.land.owner.username }}
+            </p>
+            <p class="text-xs text-gray-500">@{{ report.land.owner.username }} · {{ report.land.owner.email }}</p>
+            <div class="flex items-center gap-2 mt-1">
+              {% if report.land.owner.is_verified %}
+              <span class="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                <i class="bi bi-patch-check-fill"></i> Verified
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 text-xs text-gray-500">
+                <i class="bi bi-patch-question"></i> Unverified
+              </span>
+              {% endif %}
+              {% if report.land.owner.is_suspended %}
+              <span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded uppercase">
+                Suspended
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xl font-bold text-gray-900">{{ report.land.owner.lands.count }}</p>
+            <p class="text-xs text-gray-500">Lands posted</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xl font-bold text-gray-900">{{ report.land.owner.land_reports_reviewed.count|default:"0" }}</p>
+            <p class="text-xs text-gray-500">Reports against</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Report Details -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i class="bi bi-exclamation-triangle text-red-500"></i> Report Details
+        </h3>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Reason</p>
+            <p class="text-gray-900 font-medium">{{ report.get_reason_display }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Description</p>
+            <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100">{{ report.description }}</div>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Reported By</p>
+            <p class="text-gray-700 text-sm">
+              <i class="bi bi-person"></i>
+              <strong>{{ report.reported_by.username }}</strong>
+              <span class="text-gray-400"> · {{ report.reported_by.email }}</span>
+            </p>
+          </div>
+          {% if report.reviewed_by %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Reviewed By</p>
+            <p class="text-gray-700 text-sm">
+              <i class="bi bi-shield-check text-green-600"></i>
+              {{ report.reviewed_by.username }} on {{ report.reviewed_on|date:"M j, Y H:i" }}
+            </p>
+          </div>
+          {% endif %}
+          {% if report.admin_notes %}
+          <div>
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Previous Admin Notes</p>
+            <div class="bg-amber-50 border border-amber-100 rounded-lg p-3 text-sm text-amber-800 whitespace-pre-wrap">{{ report.admin_notes }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Related Reports -->
+      {% if related_reports %}
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i class="bi bi-files text-[#1a5c38]"></i> Other Reports on This Land
+          <span class="ml-auto px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
+            {{ related_reports.count }}
+          </span>
+        </h3>
+        <div class="space-y-3">
+          {% for r in related_reports %}
+          <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div class="text-sm">
+              <p class="font-medium text-gray-800">{{ r.get_reason_display }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">
+                by {{ r.reported_by.username }} · {{ r.created_on|date:"M j, Y" }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                {% if r.status == 'submitted' %}bg-red-100 text-red-700
+                {% elif r.status == 'reviewed' %}bg-amber-100 text-amber-700
+                {% elif r.status == 'resolved' %}bg-green-100 text-green-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ r.get_status_display }}
+              </span>
+              <a href="{% url 'lands:admin_report_detail' r.id %}"
+                class="text-xs text-[#1a5c38] hover:underline no-underline font-medium">Review</a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right: Action Panel -->
+    <div class="w-full lg:w-80 space-y-5">
+
+      <!-- Take Action -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sticky top-20">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-5 flex items-center gap-2">
+          <i class="bi bi-lightning-charge text-amber-500"></i> Take Action
+        </h3>
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <!-- Status -->
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Update Status</label>
+            <select name="status"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors">
+              {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if report.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Admin Notes -->
+          <div class="mb-5">
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">Admin Notes</label>
+            <textarea name="admin_notes" rows="4"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors resize-none"
+              placeholder="Add investigation notes, findings, or action taken...">{{ report.admin_notes }}</textarea>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="space-y-2 mb-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Quick Actions</p>
+
+            <button type="submit" name="action" value="update_status"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors">
+              <i class="bi bi-save"></i> Save & Update Status
+            </button>
+
+            {% if report.land.is_active %}
+            <button type="submit" name="action" value="suspend_land"
+              onclick="return confirm('Suspend land \'{{ report.land.title }}\'? It will be hidden from listings.')"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+              <i class="bi bi-ban"></i> Suspend This Land
+            </button>
+            {% else %}
+            <div class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg text-sm font-semibold cursor-not-allowed">
+              <i class="bi bi-ban"></i> Land Already Suspended
+            </div>
+            {% endif %}
+
+            {% if not report.land.owner.is_suspended %}
+            <button type="submit" name="action" value="suspend_owner"
+              onclick="return confirm('Suspend owner \'{{ report.land.owner.username }}\'? They will be unable to log in.')"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+              <i class="bi bi-person-slash"></i> Suspend Owner Account
+            </button>
+            {% else %}
+            <div class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg text-sm font-semibold cursor-not-allowed">
+              <i class="bi bi-person-slash"></i> Owner Already Suspended
+            </div>
+            {% endif %}
+
+            <button type="submit" name="action" value="dismiss"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+              <i class="bi bi-x-circle"></i> Dismiss Report
+            </button>
+
+            <button type="submit" name="action" value="mark_spam"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-orange-300 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50 transition-colors">
+              <i class="bi bi-slash-circle"></i> Mark Reporter as Spam
+            </button>
+          </div>
+        </form>
+
+        <!-- Danger Zone Notice -->
+        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p class="text-xs text-yellow-800 flex items-start gap-1.5">
+            <i class="bi bi-exclamation-triangle-fill mt-0.5 flex-shrink-0"></i>
+            Suspension actions are irreversible from this panel. The owner must contact support to restore access.
+          </p>
+        </div>
+      </div>
+
+      <!-- View Land Link -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <a href="{% url 'lands:land_detail' report.land.id %}" target="_blank"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#1a5c38] text-[#1a5c38] rounded-lg text-sm font-semibold hover:bg-[#1a5c38] hover:text-white transition-colors no-underline">
+          <i class="bi bi-box-arrow-up-right"></i> View Full Land Listing
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

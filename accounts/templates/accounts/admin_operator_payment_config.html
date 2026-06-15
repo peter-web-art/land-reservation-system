@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Operator Payment Configuration - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-8" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'accounts:admin_portal' %}" class="inline-flex items-center text-gray-700 hover:text-primary">
+                    <i class="bi bi-speedometer2 mr-2"></i>Admin Portal
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="bi bi-chevron-right text-gray-400"></i>
+                    <span class="ml-1 md:ml-2 text-gray-700">Payment Configuration</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Payment Configuration</h1>
+            <p class="text-lg text-gray-600">Configure payment methods where customers send payments</p>
+        </div>
+        <a href="{% url 'accounts:admin_operator_payment_config_add' %}" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors">
+            <i class="bi bi-plus-circle mr-2"></i>Add Payment Method
+        </a>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-4 p-4 rounded-lg {% if message.tags %}bg-{{ message.tags }}-50 border border-{{ message.tags }}-200 text-{{ message.tags }}-700{% else %}bg-blue-50 border border-blue-200 text-blue-700{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Info Alert -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="bi bi-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    Configure the payment methods and account details where customers should send their payments. 
+                    These details will be displayed to customers during checkout.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods List -->
+    <div class="grid grid-cols-1 gap-4">
+        {% for config in configs %}
+            <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                <div class="flex justify-between items-start">
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold" 
+                                  style="background:{% if config.payment_method == 'mpesa' %}#22863a{% elif config.payment_method == 'airtel' %}#cb2431{% elif config.payment_method == 'tigo' %}#6f42c1{% elif config.payment_method == 'bank_transfer' %}#005a9c{% else %}#555{% endif %}; color:white;">
+                                {{ config.get_payment_method_display }}
+                            </span>
+                            {% if config.is_active %}
+                                <span class="text-green-600 font-semibold"><i class="bi bi-check-circle"></i> Active</span>
+                            {% else %}
+                                <span class="text-gray-500 font-semibold"><i class="bi bi-x-circle"></i> Inactive</span>
+                            {% endif %}
+                            <span class="text-gray-500 text-sm">Priority: {{ config.priority }}</span>
+                        </div>
+                        <div class="space-y-2 text-gray-700">
+                            <p><strong>Account:</strong> <code class="bg-gray-100 px-2 py-1 rounded text-sm">{{ config.account_identifier }}</code></p>
+                            <p><strong>Name:</strong> {{ config.account_holder_name }}</p>
+                            {% if config.bank_name %}
+                                <p><strong>Bank:</strong> {{ config.bank_name }}{% if config.bank_branch %} ({{ config.bank_branch }}){% endif %}</p>
+                            {% endif %}
+                            {% if config.instructions %}
+                                <p><strong>Instructions:</strong> {{ config.instructions|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-2">
+                        {% if config.is_active %}
+                            <form method="post" action="{% url 'accounts:admin_operator_payment_config_toggle' config.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors" title="Deactivate">
+                                    <i class="bi bi-eye-slash"></i>
+                                </button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'accounts:admin_operator_payment_config_toggle' config.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors" title="Activate">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                        <a href="{% url 'accounts:admin_operator_payment_config_edit' config.id %}" class="px-3 py-2 bg-blue-200 text-blue-700 rounded hover:bg-blue-300 transition-colors">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <a href="{% url 'accounts:admin_operator_payment_config_delete' config.id %}" class="px-3 py-2 bg-red-200 text-red-700 rounded hover:bg-red-300 transition-colors">
+                            <i class="bi bi-trash"></i> Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+                <i class="bi bi-exclamation-triangle text-yellow-600 text-4xl mb-4"></i>
+                <p class="text-yellow-700 text-lg font-medium">No payment methods configured yet</p>
+                <p class="text-yellow-600 mb-4">Add at least one payment method so customers can submit payments</p>
+                <a href="{% url 'accounts:admin_operator_payment_config_add' %}" class="inline-block px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                    <i class="bi bi-plus-circle mr-2"></i>Add First Payment Method
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
