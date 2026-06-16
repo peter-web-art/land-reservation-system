@@ -436,8 +436,18 @@ def admin_portal(request):
     monthly_revenue = confirmed_payments.filter(
         confirmed_on__gte=timezone.now() - timedelta(days=30)
     ).aggregate(total=Sum('platform_fee_amount'))['total'] or 0
-    owner_payout_total = gross_revenue - total_revenue
-    monthly_owner_payout = monthly_gross_revenue - monthly_revenue
+
+    # Owner payout should reflect funds waiting to be paid out to owners
+    pending_owner_payments = confirmed_payments.filter(owner_received_on__isnull=True)
+    pending_gross = pending_owner_payments.aggregate(total=Sum('amount'))['total'] or 0
+    pending_platform_fees = pending_owner_payments.aggregate(total=Sum('platform_fee_amount'))['total'] or 0
+    owner_payout_total = pending_gross - pending_platform_fees
+
+    # Monthly owner payout (pending) — confirmed in last 30 days and still not released
+    monthly_pending = pending_owner_payments.filter(confirmed_on__gte=timezone.now() - timedelta(days=30))
+    monthly_pending_gross = monthly_pending.aggregate(total=Sum('amount'))['total'] or 0
+    monthly_pending_fees = monthly_pending.aggregate(total=Sum('platform_fee_amount'))['total'] or 0
+    monthly_owner_payout = monthly_pending_gross - monthly_pending_fees
 
     # Recent data
     # Global Search Logic

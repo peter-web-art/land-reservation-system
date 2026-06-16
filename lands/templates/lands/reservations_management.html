@@ -112,6 +112,12 @@
               <strong class="text-gray-600">{{ r.payment_reference }}</strong>
             </div>
             {% endif %}
+            {% if r.payment_method or r.latest_pending_payment.payment_method %}
+            <div>
+              <div class="text-xs text-gray-500 uppercase">Payment Method</div>
+              <strong class="text-gray-700">{{ r.latest_pending_payment.payment_method|default:r.payment_method|default:"Not set"|capfirst }}</strong>
+            </div>
+            {% endif %}
           </div>
 
           {% if r.notes %}<div class="mt-3 text-sm text-gray-600 flex items-start gap-2"><i class="bi bi-chat-text mt-0.5"></i> {{ r.notes|truncatewords:25 }}</div>{% endif %}

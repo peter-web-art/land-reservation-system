@@ -68,7 +68,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 text-sm">
           <div>
             <div class="text-xs text-gray-500 uppercase">Land Owner</div>
             <div class="font-semibold text-gray-900">{{ booking.land.owner.get_full_name|default:booking.land.owner.username }}</div>
@@ -88,6 +88,10 @@
           <div>
             <div class="text-xs text-gray-500 uppercase">Payment Date</div>
             <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_date|date:"M d, Y"|default:booking.payment_date|date:"M d, Y"|default:"Not set" }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Payment Method</div>
+            <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_method|default:booking.payment_method|default:"Not set"|capfirst }}</div>
           </div>
         </div>
 
@@ -109,6 +113,80 @@
         {% elif booking.payment_review_status == 'confirmed' %}
         <div class="mt-5 p-4 rounded-xl bg-green-50 border border-green-200 text-sm text-green-800">
           The owner has confirmed this payment inside the system. This booking now counts toward tracked income.
+        </div>
+        {% endif %}
+
+        {% if booking.status == 'approved' or booking.status == 'awaiting_payment' %}
+        <div class="mt-4">
+          {% if booking.selected_operator_payment %}
+            {% with cfg=booking.selected_operator_payment %}
+              {% if cfg and cfg.account_identifier %}
+                {% if booking.payment_method == cfg.payment_method %}
+                  <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                    <i class="bi bi-phone"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Pay via</div>
+                      <div class="font-semibold">{{ cfg.get_payment_method_display }} — {{ cfg.account_identifier }}</div>
+                    </div>
+                  </div>
+                {% elif not booking.payment_method %}
+                  <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                    <i class="bi bi-phone"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Pay via</div>
+                      <div class="font-semibold">{{ cfg.get_payment_method_display }} — {{ cfg.account_identifier }}</div>
+                    </div>
+                  </div>
+                {% else %}
+                  {% with owner_pd=booking.land.owner.payment_details %}
+                    {% if owner_pd and owner_pd.account_identifier and owner_pd.payment_method == booking.payment_method %}
+                      <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <div>
+                          <div class="text-xs text-gray-500">Owner Account</div>
+                          <div class="font-semibold">{{ booking.land.owner.get_full_name|default:booking.land.owner.username }} — {{ owner_pd.account_identifier }}</div>
+                        </div>
+                      </div>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+          {% else %}
+            {% with cfg=operator_payment_configs|first %}
+              {% if cfg and cfg.account_identifier %}
+                {% if booking.payment_method == cfg.payment_method %}
+                  <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                    <i class="bi bi-phone"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Pay via</div>
+                      <div class="font-semibold">{{ cfg.get_payment_method_display }} — {{ cfg.account_identifier }}</div>
+                    </div>
+                  </div>
+                {% elif not booking.payment_method %}
+                  <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                    <i class="bi bi-phone"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Pay via</div>
+                      <div class="font-semibold">{{ cfg.get_payment_method_display }} — {{ cfg.account_identifier }}</div>
+                    </div>
+                  </div>
+                {% else %}
+                  {% with owner_pd=booking.land.owner.payment_details %}
+                    {% if owner_pd and owner_pd.account_identifier and owner_pd.payment_method == booking.payment_method %}
+                      <div class="inline-flex items-center gap-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <div>
+                          <div class="text-xs text-gray-500">Owner Account</div>
+                          <div class="font-semibold">{{ booking.land.owner.get_full_name|default:booking.land.owner.username }} — {{ owner_pd.account_identifier }}</div>
+                        </div>
+                      </div>
+                    {% endif %}
+                  {% endwith %}
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+          {% endif %}
         </div>
         {% endif %}
 
@@ -143,6 +221,15 @@
               <i class="bi bi-receipt"></i> {% if booking.payment_reference %}Update Reference{% else %}Submit Reference{% endif %}
             </a>
             {% endif %}
+          {% endif %}
+          {% if not booking.selected_operator_payment and booking.status == 'approved' %}
+            <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+              <i class="bi bi-credit-card-2-front"></i> Choose Payment Method
+            </a>
+          {% elif not booking.selected_operator_payment and booking.status == 'awaiting_payment' %}
+            <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+              <i class="bi bi-credit-card-2-front"></i> Choose Payment Method
+            </a>
           {% endif %}
         </div>
       </div>

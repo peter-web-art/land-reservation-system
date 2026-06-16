@@ -78,7 +78,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 text-sm">
           <div>
             <div class="text-xs text-gray-500 uppercase">Confirmed Paid</div>
             <div class="font-semibold text-green-700">Tsh {{ booking.confirmed_amount_total }}</div>
@@ -86,6 +86,10 @@
           <div>
             <div class="text-xs text-gray-500 uppercase">Platform Fee</div>
             <div class="font-semibold text-amber-700">Tsh {{ booking.platform_fee_total }}</div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Payment Method</div>
+            <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_method|default:booking.payment_method|default:"Not set"|capfirst }}</div>
+          </div>
           </div>
           <div>
             <div class="text-xs text-gray-500 uppercase">Owner Net</div>

@@ -43,6 +43,6 @@ urlpatterns = [
     # Owner Payment Dashboard & Tracking
     path('owner/payments/', payment_views.owner_payment_dashboard, name='owner_payment_dashboard'),
     path('owner/payments/<int:payment_id>/', payment_views.owner_payment_detail, name='owner_payment_detail'),
-    path('owner/payments/<int:payment_id>/request/', payment_views.owner_request_payment, name='owner_request_payment'),
+    # Owner requests are handled by admin now; owner-request endpoint removed
     path('owner/communication/', payment_views.owner_communication_list, name='owner_communication_list'),
 ]

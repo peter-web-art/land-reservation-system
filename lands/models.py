@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
 from accounts.models import User, AuditBase
+from django.urls import reverse
 
 
 class Utility(AuditBase):
@@ -537,10 +538,78 @@ class Reservation(AuditBase):
     def is_awaiting_payment(self):
         return self.status == 'awaiting_payment'
 
+    def save(self, *args, **kwargs):
+        """
+        Override save to send a notification to the customer when a reservation
+        transitions to 'approved' (booking confirmed). The notification contains
+        a link to payment options so the customer can proceed with any required payments.
+        """
+        old_status = None
+        if self.pk:
+            try:
+                old = Reservation.objects.get(pk=self.pk)
+                old_status = old.status
+            except Reservation.DoesNotExist:
+                old_status = None
+
+        super().save(*args, **kwargs)
+
+        # Send notification when reservation becomes approved
+        try:
+            if self.status == 'approved' and old_status != 'approved' and self.customer:
+                Notification.objects.create(
+                    user=self.customer,
+                    notification_type='booking_approved',
+                    title='Booking Confirmed — Proceed to Payment',
+                    message=(
+                        f"Your booking for '{self.land.title}' has been confirmed. "
+                        f"Please complete payment and choose an operator payment method: /lands/reservations/{self.pk}/payment-options/"
+                    ),
+                    link=f'/lands/reservations/{self.pk}/payment-options/'
+                )
+                # If there's a submitted payment attached to this reservation, copy key details
+                try:
+                    latest = self.latest_pending_payment
+                    if latest:
+                        update_fields = {}
+                        if not self.payment_reference and latest.payment_reference:
+                            update_fields['payment_reference'] = latest.payment_reference
+                        if not self.payment_date and latest.payment_date:
+                            update_fields['payment_date'] = latest.payment_date
+                        if not self.payment_method and latest.payment_method:
+                            update_fields['payment_method'] = latest.payment_method
+                        # Avoid copying receipt file here to prevent file handling complexity;
+                        # admins can view receipts from the PaymentRecord.
+                        if update_fields:
+                            Reservation.objects.filter(pk=self.pk).update(**update_fields)
+
+                        # Notify the owner that a payment reference has been submitted for this approved booking
+                        Notification.objects.create(
+                            user=self.land.owner,
+                            notification_type='payment',
+                            title='Payment Submitted for Approved Booking',
+                            message=(
+                                f"Customer {self.customer.username} submitted payment reference {latest.payment_reference} "
+                                f"for booking '{self.land.title}'. Please review in Manage Payments."
+                            ),
+                            link=reverse('lands:manage_payments')
+                        )
+                except Exception:
+                    import logging
+                    logging.exception('Failed to copy submitted payment details or notify owner')
+        except Exception:
+            # Avoid breaking save on notification errors; log to console for now
+            import logging
+            logging.exception('Failed to create booking_approved notification')
+
     @property
     def access_details_unlocked(self):
         """True when the customer has both approval and a fully confirmed payment."""
-        return self.status == 'approved' and self.payment_confirmed
+        # Unlock access details when booking is approved and there is at least
+        # some payment activity (either a submitted payment or a fully
+        # confirmed payment). This allows owner contact to be shown for
+        # partial payments too.
+        return self.status == 'approved' and (self.payment_confirmed or self.submitted_amount_total > 0)
 
     @property
     def is_fully_paid(self):
@@ -566,6 +635,12 @@ class PaymentRecord(AuditBase):
     platform_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     confirmed_on = models.DateTimeField(null=True, blank=True)
     owner_received_on = models.DateTimeField(null=True, blank=True, help_text='When the owner confirmed receipt of released funds')
+    # Cached owner payout/contact details at time of confirmation
+    owner_name = models.CharField(max_length=200, blank=True, null=True, help_text='Cached owner full name for payout')
+    owner_phone = models.CharField(max_length=30, blank=True, null=True, help_text='Cached owner phone for payout')
+    owner_email = models.EmailField(blank=True, null=True, help_text='Cached owner email for payout')
+    owner_payment_method = models.CharField(max_length=50, blank=True, null=True, help_text='Owner preferred payout method at confirmation')
+    owner_account_identifier = models.CharField(max_length=200, blank=True, null=True, help_text='Owner payout identifier (M-Pesa number / bank account)')
 
     class Meta:
         ordering = ['-created_on']

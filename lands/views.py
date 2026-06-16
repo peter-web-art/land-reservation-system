@@ -1637,8 +1637,9 @@ def help_center(request):
 @login_required
 def my_notifications(request):
     from lands.models import Notification
-    notifications = Notification.objects.filter(user=request.user)[:50]
-    unread_count = notifications.filter(is_read=False).count()
+    base_qs = Notification.objects.filter(user=request.user).order_by('-created_on')
+    unread_count = base_qs.filter(is_read=False).count()
+    notifications = base_qs[:50]
     return render(request, 'lands/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count,
@@ -1709,7 +1710,8 @@ def live_search(request):
 def my_bookings(request):
     """View for customers to track their own land reservations."""
     bookings = Reservation.objects.filter(customer=request.user).select_related('land').order_by('-created_on')
-    return render(request, 'lands/my_bookings.html', {'bookings': bookings})
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
+    return render(request, 'lands/my_bookings.html', {'bookings': bookings, 'operator_payment_configs': operator_payment_configs})
 
 
 @login_required
@@ -1726,12 +1728,14 @@ def payments_and_bills(request):
         for booking in active_bookings
         if booking.remaining_balance > 0
     )
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
     return render(request, 'lands/payments_and_bills.html', {
         'bookings': bookings,
         'unpaid_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'pending'),
         'under_review_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'submitted'),
         'confirmed_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'confirmed'),
         'outstanding_total': outstanding_total,
+        'operator_payment_configs': operator_payment_configs,
     })
 
 

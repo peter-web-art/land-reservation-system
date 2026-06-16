@@ -181,6 +181,45 @@ def admin_confirm_payment(request, payment_id):
     
     # Apply platform fee
     payment = apply_platform_fee(payment)
+    # Cache owner payout/contact details so admin can act on payouts without extra lookups
+    owner = reservation.land.owner
+    try:
+        # Preferred: owner's personal details and payment details
+        owner_full = None
+        owner_phone = None
+        owner_email = None
+        owner_pay_method = None
+        owner_account = None
+        if owner:
+            personal = getattr(owner, 'personal_details', None)
+            if personal:
+                owner_full = f"{personal.fname} {personal.surname}" if personal.fname and personal.surname else owner.get_full_name() or owner.username
+                owner_phone = personal.phone or owner.phone or None
+                owner_email = personal.email or owner.email or None
+            else:
+                owner_full = owner.get_full_name() or owner.username
+                owner_phone = owner.phone or None
+                owner_email = owner.email or None
+
+            payment_details = getattr(owner, 'payment_details', None)
+            if payment_details:
+                owner_pay_method = payment_details.get_payment_method_display() if hasattr(payment_details, 'get_payment_method_display') else payment_details.payment_method
+                owner_account = payment_details.account_identifier or None
+
+        if owner_full:
+            payment.owner_name = owner_full
+        if owner_phone:
+            payment.owner_phone = owner_phone
+        if owner_email:
+            payment.owner_email = owner_email
+        if owner_pay_method:
+            payment.owner_payment_method = owner_pay_method
+        if owner_account:
+            payment.owner_account_identifier = owner_account
+    except Exception:
+        import logging
+        logging.exception('Failed to cache owner payout details')
+
     payment.save()
     
     # Update reservation
@@ -1020,58 +1059,7 @@ def owner_payment_detail(request, payment_id):
     return render(request, 'accounts/owner_payment_detail.html', context)
 
 
-@login_required
-@csrf_protect
-@require_http_methods(["POST"])
-def owner_request_payment(request, payment_id):
-    """
-    Owner submits a request to operator for payment release.
-    Creates a message notification to admin.
-    """
-    payment = get_object_or_404(PaymentRecord, pk=payment_id)
-    
-    # Verify ownership
-    if payment.reservation.land.owner != request.user:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    message_text = request.POST.get('message', '').strip()
-    
-    if not message_text:
-        return JsonResponse({'error': 'Message cannot be empty'}, status=400)
-    
-    if len(message_text) > 1000:
-        return JsonResponse({'error': 'Message too long (max 1000 characters)'}, status=400)
-    
-    # Create notification to admin
-    admin_users = User.objects.filter(role='admin')
-    for admin in admin_users:
-        create_notification(
-            admin,
-            'owner_payment_request',
-            f'Payment Request from {request.user.get_full_name() or request.user.username}',
-            f'Payment {payment.payment_reference}: {message_text[:100]}...',
-            f'/accounts/admin-portal/payments/{payment.pk}/'
-        )
-        # Also create a Message thread entry for persistent communication
-        Message.objects.create(
-            sender=request.user,
-            recipient=admin,
-            land=payment.reservation.land,
-            subject=f'Payment {payment.payment_reference} request',
-            body=message_text[:2000]
-        )
-    
-    # Create notification for owner confirmation
-    create_notification(
-        request.user,
-        'payment_request_sent',
-        'Payment Request Submitted',
-        f'Your request for payment {payment.payment_reference} has been sent to the operator.',
-        f'/accounts/owner-payments/{payment.pk}/'
-    )
-    
-    messages.success(request, 'Your request has been sent to the operator.')
-    return redirect('accounts:owner_payment_detail', payment_id=payment.pk)
+# Owner request endpoint removed: payments and release are managed by admin/operator
 
 
 @login_required

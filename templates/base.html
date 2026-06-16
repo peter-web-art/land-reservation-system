@@ -192,15 +192,25 @@
 
     <div class="flex items-center gap-2 md:gap-3 shrink-0">
       {% if user.is_authenticated %}
-        {% if unread_messages %}
         <a href="{% url 'lands:inbox' %}"
           class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
           <i class="bi bi-chat-dots text-xl"></i>
-          <span
-            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{
-            unread_messages }}</span>
+          {% if unread_messages and unread_messages > 0 %}
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{ unread_messages }}</span>
+          {% else %}
+          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gray-300 rounded-full" title="No unread messages"></span>
+          {% endif %}
         </a>
-        {% endif %}
+
+        <a href="{% url 'lands:my_notifications' %}"
+          class="relative p-2 text-gray-600 hover:text-[#1a5c38] transition-colors no-underline">
+          <i class="bi bi-bell text-xl"></i>
+          {% if unread_notifications and unread_notifications > 0 %}
+          <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{{ unread_notifications }}</span>
+          {% else %}
+          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gray-300 rounded-full" title="No new notifications"></span>
+          {% endif %}
+        </a>
 
         {% if can_switch_mode %}
         <form method="post" action="{% url 'lands:switch_mode' %}" class="hidden md:block">
