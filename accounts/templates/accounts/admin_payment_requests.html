@@ -1,29 +1,80 @@
 {% extends "base.html" %}
-{% block title %}Owner Requests — Admin{% endblock %}
+{% block title %}Support Requests & Messages — Admin{% endblock %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-4">Owner Payment Requests</h1>
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Support Requests & Messages</h1>
+      <p class="text-sm text-gray-500 mt-1">Incoming messages from owners and customers.</p>
+    </div>
+    <a href="{% url 'accounts:admin_portal' %}" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#1a5c38] transition-colors no-underline mt-4 md:mt-0">
+      <i class="bi bi-arrow-left"></i> Back to Admin Portal
+    </a>
+  </div>
+
   {% if page_obj %}
     <ul class="space-y-3">
       {% for m in page_obj %}
-        <li class="border rounded p-4 flex justify-between items-start">
-          <div>
-            <div class="text-sm font-semibold">{{ m.subject|default:'Payment request' }}</div>
-            <div class="text-xs text-gray-500">From {{ m.sender.get_full_name|default:m.sender.username }} • {{ m.created_on|date:'M d, Y H:i' }}</div>
-            <p class="mt-2 text-sm text-gray-700">{{ m.body|truncatechars:200 }}</p>
-            {% if m.land %}<div class="mt-2 text-xs text-gray-500">Land: {{ m.land.title }}</div>{% endif %}
+        <li class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md hover:border-[#1a5c38]/30 transition-all flex justify-between items-start gap-4">
+          <div class="flex items-start gap-4 flex-1 min-w-0">
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 overflow-hidden
+              {% if m.sender.role == 'owner' %}bg-amber-500 text-white{% else %}bg-[#1a5c38] text-white{% endif %}">
+              {% if m.sender.profile_picture %}
+                <img src="{{ m.sender.profile_picture.url }}" alt="" class="w-full h-full object-cover">
+              {% else %}
+                {{ m.sender.username|make_list|first|upper }}
+              {% endif %}
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <span class="font-semibold text-gray-900">{{ m.sender.get_full_name|default:m.sender.username }}</span>
+                {% if m.sender.role == 'owner' %}
+                  <span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold uppercase">Owner</span>
+                {% else %}
+                  <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold uppercase">Customer</span>
+                {% endif %}
+                <span class="text-xs text-gray-400">{{ m.created_on|timesince }} ago</span>
+              </div>
+              <div class="text-sm font-medium text-gray-700 truncate">{{ m.subject|default:'Support request' }}</div>
+              <p class="mt-1 text-sm text-gray-500 truncate">{{ m.body|truncatechars:160 }}</p>
+              {% if m.land %}
+                <span class="inline-flex items-center gap-1 mt-1.5 text-xs text-[#1a5c38]"><i class="bi bi-geo-alt-fill"></i> {{ m.land.title|truncatechars:30 }}</span>
+              {% endif %}
+            </div>
           </div>
-          <div class="ml-4 flex flex-col items-end">
-            <a href="{% url 'accounts:admin_message_detail' m.pk %}" class="px-3 py-1 bg-[#1a5c38] text-white rounded text-sm no-underline">Open</a>
+          <div class="ml-4 flex flex-col items-end gap-2 flex-shrink-0">
+            {% if not m.is_read %}
+              <span class="w-2.5 h-2.5 bg-red-500 rounded-full" title="Unread"></span>
+            {% endif %}
+            <a href="{% url 'accounts:admin_message_detail' m.pk %}" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-medium no-underline hover:bg-[#134428] transition-colors">
+              Open
+            </a>
           </div>
         </li>
       {% endfor %}
     </ul>
-    <div class="mt-4">{% if page_obj.has_other_pages %}
-      <div class="flex items-center gap-2">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 bg-gray-100 rounded">Prev</a>{% endif %}{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 bg-gray-100 rounded">Next</a>{% endif %}</div>
-    {% endif %}</div>
+    <div class="mt-6">
+      {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-center gap-2">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 no-underline">← Prev</a>
+          {% endif %}
+          <span class="text-sm text-gray-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 no-underline">Next →</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
   {% else %}
-    <p class="text-sm text-gray-500">No owner requests found.</p>
+    <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
+      <i class="bi bi-chat-square-text text-5xl text-gray-300 mb-4"></i>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2">No messages yet</h3>
+      <p class="text-gray-500">When owners or customers send you a support request, it will appear here.</p>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

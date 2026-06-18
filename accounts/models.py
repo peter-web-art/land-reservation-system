@@ -147,3 +147,22 @@ class SystemSettings(models.Model):
 
     def __str__(self):
         return "Global System Settings"
+
+
+class Message(models.Model):
+    """
+    Simple one-to-one message record between two users.
+    Admin can send messages to any user and view threads.
+    """
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='accounts_sent_messages')
+    receiver = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='accounts_received_messages')
+    subject = models.CharField(max_length=200, blank=True)
+    body = models.TextField()
+    created_on = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_on']
+
+    def __str__(self):
+        return f"Message from {self.sender} to {self.receiver} ({self.created_on.isoformat()})"

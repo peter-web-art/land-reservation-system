@@ -115,6 +115,79 @@
         </div>
       </div>
 
+      <!-- Edit Payout Details (Admin Override) Card -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i class="bi bi-pencil-square text-amber-500"></i> Modify Payout Details (Admin Override)
+        </h2>
+        
+        <form method="POST" class="space-y-4">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="edit_payout">
+          
+          {% if edit_form.non_field_errors %}
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              {% for error in edit_form.non_field_errors %}
+                <p class="text-sm text-red-700">{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+              {{ edit_form.payment_method }}
+              {% if edit_form.payment_method.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ edit_form.payment_method.errors.0 }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Account Identifier</label>
+              {{ edit_form.account_identifier }}
+              {% if edit_form.account_identifier.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ edit_form.account_identifier.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Account Holder Name</label>
+            {{ edit_form.account_holder_name }}
+            {% if edit_form.account_holder_name.errors %}
+              <p class="text-red-500 text-xs mt-1">{{ edit_form.account_holder_name.errors.0 }}</p>
+            {% endif %}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Bank Name</label>
+              {{ edit_form.bank_name }}
+              {% if edit_form.bank_name.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ edit_form.bank_name.errors.0 }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Bank Branch</label>
+              {{ edit_form.bank_branch }}
+              {% if edit_form.bank_branch.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ edit_form.bank_branch.errors.0 }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 py-2">
+            {{ edit_form.is_default }}
+            <label for="{{ edit_form.is_default.id_for_label }}" class="text-sm text-gray-700 font-medium">Set as default payout method</label>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button type="submit" class="px-5 py-2.5 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition-colors shadow-sm">
+              <i class="bi bi-save mr-1"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
       <!-- Other Payment Methods -->
       {% if other_methods %}
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">

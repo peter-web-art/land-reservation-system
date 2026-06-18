@@ -47,12 +47,13 @@
               <div class="flex items-center gap-2 mb-1">
                 <h3 class="text-xl font-bold text-gray-900">{{ b.land.title }}</h3>
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full 
-                  {% if b.status == 'pending' %}bg-amber-100 text-amber-700
+                  {% if b.is_escrow_holding %}bg-blue-100 text-blue-700
+                  {% elif b.status == 'pending' %}bg-amber-100 text-amber-700
                   {% elif b.status == 'awaiting_payment' %}bg-sky-100 text-sky-700
                   {% elif b.status == 'approved' %}bg-green-100 text-green-700
                   {% elif b.status == 'rejected' %}bg-red-100 text-red-700
                   {% else %}bg-gray-100 text-gray-700{% endif %}">
-                  {{ b.get_status_display }}
+                  {% if b.is_escrow_holding %}Money on hold and will be released after 24 hours{% else %}{{ b.get_status_display }}{% endif %}
                 </span>
               </div>
               <p class="text-sm text-gray-500 flex items-center gap-1">
@@ -78,8 +79,8 @@
             {% endif %}
             <div>
               <p class="text-xs text-gray-400 mb-1">Payment Status</p>
-              <p class="font-bold {% if b.payment_confirmed %}text-green-600{% else %}text-amber-600{% endif %}">
-                {% if b.payment_confirmed %}Paid & Confirmed{% elif b.status == 'awaiting_payment' and b.payment_reference %}Payment Under Review{% elif b.status == 'awaiting_payment' %}Awaiting Payment{% else %}Unpaid{% endif %}
+              <p class="font-bold {% if b.is_escrow_holding %}text-blue-600{% elif b.payment_confirmed %}text-green-600{% else %}text-amber-600{% endif %}">
+                {% if b.is_escrow_holding %}Money on hold and will be released after 24 hours{% elif b.payment_confirmed %}Paid & Confirmed{% elif b.status == 'awaiting_payment' and b.payment_reference %}Payment Under Review{% elif b.status == 'awaiting_payment' %}Awaiting Payment{% else %}Unpaid{% endif %}
               </p>
             </div>
             <div>
@@ -116,14 +117,20 @@
                 </a>
               {% endif %}
             {% endif %}
-            {% if not b.selected_operator_payment and b.status == 'approved' %}
-              <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                <i class="bi bi-credit-card-2-front"></i> Choose Payment Method
+            {% if b.status == 'approved' and not b.payment_confirmed %}
+              <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                <i class="bi bi-credit-card-2-front"></i> Make payment
               </a>
-            {% elif not b.selected_operator_payment and b.status == 'awaiting_payment' %}
-              <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                <i class="bi bi-credit-card-2-front"></i> Choose Payment Method
-              </a>
+            {% elif b.status == 'awaiting_payment' and not b.payment_confirmed %}
+              {% if b.selected_operator_payment %}
+                <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                  <i class="bi bi-credit-card"></i> Make payment
+                </a>
+              {% else %}
+                <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                  <i class="bi bi-credit-card-2-front"></i> Make payment
+                </a>
+              {% endif %}
             {% endif %}
             {% comment %} Show operator account identifier for chosen or default method {% endcomment %}
             {% if b.status == 'approved' or b.status == 'awaiting_payment' %}

@@ -44,13 +44,15 @@
 
   /* Filter pill */
   .pill {
-    @apply px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-all duration-150 cursor-pointer select-none;
+    @apply inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-semibold border whitespace-nowrap transition-all duration-150 cursor-pointer select-none;
   }
   .pill-active {
-    @apply bg-[#1a5c38] text-white border-[#1a5c38] shadow-sm;
+    @apply bg-[#1a5c38] text-white border-[#1a5c38];
+    box-shadow: 0 10px 20px rgba(26,92,56,0.18);
   }
   .pill-inactive {
-    @apply bg-white text-gray-500 border-gray-200 hover:border-[#1a5c38]/50 hover:text-gray-800;
+    @apply bg-white text-gray-600 border-gray-200 hover:border-[#1a5c38] hover:text-gray-800;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   }
 
   /* Status badge */
@@ -80,14 +82,16 @@
 
   /* Primary button */
   .btn-primary {
-    @apply inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-xl
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1a5c38] text-white rounded-xl
            font-semibold text-sm hover:bg-[#134428] active:scale-95 transition-all no-underline;
+    box-shadow: 0 10px 25px rgba(26,92,56,0.18), 0 1px 2px rgba(0,0,0,0.08);
   }
 
   /* Outline button */
   .btn-outline {
-    @apply inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl
-           font-medium text-sm hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition-all no-underline;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-xl
+           font-semibold text-sm hover:border-[#1a5c38] hover:bg-[#f7fbf8] hover:text-[#1a5c38] active:scale-95 transition-all no-underline;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.05);
   }
 }
 

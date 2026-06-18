@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.utils.html import strip_tags, format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
+from django.urls import reverse
 from accounts.decorators import owner_required, customer_required, admin_required
 import bleach, re
 from datetime import date as date_cls, timedelta
@@ -148,6 +149,14 @@ def send_sms_notification(phone_number, message):
 # ── Forms ─────────────────────────────────────────────────────────────────────
 
 class LandForm(forms.ModelForm):
+    owner_will_refund = forms.TypedChoiceField(
+        choices=((True, 'Owner will refund'), (False, 'Owner will not refund')),
+        coerce=lambda v: (v == 'True' or v is True),
+        widget=forms.RadioSelect,
+        initial=True,
+        label='Refund policy'
+    )
+
     class Meta:
         model  = Land
         fields = ['land_id', 'title', 'description', 'price', 'price_unit',
@@ -156,7 +165,7 @@ class LandForm(forms.ModelForm):
                   'usage', 'size', 'size_unit', 'land_use',
                   'topography', 'soil_fertility', 'utilities', 'additional_utilities_notes',
                   'weekly_discount', 'monthly_discount',
-                  'contact_phone', 'contact_email', 'land_image_path', 'wizard_step']
+                  'contact_phone', 'contact_email', 'land_image_path', 'wizard_step', 'owner_will_refund']
 
     def __init__(self, *args, **kwargs):
         self.is_draft = kwargs.pop('is_draft', False)
@@ -464,19 +473,22 @@ def land_list(request):
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
     if availability == 'available':
         map_pins_qs = [l for l in map_pins_qs if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
          'price': l.price_display, 'location': l.location, 'type': l.usage,
-         'status': 'available' if l.is_available else 'reserved'}
+         'status': l.availability_state,
+         'availability_label': l.availability_label,
+         'remaining_size': str(l.current_remaining_size),
+         'total_size': str(l.size) if l.size is not None else ''}
         for l in map_pins_qs[:200]
     ])
 
     # Availability filter (may convert queryset → list — must happen after sort & map_pins)
     if availability == 'available':
         lands = [l for l in lands if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         lands = [l for l in lands if not l.is_available]
 
     paginator = Paginator(lands, 12)
@@ -648,19 +660,22 @@ def search_lands(request):
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
     if availability == 'available':
         map_pins_qs = [l for l in map_pins_qs if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
          'price': l.price_display, 'location': l.location, 'type': l.usage,
-         'status': 'available' if l.is_available else 'reserved'}
+         'status': l.availability_state,
+         'availability_label': l.availability_label,
+         'remaining_size': str(l.current_remaining_size),
+         'total_size': str(l.size) if l.size is not None else ''}
         for l in map_pins_qs[:200]
     ])
 
     # Availability filter (may convert QS → list — must happen after sort & map_pins)
     if availability == 'available':
         lands = [l for l in lands if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         lands = [l for l in lands if not l.is_available]
 
     paginator = Paginator(lands, 12)
@@ -1244,8 +1259,8 @@ def update_reservation_status(request, pk, status):
             create_notification(
                 customer, 'booking_approved',
                 'Booking Approved',
-                f"Your booking for '{r.land.title}' has been approved. Complete payment in the platform to unlock access details.",
-                f'/lands/reservations/'
+                f"Your booking for '{r.land.title}' has been approved. Tap Make payment to choose a payment method and complete your booking.",
+                f"{reverse('lands:payments_and_bills')}?booking={r.id}"
             )
 
     # SMS on rejection
@@ -1453,6 +1468,22 @@ def inbox(request):
 
 
 @login_required
+def contact_admin(request):
+    """
+    Finds the first active admin/operator user and redirects the user to the message thread with them.
+    """
+    admin = User.objects.filter(Q(is_staff=True) | Q(role='admin'), is_active=True).first()
+    if not admin:
+        admin = User.objects.filter(Q(is_staff=True) | Q(role='admin')).first()
+        
+    if not admin:
+        messages.error(request, 'No administrator is currently available to receive messages.')
+        return redirect('lands:inbox')
+        
+    return redirect('lands:message_thread', user_id=admin.id)
+
+
+@login_required
 def send_message(request):
     if request.method == 'POST':
         recipient_id = request.POST.get('recipient')
@@ -1469,9 +1500,19 @@ def send_message(request):
         land = None
         if land_id:
             land = Land.objects.filter(pk=land_id).first()
-        Message.objects.create(
+        msg = Message.objects.create(
             sender=request.user, recipient=recipient,
             land=land, subject=subject, body=body
+        )
+        # Create a notification for the recipient
+        is_admin_recipient = recipient.is_staff or recipient.role == 'admin'
+        link = f"/admin-portal/owner-requests/{msg.id}/" if is_admin_recipient else f"/lands/messages/{request.user.id}/"
+        create_notification(
+            user=recipient,
+            notification_type='message_received',
+            title=f"New message from {request.user.get_full_name() or request.user.username}",
+            message=body[:200],
+            link=link
         )
         messages.success(request, f'Message sent to {recipient.username}.')
         return redirect('lands:inbox')
@@ -1492,9 +1533,19 @@ def message_thread(request, user_id):
         land_id = request.POST.get('land')
         land = Land.objects.filter(pk=land_id).first() if land_id else None
         if body:
-            Message.objects.create(
+            msg = Message.objects.create(
                 sender=request.user, recipient=other_user,
                 land=land, body=body
+            )
+            # Create a notification for the recipient
+            is_admin_recipient = other_user.is_staff or other_user.role == 'admin'
+            link = f"/admin-portal/owner-requests/{msg.id}/" if is_admin_recipient else f"/lands/messages/{request.user.id}/"
+            create_notification(
+                user=other_user,
+                notification_type='message_received',
+                title=f"New message from {request.user.get_full_name() or request.user.username}",
+                message=body[:200],
+                link=link
             )
             messages.success(request, 'Reply sent.')
         return redirect('lands:message_thread', user_id=other_user.pk)
@@ -1623,6 +1674,35 @@ def help_center(request):
         except Exception as e:
             logger.warning(f"Failed to send support email: {e}")
         
+        # Create database Message if authenticated
+        if request.user.is_authenticated:
+            admin = User.objects.filter(Q(is_staff=True) | Q(role='admin'), is_active=True).first()
+            if not admin:
+                admin = User.objects.filter(Q(is_staff=True) | Q(role='admin')).first()
+            
+            if admin:
+                msg = Message.objects.create(
+                    sender=request.user,
+                    recipient=admin,
+                    subject=f"[{category.upper()}] {subject}",
+                    body=message_body
+                )
+                
+                # Notify admin/operator
+                create_notification(
+                    user=admin,
+                    notification_type='message_received',
+                    title=f"New Support Request from {request.user.username}",
+                    message=f"[{category.upper()}] {subject}",
+                    link=f"/admin-portal/owner-requests/{msg.id}/"
+                )
+                
+                messages.success(
+                    request,
+                    "Thank you for contacting us. We've received your message and will respond within 24 hours. You can follow and track this conversation in your Inbox.",
+                )
+                return redirect('lands:inbox')
+
         messages.success(
             request,
             "Thank you for contacting us. We've received your message and will respond within 24 hours.",
@@ -1640,9 +1720,24 @@ def my_notifications(request):
     base_qs = Notification.objects.filter(user=request.user).order_by('-created_on')
     unread_count = base_qs.filter(is_read=False).count()
     notifications = base_qs[:50]
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer and not url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        referer = ''
+    if not referer:
+        if request.user.is_staff or request.user.role == User.ROLE_ADMIN:
+            referer = reverse('accounts:admin_portal')
+        elif request.user.role == User.ROLE_OWNER or request.user.is_owner:
+            referer = reverse('lands:owner_dashboard')
+        else:
+            referer = reverse('lands:customer_dashboard')
     return render(request, 'lands/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count,
+        'back_url': referer,
     })
 
 
@@ -1722,6 +1817,10 @@ def payments_and_bills(request):
                 .select_related('land', 'land__owner')
                 .prefetch_related('payments')
                 .order_by('-created_on'))
+    focus_booking_id = request.GET.get('booking')
+    focus_booking = None
+    if focus_booking_id:
+        focus_booking = bookings.filter(pk=focus_booking_id).first()
     active_bookings = bookings.exclude(status__in=['rejected', 'cancelled'])
     outstanding_total = sum(
         booking.remaining_balance
@@ -1736,6 +1835,8 @@ def payments_and_bills(request):
         'confirmed_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'confirmed'),
         'outstanding_total': outstanding_total,
         'operator_payment_configs': operator_payment_configs,
+        'focus_booking': focus_booking,
+        'focus_booking_id': focus_booking_id,
     })
 
 
@@ -1776,7 +1877,7 @@ def submit_payment(request, pk):
                     f"Customer {request.user.username} submitted Tsh {payment.amount} for {booking.land.title}. "
                     f"Review reference: {payment.payment_reference}."
                 ),
-                link="/accounts/admin-portal/"
+                link=reverse('accounts:admin_payment_detail', args=[payment.pk])
             )
             
             messages.success(request, "Payment details submitted successfully. An admin will review and confirm it.")

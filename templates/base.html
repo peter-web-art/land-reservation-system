@@ -84,7 +84,10 @@
       }
     }
     .bg-form-premium {
-      background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2070&auto=format&fit=crop');
+      background-image:
+        radial-gradient(circle at top left, rgba(26, 92, 56, 0.32), transparent 36%),
+        radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.16), transparent 28%),
+        linear-gradient(160deg, #0f172a 0%, #173a28 48%, #eef7f1 100%);
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
@@ -96,14 +99,110 @@
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
     }
+
+    .topbar-menu-panel {
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    .topbar-menu-link {
+      transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+
+    .topbar-menu-link:hover {
+      transform: translateX(2px);
+    }
+
+    .topbar-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .topbar-menu summary::marker {
+      content: '';
+    }
   </style>
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <style>
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .pill-active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      box-shadow: 0 10px 20px rgba(26, 92, 56, 0.18);
+    }
+
+    .pill-inactive {
+      background: white;
+      color: #4b5563;
+      border-color: #e5e7eb;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .btn-primary,
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 2.75rem;
+      padding: 0.7rem 1rem;
+      border-radius: 1rem;
+      text-decoration: none;
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 10px 25px rgba(26, 92, 56, 0.18), 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(26, 92, 56, 0.24), 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-outline {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    .btn-outline:hover {
+      background: #f7fbf8;
+      color: var(--primary);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .btn-primary:active,
+    .btn-outline:active,
+    .pill:active {
+      transform: translateY(0);
+    }
+  </style>
   {% block extra_css %}{% endblock %}
 </head>
 
-<body class="flex flex-col min-h-screen font-sans {% block body_class %}bg-gray-50{% endblock %}">
+<body data-page="{{ request.resolver_match.url_name|default:'' }}"
+  class="flex flex-col min-h-screen font-sans {% block body_class %}bg-gray-50{% endblock %}">
   <nav
-    class="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center justify-between px-4 md:px-5 shadow-sm">
+    class="sticky top-0 z-50 bg-white border-b border-gray-200 min-h-14 flex items-center justify-between px-4 md:px-5 py-2 md:py-0 shadow-sm gap-3">
     <a class="flex items-center gap-2 no-underline shrink-0" href="{% url 'lands:land_list' %}">
       <div class="w-8 h-8 bg-[#1a5c38] rounded-lg flex items-center justify-center">
         <svg viewBox="0 0 20 20" fill="none" class="w-5 h-5">
@@ -216,7 +315,7 @@
         <form method="post" action="{% url 'lands:switch_mode' %}" class="hidden md:block">
           {% csrf_token %}
           <button type="submit"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-full text-xs font-medium text-gray-600 hover:border-[#1a5c38] hover:text-[#1a5c38] transition-colors">
+            class="btn-outline px-3 py-1.5 rounded-full text-xs font-medium">
             {% if current_mode == 'owner' %}<i class="bi bi-person"></i> Customer{% else %}<i class="bi bi-house"></i>
             Owner{% endif %}
           </button>
@@ -235,6 +334,78 @@
           </a>
           {% endif %}
         {% endif %}
+
+        <details class="topbar-menu relative md:hidden">
+          <summary
+            class="list-none inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-[#1a5c38] hover:text-[#1a5c38]">
+            <i class="bi bi-grid-3x3-gap"></i>
+            <span>Menu</span>
+          </summary>
+          <div
+            class="topbar-menu-panel absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-2 z-50">
+            <div class="px-3 py-2">
+              <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-400">Quick actions</p>
+              <p class="mt-1 text-xs text-gray-500">Shortcuts to the places you use most.</p>
+            </div>
+            <div class="space-y-1">
+              <a href="{% url 'lands:inbox' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-chat-dots w-4 text-gray-500"></i> Inbox
+              </a>
+              <a href="{% url 'lands:my_notifications' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-bell w-4 text-gray-500"></i> Notifications
+              </a>
+              {% if can_switch_mode %}
+              <form method="post" action="{% url 'lands:switch_mode' %}">
+                {% csrf_token %}
+                <button type="submit" class="topbar-menu-link flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                  <i class="bi bi-arrow-repeat w-4 text-gray-500"></i>
+                  Switch to {% if current_mode == 'owner' %}customer{% else %}owner{% endif %}
+                </button>
+              </form>
+              {% endif %}
+              {% if request.resolver_match.url_name != 'land_list' and request.resolver_match.url_name != 'home' %}
+                {% if user.role == 'owner' or user.is_owner %}
+                <a href="{% url 'lands:add_land' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                  <i class="bi bi-plus-lg w-4 text-gray-500"></i> Add new post
+                </a>
+                <a href="{% url 'accounts:owner_payment_dashboard' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                  <i class="bi bi-wallet2 w-4 text-gray-500"></i> My Payments
+                </a>
+                {% endif %}
+              {% endif %}
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="{% url 'accounts:profile_edit' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-person-gear w-4 text-gray-500"></i> Profile
+              </a>
+              {% if user.role == 'customer' and not user.is_staff %}
+              <a href="{% url 'lands:my_reservations' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-calendar-check w-4 text-gray-500"></i> My Bookings
+              </a>
+              <a href="{% url 'lands:my_wishlist' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-heart w-4 text-gray-500"></i> Wishlist
+              </a>
+              {% elif user.role == 'owner' or user.is_owner %}
+              <a href="{% url 'lands:owner_dashboard' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-file-earmark-text w-4 text-gray-500"></i> My Drafts
+              </a>
+              <a href="{% url 'accounts:owner_payment_dashboard' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-wallet2 w-4 text-gray-500"></i> My Payments
+              </a>
+              {% elif user.role == 'admin' or user.is_staff %}
+              <a href="{% url 'accounts:admin_portal' %}" class="topbar-menu-link flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline">
+                <i class="bi bi-shield-lock w-4 text-gray-500"></i> Admin Portal
+              </a>
+              {% endif %}
+              <div class="border-t border-gray-100 my-1"></div>
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="topbar-menu-link flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left">
+                  <i class="bi bi-box-arrow-right w-4"></i> Log out
+                </button>
+              </form>
+            </div>
+          </div>
+        </details>
 
         <div class="hidden md:flex flex-col text-right mr-2">
           <span class="text-sm text-gray-600">Welcome, <strong>{{ user.first_name|default:user.username }}</strong></span>
@@ -261,19 +432,24 @@
             <a href="{% url 'accounts:profile_edit' %}"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
                 class="bi bi-person-gear w-4"></i> Profile</a>
+            {% if user.role == 'customer' and not user.is_staff %}
             <a href="{% url 'lands:my_reservations' %}"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
                 class="bi bi-calendar-check w-4"></i> My Bookings</a>
             <a href="{% url 'lands:my_wishlist' %}"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
                 class="bi bi-heart w-4"></i> Wishlist</a>
-            {% if user.role == 'owner' or user.is_owner %}
+            {% elif user.role == 'owner' or user.is_owner %}
             <a href="{% url 'lands:owner_dashboard' %}"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
                 class="bi bi-file-earmark-text w-4"></i> My Drafts</a>
             <a href="{% url 'accounts:owner_payment_dashboard' %}"
               class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
                 class="bi bi-wallet2 w-4"></i> My Payments</a>
+            {% elif user.role == 'admin' or user.is_staff %}
+            <a href="{% url 'accounts:admin_portal' %}"
+              class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 no-underline"><i
+                class="bi bi-shield-lock w-4"></i> Admin Portal</a>
             {% endif %}
             <div class="border-t border-gray-100 mt-1">
               <form method="post" action="{% url 'logout' %}">
@@ -395,7 +571,7 @@
 
       <div id="loginFormWrap" class="p-6 space-y-3">
         <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline"
-          href="{% provider_login_url 'google' %}">
+          href="{% provider_login_url 'google' %}{% if request.resolver_match.url_name != 'land_list' and request.resolver_match.url_name != 'home' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
           <svg viewBox="0 0 24 24" class="w-4 h-4">
             <path fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -414,6 +590,7 @@
         </div>
         <form method="post" action="{% url 'accounts:login' %}">
           {% csrf_token %}
+          <input type="hidden" name="next" id="loginNextInput" value="">
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
@@ -439,7 +616,7 @@
 
       <div id="registerFormWrap" class="p-6 space-y-3 hidden">
         <a class="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 no-underline"
-          href="{% provider_login_url 'google' %}">
+          href="{% provider_login_url 'google' %}{% if request.resolver_match.url_name != 'land_list' and request.resolver_match.url_name != 'home' %}?next={{ request.get_full_path|urlencode }}{% endif %}">
           <svg viewBox="0 0 24 24" class="w-4 h-4">
             <path fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -503,6 +680,40 @@
               <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.phone|join:', ' }}</p>
               {% endif %}
             </div>
+            <div id="payoutFields" class="hidden space-y-4">
+              <div>
+                <label for="register_payout_method" class="block text-sm font-medium text-gray-700 mb-1">Payout Method *</label>
+                <select id="register_payout_method" name="payout_method"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors">
+                  <option value="mpesa" {% if register_form_state.values.payout_method|default:'mpesa' == 'mpesa' %}selected{% endif %}>M-Pesa</option>
+                  <option value="airtel" {% if register_form_state.values.payout_method == 'airtel' %}selected{% endif %}>Airtel Money</option>
+                  <option value="tigo" {% if register_form_state.values.payout_method == 'tigo' %}selected{% endif %}>Tigo Money</option>
+                  <option value="bank_transfer" {% if register_form_state.values.payout_method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                  <option value="bank_cheque" {% if register_form_state.values.payout_method == 'bank_cheque' %}selected{% endif %}>Bank Cheque</option>
+                </select>
+                {% if register_form_state.errors.payout_method %}
+                <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.payout_method|join:', ' }}</p>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Account / Wallet Identifier *</label>
+                <input type="text" name="account_identifier" id="register_account_identifier"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                  placeholder="e.g. M-Pesa phone number or bank account" value="{{ register_form_state.values.account_identifier|default:'' }}">
+                {% if register_form_state.errors.account_identifier %}
+                <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.account_identifier|join:', ' }}</p>
+                {% endif %}
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Account Holder Name *</label>
+                <input type="text" name="account_holder_name" id="register_account_holder_name"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/25 focus:border-[#1a5c38] transition-colors"
+                  placeholder="Full name on account" value="{{ register_form_state.values.account_holder_name|default:'' }}">
+                {% if register_form_state.errors.account_holder_name %}
+                <p class="mt-1 text-xs text-red-600">{{ register_form_state.errors.account_holder_name|join:', ' }}</p>
+                {% endif %}
+              </div>
+            </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input type="password" name="password1"
@@ -535,9 +746,21 @@
 
   {% block extra_js %}{% endblock %}
   <script>
-    function openModal(tab) {
+    function getDefaultAuthNext() {
+      var page = document.body ? document.body.dataset.page : '';
+      if (!page || page === 'land_list' || page === 'home') {
+        return '';
+      }
+      return window.location.pathname + window.location.search;
+    }
+
+    function openModal(tab, nextUrl) {
       var modal = document.getElementById('authModal');
       if (!modal) return;
+      var nextInput = document.getElementById('loginNextInput');
+      if (nextInput) {
+        nextInput.value = nextUrl !== undefined ? nextUrl : getDefaultAuthNext();
+      }
       modal.classList.remove('hidden');
       modal.classList.add('show');
       showTab(tab || 'register');
@@ -580,10 +803,32 @@
         var role = document.getElementById('register_role');
         var phone = document.getElementById('register_phone');
         var phoneWrap = document.getElementById('registerPhoneField');
-        if (!role || !phone || !phoneWrap) return;
+        var payoutWrap = document.getElementById('payoutFields');
+        var payoutMethod = document.getElementById('register_payout_method');
+        var accId = document.getElementById('register_account_identifier');
+        var accName = document.getElementById('register_account_holder_name');
+        
+        if (!role) return;
         var isCustomer = role.value === 'customer';
-        phone.required = isCustomer;
-        phoneWrap.classList.toggle('opacity-70', !isCustomer);
+        
+        if (phone && phoneWrap) {
+          phone.required = isCustomer;
+          phoneWrap.classList.toggle('opacity-70', !isCustomer);
+        }
+        
+        if (payoutWrap && payoutMethod && accId && accName) {
+          if (isCustomer) {
+            payoutWrap.classList.add('hidden');
+            payoutMethod.required = false;
+            accId.required = false;
+            accName.required = false;
+          } else {
+            payoutWrap.classList.remove('hidden');
+            payoutMethod.required = true;
+            accId.required = true;
+            accName.required = true;
+          }
+        }
       }
 
       var modal = document.getElementById('authModal');
@@ -636,9 +881,10 @@
         });
       }
 
-      var authTarget = new URLSearchParams(window.location.search).get('auth');
+      var params = new URLSearchParams(window.location.search);
+      var authTarget = params.get('auth');
       if (authTarget === 'login' || authTarget === 'register') {
-        openModal(authTarget);
+        openModal(authTarget, params.get('next') || getDefaultAuthNext());
       }
     });
   </script>

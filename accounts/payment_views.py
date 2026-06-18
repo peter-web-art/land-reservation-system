@@ -19,6 +19,7 @@ from .decorators import admin_required
 from lands.models import PaymentRecord, Reservation, Notification, Message
 from accounts.models import User, SystemSettings, PaymentDetails, OperatorPaymentConfig
 from .payment_forms import OwnerPaymentDetailsForm, OperatorPaymentConfigForm
+from lands.services import release_matured_escrow_payments
 
 
 
@@ -169,7 +170,25 @@ def admin_confirm_payment(request, payment_id):
     # Admin notes/confirmation
     admin_notes = request.POST.get('admin_notes', '').strip()
     payment_method = request.POST.get('payment_method', '').strip() or payment.payment_method
-    
+    verified_reference = request.POST.get('verified_reference', '').strip()
+
+    def normalize_reference(value):
+        return ''.join(str(value).split()).upper()
+
+    expected_reference = normalize_reference(payment.payment_reference)
+    observed_reference = normalize_reference(verified_reference)
+
+    if not verified_reference:
+        messages.error(request, 'Enter the reference number you verified before confirming the payment.')
+        return redirect('accounts:admin_payment_detail', payment_id=payment.pk)
+
+    if expected_reference and observed_reference != expected_reference:
+        messages.error(
+            request,
+            f"Reference mismatch. Submitted reference is {payment.payment_reference}, but you entered {verified_reference}."
+        )
+        return redirect('accounts:admin_payment_detail', payment_id=payment.pk)
+
     # Confirm the payment
     payment.status = 'confirmed'
     payment.confirmed_on = timezone.now()
@@ -461,6 +480,8 @@ def admin_escrow_tracker(request):
     Tracks when funds will be available for release to owners.
     """
     
+    release_matured_escrow_payments(triggered_by=request.user)
+
     # Get all confirmed payments
     escrow_payments = (PaymentRecord.objects
                       .filter(status='confirmed', reservation__payment_confirmed=True)
@@ -514,9 +535,21 @@ def admin_release_payment(request, payment_id):
     """Mark the payment as released to owner (admin-forced)."""
     payment = get_object_or_404(PaymentRecord, pk=payment_id)
     if request.method == 'POST':
+        owner = payment.reservation.land.owner
         payment.owner_received_on = timezone.now()
         payment.updated_by = request.user
         payment.save(update_fields=['owner_received_on', 'updated_by'])
+        if owner:
+            Notification.objects.create(
+                user=owner,
+                notification_type='payment_received',
+                title='Escrow Released to You',
+                message=(
+                    f'Tsh {payment.owner_net_amount:,.0f} for "{payment.reservation.land.title}" was manually released '
+                    f'to you by {request.user.get_full_name() or request.user.username}.'
+                ),
+                link='/accounts/owner/payments/'
+            )
         messages.success(request, f'Payment {payment.payment_reference} marked as released to owner.')
     return redirect('accounts:admin_escrow_tracker')
 
@@ -616,18 +649,19 @@ def admin_message_detail(request, message_id):
             sender=request.user,
             recipient=msg.sender,
             land=msg.land,
-            subject=f'Re: {msg.subject}' if msg.subject else 'Reply',
+            subject=f'Re: {msg.subject}' if msg.subject else 'Reply from Support',
             body=reply_text[:2000]
         )
-        # Notify owner
+        # Notify the original sender — link to their inbox thread with admin
+        admin_user = request.user
         create_notification(
             msg.sender,
             'message_received',
-            'Reply from operator',
+            f'Reply from {admin_user.get_full_name() or admin_user.username}',
             reply_text[:200],
-            f'/accounts/owner/communication/'
+            f'/lands/messages/{admin_user.pk}/'
         )
-        messages.success(request, 'Reply sent to owner.')
+        messages.success(request, f'Reply sent to {msg.sender.get_full_name() or msg.sender.username}.')
         return redirect('accounts:admin_message_detail', message_id=msg.pk)
 
     # mark as read
@@ -650,7 +684,7 @@ def owner_payment_details(request):
     """
     if request.user.role != 'owner':
         messages.error(request, 'Only land owners can manage payment details.')
-        return redirect('accounts:profile')
+        return redirect('accounts:profile_edit')
     
     try:
         payment_details = PaymentDetails.objects.get(user=request.user)
@@ -837,6 +871,7 @@ def admin_owner_payment_details_review(request, payment_detail_id):
                 f'Your {payment_detail.get_payment_method_display()} details have been verified. You will receive payouts here.'
             )
             messages.success(request, f'Payment details for {payment_detail.user.username} verified!')
+            return redirect('accounts:admin_owner_payment_details')
             
         elif action == 'reject':
             reason = request.POST.get('reason', '')
@@ -851,6 +886,7 @@ def admin_owner_payment_details_review(request, payment_detail_id):
                 f'Your payment details were rejected. Reason: {reason or "Please update and resubmit."}. Please update your details.'
             )
             messages.warning(request, f'Payment details rejected. Notification sent to {payment_detail.user.username}.')
+            return redirect('accounts:admin_owner_payment_details')
         
         elif action == 'set_default':
             # Set this as default and unset others for this user
@@ -858,15 +894,33 @@ def admin_owner_payment_details_review(request, payment_detail_id):
             payment_detail.is_default = True
             payment_detail.save()
             messages.success(request, f'Set as default payout method for {payment_detail.user.username}.')
-        
-        return redirect('accounts:admin_owner_payment_details')
+            return redirect('accounts:admin_owner_payment_details')
+
+        elif action == 'edit_payout':
+            edit_form = OwnerPaymentDetailsForm(request.POST, instance=payment_detail)
+            if edit_form.is_valid():
+                edit_form.save()
+                messages.success(request, f'Payment details for {payment_detail.user.username} successfully modified by admin.')
+                return redirect('accounts:admin_owner_payment_details_review', payment_detail_id=payment_detail.id)
+            else:
+                messages.error(request, 'Please correct the errors in the form.')
+                # Render the template with the invalid form
+                other_methods = PaymentDetails.objects.filter(user=payment_detail.user).exclude(id=payment_detail.id)
+                context = {
+                    'payment_detail': payment_detail,
+                    'other_methods': other_methods,
+                    'edit_form': edit_form,
+                }
+                return render(request, 'accounts/admin_owner_payment_details_review.html', context)
     
     # Get other payment methods for this owner
     other_methods = PaymentDetails.objects.filter(user=payment_detail.user).exclude(id=payment_detail.id)
+    edit_form = OwnerPaymentDetailsForm(instance=payment_detail)
     
     context = {
         'payment_detail': payment_detail,
         'other_methods': other_methods,
+        'edit_form': edit_form,
     }
     
     return render(request, 'accounts/admin_owner_payment_details_review.html', context)
@@ -923,8 +977,11 @@ def owner_payment_dashboard(request):
         messages.error(request, "Only land owners can access this page.")
         return redirect('lands:home')
     
+    release_matured_escrow_payments(triggered_by=request.user)
+
     # Get all payments for reservations of this owner's lands
     reservations = Reservation.objects.filter(land__owner=request.user)
+    owner_payment_details = PaymentDetails.objects.filter(user=request.user, is_verified=True).first()
     payments = PaymentRecord.objects.filter(
         reservation__in=reservations,
         status='confirmed'  # Only show confirmed payments
@@ -992,6 +1049,7 @@ def owner_payment_dashboard(request):
         'held_count': len(held_payments),
         'available_count': len(available_payments),
         'released_count': len(released_payments),
+        'owner_payment_details': owner_payment_details,
     }
     
     return render(request, 'accounts/owner_payment_dashboard.html', context)

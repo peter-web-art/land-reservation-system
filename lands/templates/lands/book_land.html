@@ -19,7 +19,7 @@
       </h2>
 
       {% if user.is_authenticated %}
-      <a href="{% url 'lands:customer_dashboard' %}" class="inline-flex items-center gap-2 text-sm text-[#1a5c38] hover:underline mb-4">
+      <a href="{% url 'lands:customer_dashboard' %}" class="btn-outline mb-4 no-underline">
         <i class="bi bi-arrow-left-circle"></i> Back to dashboard
       </a>
       {% endif %}
@@ -41,10 +41,12 @@
               {% else %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">For Sale</span>
               {% endif %}
-              {% if land.is_available %}
+              {% if land.availability_state == 'available' %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-check-circle"></i> Available</span>
+              {% elif land.availability_state == 'partial' %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-pie-chart"></i> Partially occupied</span>
               {% else %}
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Reserved</span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold"><i class="bi bi-x-circle"></i> Unavailable at the moment</span>
               {% endif %}
             </div>
           </div>
@@ -61,7 +63,11 @@
               <span class="w-8 h-8 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-semibold"><i class="bi bi-rulers"></i></span>
               <h3 class="font-semibold">Area Required</h3>
             </div>
+            {% if land.availability_state == 'unavailable' %}
+            <span class="text-sm bg-red-100 text-red-800 px-3 py-1 rounded-full font-medium shadow-sm">Unavailable at the moment</span>
+            {% else %}
             <span class="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm">Currently Available: {{ land.current_remaining_size }} {{ land.get_size_unit_display }}</span>
+            {% endif %}
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">How much area do you need? <span class="text-gray-400 font-normal">(Leave blank for whole land)</span></label>
@@ -95,12 +101,12 @@
             </div>
           </div>
 
-          {% if land.usage == 'rent' and not land.is_available and not request.GET.start %}
+          {% if land.usage == 'rent' and land.availability_state == 'unavailable' and not request.GET.start %}
           <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div class="flex items-start gap-2">
               <i class="bi bi-info-circle text-blue-500 mt-0.5"></i>
               <div class="text-sm text-blue-700">
-                <strong>Dates pre-filled:</strong> This land is currently unavailable. We've suggested the next available check-in date based on existing reservations.
+                <strong>Booked / unavailable:</strong> This land is fully occupied at the moment. We suggested the next available check-in date based on existing reservations.
               </div>
             </div>
           </div>
@@ -174,15 +180,27 @@
           <div><strong>Booking Protection:</strong> Your request will be <strong>pending</strong> until the owner approves. After approval, you submit payment in the platform and then unlock owner details.</div>
         </div>
 
-        <button type="button" id="reviewBookingBtn" class="w-full py-3 bg-[#1a5c38] text-white rounded-xl font-semibold text-lg hover:bg-[#134428] transition-colors">
+        {% if land.owner_will_refund %}
+        <div class="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
+          <i class="bi bi-info-circle text-xl text-[#1a5c38] mt-0.5"></i>
+          <div><strong>Refund Policy:</strong> The owner has defined a refund policy for this property. If you cancel, you are eligible for a refund according to the policy.</div>
+        </div>
+        {% else %}
+        <div class="flex items-start gap-3 p-4 bg-amber-50 rounded-lg text-amber-800">
+          <i class="bi bi-exclamation-triangle text-xl text-amber-600 mt-0.5"></i>
+          <div><strong>Refund Policy:</strong> The owner has NOT defined a refund policy for this property. Deposit refunds may not be supported by the owner.</div>
+        </div>
+        {% endif %}
+
+        <button type="button" id="reviewBookingBtn" class="btn-primary w-full text-lg">
           <i class="bi bi-clipboard-check"></i>
           Review Booking
         </button>
         
-        <a href="{% url 'lands:customer_dashboard' %}" class="block w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm text-center hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline mb-3">
+        <a href="{% url 'lands:customer_dashboard' %}" class="btn-outline w-full mb-3 no-underline">
           <i class="bi bi-arrow-left"></i> Back to dashboard
         </a>
-        <a href="{% url 'lands:land_detail' land.id %}" class="block w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm text-center hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+        <a href="{% url 'lands:land_detail' land.id %}" class="btn-outline w-full no-underline">
           <i class="bi bi-arrow-left"></i> Back to land
         </a>
       </form>
@@ -308,13 +326,19 @@
         <i class="bi bi-info-circle text-amber-500 mt-0.5"></i>
         <p class="text-sm text-amber-700">Your booking request will be <strong>pending</strong> until the owner reviews and approves it. After approval, you'll submit payment inside the platform and unlock owner contact details.</p>
       </div>
+
+      {% if land.owner_will_refund %}
+      <div class="p-3 mt-3 bg-green-50 rounded border border-green-200 text-sm text-green-700">Owner Refund Policy: Owner WILL refund deposits when eligible. Funds are held for 24 hours after confirmation before release to the owner.</div>
+      {% else %}
+      <div class="p-3 mt-3 bg-red-50 rounded border border-red-200 text-sm text-red-700">Owner Refund Policy: Owner WILL NOT refund deposits. Funds are held for 24 hours after confirmation before release to the owner.</div>
+      {% endif %}
     </div>
     
     <div class="flex gap-3 p-4 border-t border-gray-200">
-      <button type="button" onclick="document.getElementById('reviewModal').classList.add('hidden')" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+      <button type="button" onclick="document.getElementById('reviewModal').classList.add('hidden')" class="btn-outline flex-1">
         <i class="bi bi-pencil"></i> Edit
       </button>
-      <button type="button" onclick="submitBookingForm()" class="flex-1 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+      <button type="button" onclick="submitBookingForm()" class="btn-primary flex-1">
         <i class="bi bi-check-circle"></i> Confirm Booking
       </button>
     </div>

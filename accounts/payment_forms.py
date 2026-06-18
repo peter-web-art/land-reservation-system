@@ -18,28 +18,28 @@ class OwnerPaymentDetailsForm(forms.ModelForm):
                   'bank_name', 'bank_branch', 'is_default']
         widgets = {
             'payment_method': forms.Select(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary',
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-all duration-200 shadow-sm',
             }),
             'account_identifier': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary',
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-all duration-200 shadow-sm',
                 'placeholder': 'e.g., +255 123 456 789 or 12345-67890-123',
                 'required': True,
             }),
             'account_holder_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary',
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-all duration-200 shadow-sm',
                 'placeholder': 'Name on the account',
                 'required': True,
             }),
             'bank_name': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary',
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-all duration-200 shadow-sm',
                 'placeholder': 'Bank name (if applicable)',
             }),
             'bank_branch': forms.TextInput(attrs={
-                'class': 'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary',
+                'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-all duration-200 shadow-sm',
                 'placeholder': 'Branch name/code (if applicable)',
             }),
             'is_default': forms.CheckboxInput(attrs={
-                'class': 'rounded',
+                'class': 'h-5 w-5 text-[#1a5c38] rounded border-gray-300 focus:ring-[#1a5c38]/30 transition-all cursor-pointer',
             }),
         }
         labels = {

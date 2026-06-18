@@ -60,6 +60,7 @@
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Customer</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Land</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Amount</th>
+            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Amount to Release</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Confirmed</th>
             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Release Available</th>
           </tr>
@@ -71,6 +72,7 @@
             <td class="px-6 py-4 text-sm text-gray-900">{{ payment.reservation.customer.username|default:payment.reservation.customer_name }}</td>
             <td class="px-6 py-4 text-sm text-gray-900">{{ payment.reservation.land.title }}</td>
             <td class="px-6 py-4 text-sm font-semibold text-gray-900">Tsh {{ payment.amount|floatformat:0 }}</td>
+            <td class="px-6 py-4 text-sm font-semibold text-blue-700">Tsh {{ payment.owner_net_amount|floatformat:0 }}</td>
             <td class="px-6 py-4 text-sm text-gray-500">{{ payment.confirmed_on|date:"M d H:i" }}</td>
             <td class="px-6 py-4 text-sm text-blue-700 font-semibold">{{ payment.payout_release_available_on|date:"M d, Y" }}</td>
           </tr>
@@ -129,16 +131,15 @@
             </td>
             <td class="px-6 py-4 text-center">
               <div class="inline-flex items-center gap-2">
-                <form method="post" action="{% url 'accounts:admin_release_payment' payment.pk %}">{% csrf_token %}
-                  <button type="submit" class="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700">Release Now</button>
+                <form method="post" action="{% url 'accounts:admin_release_payment' payment.pk %}" class="inline">{% csrf_token %}
+                  <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-white text-xs font-semibold hover:bg-green-700 shadow-sm transition-colors cursor-pointer border-0" style="background-color: #16a34a !important; color: #ffffff !important;">
+                    <i class="bi bi-check2-circle mr-1"></i> Release Now
+                  </button>
                 </form>
-                <form method="post" action="{% url 'accounts:admin_delay_payment' payment.pk %}">{% csrf_token %}
-                  <label class="sr-only">Delay days</label>
-                  <input type="number" name="days" value="3" min="1" max="90" class="w-16 text-sm px-2 py-1 rounded border border-gray-200" title="Days to delay">
-                  <button type="submit" class="ml-2 px-3 py-1 rounded bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600">Delay</button>
-                </form>
-                <form method="post" action="{% url 'accounts:admin_refund_payment' payment.pk %}" onsubmit="return confirm('Return funds to customer? This will mark the reservation as refunded.');">{% csrf_token %}
-                  <button type="submit" class="ml-2 px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700">Refund</button>
+                <form method="post" action="{% url 'accounts:admin_refund_payment' payment.pk %}" onsubmit="return confirm('Return funds to customer? This will mark the reservation as refunded.');" class="inline">{% csrf_token %}
+                  <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-white text-xs font-semibold hover:bg-red-700 shadow-sm transition-colors cursor-pointer border-0" style="background-color: #dc2626 !important; color: #ffffff !important;">
+                    <i class="bi bi-x-circle mr-1"></i> Refund
+                  </button>
                 </form>
               </div>
             </td>
@@ -188,16 +189,15 @@
             <td class="px-6 py-4 text-sm text-red-700 font-semibold">{{ payment.payout_release_due_on|date:"M d, Y" }}</td>
             <td class="px-6 py-4 text-center">
               <div class="inline-flex items-center gap-2 justify-center">
-                <form method="post" action="{% url 'accounts:admin_release_payment' payment.pk %}">{% csrf_token %}
-                  <button type="submit" class="px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold hover:bg-green-700">Force Release</button>
+                <form method="post" action="{% url 'accounts:admin_release_payment' payment.pk %}" class="inline">{% csrf_token %}
+                  <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-white text-xs font-semibold hover:bg-green-700 shadow-sm transition-colors cursor-pointer border-0" style="background-color: #16a34a !important; color: #ffffff !important;">
+                    <i class="bi bi-check2-circle mr-1"></i> Force Release
+                  </button>
                 </form>
-                <form method="post" action="{% url 'accounts:admin_delay_payment' payment.pk %}">{% csrf_token %}
-                  <label class="sr-only">Delay days</label>
-                  <input type="number" name="days" value="7" min="1" max="90" class="w-16 text-sm px-2 py-1 rounded border border-gray-200" title="Days to delay">
-                  <button type="submit" class="ml-2 px-3 py-1 rounded bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600">Delay</button>
-                </form>
-                <form method="post" action="{% url 'accounts:admin_refund_payment' payment.pk %}" onsubmit="return confirm('Return funds to customer? This will mark the reservation as refunded.');">{% csrf_token %}
-                  <button type="submit" class="ml-2 px-3 py-1 rounded bg-red-600 text-white text-xs font-semibold hover:bg-red-700">Refund</button>
+                <form method="post" action="{% url 'accounts:admin_refund_payment' payment.pk %}" onsubmit="return confirm('Return funds to customer? This will mark the reservation as refunded.');" class="inline">{% csrf_token %}
+                  <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-white text-xs font-semibold hover:bg-red-700 shadow-sm transition-colors cursor-pointer border-0" style="background-color: #dc2626 !important; color: #ffffff !important;">
+                    <i class="bi bi-x-circle mr-1"></i> Refund
+                  </button>
                 </form>
               </div>
             </td>
@@ -213,8 +213,8 @@
   {% if released_payments %}
   <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
     <div class="bg-gray-50 border-b border-gray-200 px-6 py-4">
-      <h2 class="text-lg font-bold text-gray-900">✓ Already Released & Acknowledged</h2>
-      <p class="text-sm text-gray-600 mt-1">{{ released_payments|length }} payment{{ released_payments|pluralize }} acknowledged by owner</p>
+      <h2 class="text-lg font-bold text-gray-900">✓ Already Released to Owner</h2>
+      <p class="text-sm text-gray-600 mt-1">{{ released_payments|length }} payment{{ released_payments|pluralize }} released automatically or manually</p>
     </div>
     
     <div class="overflow-x-auto">

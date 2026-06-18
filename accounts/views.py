@@ -21,7 +21,7 @@ import csv
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from .models import User, PersonalDetails, SystemSettings, OperatorPaymentConfig
+from .models import User, PersonalDetails, SystemSettings, OperatorPaymentConfig, Message
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -108,6 +108,19 @@ class UserRegistrationForm(forms.ModelForm):
         choices=[(User.ROLE_CUSTOMER, 'Customer'), (User.ROLE_OWNER, 'Land Owner')],
         initial=User.ROLE_CUSTOMER
     )
+    payout_method   = forms.ChoiceField(
+        choices=[
+            ('mpesa', 'M-Pesa'),
+            ('airtel', 'Airtel Money'),
+            ('tigo', 'Tigo Money'),
+            ('bank_transfer', 'Bank Transfer'),
+            ('bank_cheque', 'Bank Cheque'),
+        ],
+        required=False,
+        label='Payout Method'
+    )
+    account_identifier = forms.CharField(max_length=100, required=False, label='Account/Wallet Identifier')
+    account_holder_name = forms.CharField(max_length=200, required=False, label='Account Holder Name')
 
     class Meta:
         model  = User
@@ -160,6 +173,14 @@ class UserRegistrationForm(forms.ModelForm):
         if cleaned.get('role') == User.ROLE_CUSTOMER and not cleaned.get('phone'):
             raise forms.ValidationError({'phone': 'Phone number is required for customer signup.'})
         
+        if cleaned.get('role') == User.ROLE_OWNER:
+            if not cleaned.get('payout_method'):
+                raise forms.ValidationError({'payout_method': 'Payout method is required for Land Owner.'})
+            if not cleaned.get('account_identifier'):
+                raise forms.ValidationError({'account_identifier': 'Account identifier is required for Land Owner.'})
+            if not cleaned.get('account_holder_name'):
+                raise forms.ValidationError({'account_holder_name': 'Account holder name is required for Land Owner.'})
+
         return cleaned
 
     def save(self, commit=True):
@@ -194,6 +215,18 @@ class UserRegistrationForm(forms.ModelForm):
             details.surname = user.last_name or user.username
         details.updated_by = user
         details.save()
+
+    def save_payment_details(self, user):
+        if self.cleaned_data.get('role') == User.ROLE_OWNER:
+            from .models import PaymentDetails
+            PaymentDetails.objects.create(
+                user=user,
+                payment_method=self.cleaned_data.get('payout_method', 'mpesa'),
+                account_identifier=self.cleaned_data.get('account_identifier', ''),
+                account_holder_name=self.cleaned_data.get('account_holder_name', ''),
+                created_by=user,
+                updated_by=user
+            )
 
 
 class AdminUserRegistrationForm(UserRegistrationForm):
@@ -308,6 +341,14 @@ def login_view(request):
     auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
     messages.success(request, f'Welcome back, {user.username}.')
 
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+
     # Auto-redirect based on user's stored role — no role selection needed
     from .decorators import role_based_redirect
     return redirect(role_based_redirect(user))
@@ -372,6 +413,7 @@ def register_verify(request):
                 user = form.save(commit=False)
                 user.save()
                 form.save_personal_details(user)
+                form.save_payment_details(user)
                 user.created_by = user
                 user.save(update_fields=['created_by'])
                 del request.session['registration_data']
@@ -752,6 +794,64 @@ def admin_user_action(request, user_id):
             messages.success(request, f'{username} has been permanently deleted.')
 
     return safe_redirect_back(request, 'accounts:admin_portal')
+
+
+class AdminMessageForm(forms.Form):
+    subject = forms.CharField(max_length=200, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-3 border rounded'}))
+    body = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-3 border rounded', 'rows':4}))
+
+
+@admin_required
+def admin_compose_message(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    if request.method == 'POST':
+        form = AdminMessageForm(request.POST)
+        if form.is_valid():
+            Message.objects.create(
+                sender=request.user,
+                receiver=target,
+                subject=form.cleaned_data.get('subject', '').strip(),
+                body=form.cleaned_data.get('body', '').strip(),
+                
+            )
+            messages.success(request, f'Message sent to {target.username}.')
+            return redirect('accounts:admin_portal')
+    else:
+        form = AdminMessageForm()
+    return render(request, 'accounts/admin_message_compose.html', {'form': form, 'target': target})
+
+
+@admin_required
+def admin_message_thread(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    # Thread between request.user (admin) and target
+    thread_messages = Message.objects.filter(
+        (Q(sender=request.user) & Q(receiver=target)) | (Q(sender=target) & Q(receiver=request.user))
+    ).select_related('sender', 'receiver').order_by('created_on')
+
+    # Mark messages received by admin as read when viewing
+    unseen = thread_messages.filter(receiver=request.user, is_read=False)
+    if unseen.exists():
+        unseen.update(is_read=True)
+
+    # Compose reply
+    if request.method == 'POST':
+        form = AdminMessageForm(request.POST)
+        if form.is_valid():
+            Message.objects.create(
+                sender=request.user,
+                receiver=target,
+                subject=form.cleaned_data.get('subject', '').strip(),
+                body=form.cleaned_data.get('body', '').strip(),
+            )
+            messages.success(request, f'Reply sent to {target.username}.')
+            return redirect('accounts:admin_message_thread', user_id=target.id)
+    else:
+        form = AdminMessageForm()
+
+    return render(request, 'accounts/admin_message_thread.html', {
+        'target': target, 'messages': thread_messages, 'form': form
+    })
 
 
 @admin_required

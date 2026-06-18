@@ -130,6 +130,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+ACCOUNT_ADAPTER = 'accounts.adapters.RoleBasedAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.RoleBasedSocialAccountAdapter'
+
 # ─── INTERNATIONALISATION ────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Dar_es_Salaam'

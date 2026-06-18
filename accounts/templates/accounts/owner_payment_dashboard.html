@@ -9,6 +9,34 @@
     <p class="text-gray-600">Track your payments and escrow releases</p>
   </div>
 
+  {% if owner_payment_details %}
+  <div class="mb-8 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900">Payout Details</h2>
+        <p class="text-sm text-gray-500">Your verified payout account will be used for released funds.</p>
+      </div>
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+        <i class="bi bi-patch-check-fill"></i> Verified
+      </span>
+    </div>
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+      <div>
+        <div class="text-xs text-gray-500 uppercase font-semibold">Method</div>
+        <div class="font-semibold text-gray-900">{{ owner_payment_details.get_payment_method_display }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 uppercase font-semibold">Account</div>
+        <div class="font-semibold text-gray-900 break-all">{{ owner_payment_details.account_identifier }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500 uppercase font-semibold">Account Holder</div>
+        <div class="font-semibold text-gray-900">{{ owner_payment_details.account_holder_name }}</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Stats Cards -->
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <!-- Held in Escrow -->
@@ -95,6 +123,12 @@
             <p class="text-sm text-gray-600 ml-15">
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
             </p>
+            <p class="text-xs text-gray-500 ml-15 mt-1">
+              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
+                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              {% endif %}
+            </p>
           </div>
           
           <div class="flex flex-col items-end gap-2">
@@ -146,6 +180,12 @@
             <p class="text-sm text-gray-600 ml-15">
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
             </p>
+            <p class="text-xs text-gray-500 ml-15 mt-1">
+              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
+                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              {% endif %}
+            </p>
           </div>
           
           <div class="flex flex-col items-end gap-2">
@@ -196,6 +236,12 @@
             </div>
             <p class="text-sm text-gray-600 ml-15">
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
+            </p>
+            <p class="text-xs text-gray-500 ml-15 mt-1">
+              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
+                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              {% endif %}
             </p>
           </div>
           

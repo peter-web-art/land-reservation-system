@@ -28,6 +28,7 @@ urlpatterns = [
     path('<int:pk>/report/',  views.report_listing, name='report_listing'),
     # Messaging
     path('messages/',                                   views.inbox,            name='inbox'),
+    path('messages/contact-admin/',                     views.contact_admin,     name='contact_admin'),
     path('messages/send/',                              views.send_message,     name='send_message'),
     path('messages/<int:user_id>/',                     views.message_thread,   name='message_thread'),
     # Wishlist

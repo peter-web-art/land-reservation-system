@@ -108,6 +108,7 @@ class Land(AuditBase):
     is_draft      = models.BooleanField(default=False, help_text='Whether this land listing is a draft')
     wizard_step   = models.PositiveIntegerField(default=1, help_text='The current step in the registration wizard')
     view_count    = models.PositiveIntegerField(default=0, help_text='Number of detail page views')
+    owner_will_refund = models.BooleanField(default=True, help_text='Whether the owner will refund a deposited amount (shown to customers)')
 
     def save(self, *args, **kwargs):
         # Auto-generate land_id if not provided
@@ -218,6 +219,26 @@ class Land(AuditBase):
         Matches 'Normal Booking' logic.
         """
         return self.current_remaining_size > 0
+
+    @property
+    def availability_state(self):
+        """Return a normalized availability state for UI display."""
+        remaining = self.current_remaining_size
+        if remaining <= 0:
+            return 'unavailable'
+        if self.size and remaining < self.size:
+            return 'partial'
+        return 'available'
+
+    @property
+    def availability_label(self):
+        """Human-friendly status label based on remaining size."""
+        remaining = self.current_remaining_size
+        if remaining <= 0:
+            return 'Unavailable at the moment'
+        if self.size and remaining < self.size:
+            return f'{remaining} {self.get_size_unit_display()} available'
+        return f'{remaining} {self.get_size_unit_display()} available'
 
     @property
     def is_reserved(self):
@@ -538,6 +559,22 @@ class Reservation(AuditBase):
     def is_awaiting_payment(self):
         return self.status == 'awaiting_payment'
 
+    @property
+    def is_escrow_holding(self):
+        """Returns True if the reservation payment is confirmed but currently held in escrow (within 24h)."""
+        if not self.payment_confirmed:
+            return False
+        confirmed_payments = self.payments.filter(status='confirmed', owner_received_on__isnull=True)
+        if not confirmed_payments.exists():
+            return False
+        from datetime import timedelta
+        from django.utils import timezone
+        now = timezone.now()
+        for payment in confirmed_payments:
+            if payment.confirmed_on and now < payment.confirmed_on + timedelta(hours=24):
+                return True
+        return False
+
     def save(self, *args, **kwargs):
         """
         Override save to send a notification to the customer when a reservation
@@ -560,12 +597,12 @@ class Reservation(AuditBase):
                 Notification.objects.create(
                     user=self.customer,
                     notification_type='booking_approved',
-                    title='Booking Confirmed — Proceed to Payment',
+                    title='Booking Confirmed — Make Payment',
                     message=(
                         f"Your booking for '{self.land.title}' has been confirmed. "
-                        f"Please complete payment and choose an operator payment method: /lands/reservations/{self.pk}/payment-options/"
+                        f"Tap Make payment to choose a payment method and continue."
                     ),
-                    link=f'/lands/reservations/{self.pk}/payment-options/'
+                    link=f"{reverse('lands:payments_and_bills')}?booking={self.pk}"
                 )
                 # If there's a submitted payment attached to this reservation, copy key details
                 try:
@@ -663,7 +700,7 @@ class PaymentRecord(AuditBase):
     def payout_release_due_on(self):
         if not self.confirmed_on:
             return None
-        return self.confirmed_on + timedelta(days=7)
+        return self.confirmed_on + timedelta(hours=24)
 
     @property
     def owner_payout_status(self):

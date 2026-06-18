@@ -5,9 +5,14 @@
 <div class="container mx-auto px-4 py-8" style="max-width:960px">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
     <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ user.first_name|default:user.username }}</h1>
-    <a href="{% url 'lands:payments_and_bills' %}" class="inline-flex items-center justify-center px-5 py-3 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">
-      <i class="bi bi-receipt-cutoff mr-2"></i> Payments and Bills
-    </a>
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'lands:contact_admin' %}" class="btn-outline no-underline">
+        <i class="bi bi-chat-left-text mr-2"></i> Contact Support
+      </a>
+      <a href="{% url 'lands:payments_and_bills' %}" class="btn-primary no-underline">
+        <i class="bi bi-receipt-cutoff mr-2"></i> Payments and Bills
+      </a>
+    </div>
   </div>
 
   <!-- Stats row -->
@@ -31,7 +36,7 @@
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div class="text-sm text-gray-500">Notifications</div>
       <div class="text-2xl font-bold text-[#1a5c38]">{{ unread_notifications }}</div>
-      <a href="{% url 'lands:my_notifications' %}" class="text-sm text-[#1a5c38] hover:underline">View notifications</a>
+      <a href="{% url 'lands:my_notifications' %}" class="btn-outline no-underline text-sm">View notifications</a>
     </div>
   </div>
 
@@ -67,7 +72,7 @@
         <h2 class="text-xl font-semibold text-gray-900">Fresh lands</h2>
         <p class="text-sm text-gray-500">Browse the latest land posts and book the right property for your needs.</p>
       </div>
-      <a href="{% url 'lands:browse_lands' %}" class="text-[#1a5c38] hover:underline text-sm">Browse all lands &rarr;</a>
+      <a href="{% url 'lands:browse_lands' %}" class="btn-outline no-underline text-sm">Browse all lands</a>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {% for land in featured_lands %}
@@ -121,7 +126,7 @@
                 {% if r.start_date and r.end_date %}
                 <div><strong>Period:</strong> {{ r.start_date|date:"M d, Y" }} &rarr; {{ r.end_date|date:"M d, Y" }} ({{ r.duration_display }})</div>
                 {% endif %}
-                <div><strong>Status:</strong> {{ r.get_status_display }}</div>
+                <div><strong>Status:</strong> {% if r.is_escrow_holding %}Money on hold and will be released after 24 hours{% else %}{{ r.get_status_display }}{% endif %}</div>
                 <div><strong>Amount:</strong> Tsh {{ r.total_amount }}</div>
                 <div><strong>Owner:</strong> {{ r.land.owner.get_full_name|default:r.land.owner.username }}</div>
                 {% if r.land.contact_phone %}<div><i class="bi bi-phone"></i> {{ r.land.contact_phone }}</div>{% endif %}
@@ -131,11 +136,26 @@
             </div>
           </div>
           <div class="flex flex-col gap-2 min-w-[170px]">
-            <a href="{% url 'lands:land_detail' r.land.id %}" class="inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">View land</a>
+            <a href="{% url 'lands:land_detail' r.land.id %}" class="btn-primary no-underline text-sm">View land</a>
+            {% if r.status == 'approved' and not r.payment_confirmed %}
+              <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="btn-outline no-underline text-sm">
+                <i class="bi bi-credit-card-2-front"></i> Make payment
+              </a>
+            {% elif r.status == 'awaiting_payment' and not r.payment_confirmed %}
+              {% if r.selected_operator_payment %}
+                <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="btn-outline no-underline text-sm">
+                  <i class="bi bi-credit-card"></i> Make payment
+                </a>
+              {% else %}
+                <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="btn-outline no-underline text-sm">
+                  <i class="bi bi-credit-card-2-front"></i> Make payment
+                </a>
+              {% endif %}
+            {% endif %}
             {% if r.status == 'pending' or r.status == 'awaiting_payment' %}
             <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel this booking?')">
               {% csrf_token %}
-              <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors">Cancel request</button>
+              <button type="submit" class="btn-outline text-amber-700 border-amber-300 hover:bg-amber-50">Cancel request</button>
             </form>
             {% endif %}
           </div>
@@ -148,7 +168,7 @@
       <div class="text-5xl mb-4">📋</div>
       <h3 class="text-xl font-semibold text-gray-800 mb-2">No active reservations yet</h3>
       <p class="text-gray-500 mb-4">Browse available land posts, request booking, and manage your reservation period here.</p>
-      <a href="{% url 'lands:browse_lands' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+      <a href="{% url 'lands:browse_lands' %}" class="btn-primary no-underline">
         <i class="bi bi-search"></i> Browse land posts
       </a>
     </div>
@@ -182,7 +202,7 @@
       <h3 class="text-lg font-semibold text-gray-900 mb-2">Become a Host</h3>
       <p class="text-gray-600 mb-4">It's easy to start hosting and earn extra income by listing your land.</p>
       <form method="post" action="{% url 'lands:switch_to_owner' %}">{% csrf_token %}
-        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+        <button type="submit" class="btn-primary">
           <i class="bi bi-houses"></i> Try hosting
         </button>
       </form>

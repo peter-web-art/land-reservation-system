@@ -8,20 +8,28 @@
 <div class="container mx-auto px-4 py-8">
   <!-- Header -->
   <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-    <h1 class="text-3xl font-bold text-gray-900">Messages</h1>
-    <div class="flex gap-2 mt-4 md:mt-0" id="msgTabs">
-      <button class="px-4 py-2 rounded-lg text-sm font-medium bg-[#1a5c38] text-white" data-filter="all" onclick="filterMessages('all',this)">
-        All
-        {% if received.count or sent.count %}
-          <span class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ received.count|add:sent.count }}</span>
-        {% endif %}
-      </button>
-      <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200" data-filter="unread" onclick="filterMessages('unread',this)">
-        Unread
-        {% if unread_count %}
-          <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-xs">{{ unread_count }}</span>
-        {% endif %}
-      </button>
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Messages</h1>
+      <p class="text-sm text-gray-500 mt-1">Chat with landowners, customers, or contact support.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
+      <div class="flex gap-2" id="msgTabs">
+        <button class="pill pill-active" data-filter="all" onclick="filterMessages('all',this)">
+          All
+          {% if received.count or sent.count %}
+            <span class="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ received.count|add:sent.count }}</span>
+          {% endif %}
+        </button>
+        <button class="pill pill-inactive" data-filter="unread" onclick="filterMessages('unread',this)">
+          Unread
+          {% if unread_count %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-xs">{{ unread_count }}</span>
+          {% endif %}
+        </button>
+      </div>
+      <a href="{% url 'lands:contact_admin' %}" class="btn-primary no-underline text-sm">
+        <i class="bi bi-chat-left-text"></i> Message Admin
+      </a>
     </div>
   </div>
 
