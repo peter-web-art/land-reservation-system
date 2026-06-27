@@ -12,14 +12,14 @@
       </div>
       <h1 class="text-2xl font-bold text-gray-900">Booking Requests</h1>
     </div>
-    <div class="flex gap-2 mt-4 md:mt-0">
-      <a href="{% url 'lands:manage_payments' %}" class="inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">
+    <div class="flex flex-wrap gap-2 mt-4 md:mt-0">
+      <a href="{% url 'lands:manage_payments' %}" class="btn-primary no-underline">
         <i class="bi bi-cash-stack"></i> Manage Payments
       </a>
-      <a href="{% url 'lands:owner_dashboard' %}" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+      <a href="{% url 'lands:owner_dashboard' %}" class="btn-outline no-underline">
         <i class="bi bi-arrow-left"></i> Dashboard
       </a>
-      <a href="{% url 'lands:add_land' %}" class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+      <a href="{% url 'lands:add_land' %}" class="btn-outline no-underline">
         <i class="bi bi-plus-circle"></i> Add Land
       </a>
     </div>
@@ -27,14 +27,18 @@
 
   <!-- Filter tabs -->
   <div class="flex flex-wrap gap-2 mb-6">
-    <a href="?" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if not request.GET.status %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">All</a>
-    <a href="?status=pending" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'pending' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+    <a href="?" class="pill {% if not request.GET.status %}pill-active{% else %}pill-inactive{% endif %}">All</a>
+    <a href="?status=pending" class="pill {% if request.GET.status == 'pending' %}pill-active{% else %}pill-inactive{% endif %}">
       <i class="bi bi-clock"></i> Pending
       {% if pending_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ pending_count }}</span>{% endif %}
     </a>
-    <a href="?status=approved" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'approved' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"><i class="bi bi-check-circle"></i> Approved</a>
-    <a href="?status=rejected" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'rejected' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"><i class="bi bi-x-circle"></i> Rejected</a>
-    <a href="?status=cancelled" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.status == 'cancelled' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"><i class="bi bi-dash-circle"></i> Cancelled</a>
+    <a href="?status=awaiting_payment" class="pill {% if request.GET.status == 'awaiting_payment' %}pill-active{% else %}pill-inactive{% endif %}">
+      <i class="bi bi-cash"></i> Awaiting Payment
+      {% if awaiting_payment_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ awaiting_payment_count }}</span>{% endif %}
+    </a>
+    <a href="?status=approved" class="pill {% if request.GET.status == 'approved' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-check-circle"></i> Approved</a>
+    <a href="?status=rejected" class="pill {% if request.GET.status == 'rejected' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-x-circle"></i> Rejected</a>
+    <a href="?status=cancelled" class="pill {% if request.GET.status == 'cancelled' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-dash-circle"></i> Cancelled</a>
   </div>
 
   {% if reservations %}
@@ -43,7 +47,7 @@
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div class="flex items-stretch">
         <!-- Colour bar -->
-        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
+        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'awaiting_payment' %}bg-sky-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
 
         <!-- Main -->
         <div class="flex-1 p-4">
@@ -52,17 +56,19 @@
               <div class="flex items-center gap-2">
                 <a href="{% url 'lands:land_detail' r.land.id %}" class="font-semibold text-lg text-[#1a5c38] hover:underline no-underline">{{ r.land.title }}</a>
                 {% if r.start_date and r.start_date > today %}
-                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-200">Pre-Booking</span>
+                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-200">Scheduled Booking</span>
                 {% endif %}
               </div>
               <div class="text-sm text-gray-500 flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ r.land.location }}</div>
             </div>
             <div class="flex flex-wrap gap-2 mt-2 md:mt-0">
-              {% if r.status == 'pending' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Pending</span>
+              {% if r.is_escrow_holding %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold"><i class="bi bi-hourglass-split"></i> Money on hold and will be released after 24 hours</span>
+              {% elif r.status == 'pending' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Pending</span>
+              {% elif r.status == 'awaiting_payment' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-100 text-sky-700 rounded-full text-xs font-semibold"><i class="bi bi-cash"></i> Awaiting Payment</span>
               {% elif r.status == 'approved' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-check-circle-fill"></i> Approved</span>
               {% elif r.status == 'rejected' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold"><i class="bi bi-x-circle"></i> Rejected</span>
               {% else %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">Cancelled</span>{% endif %}
-              {% if r.payment_status == 'paid' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-cash"></i> Paid</span>{% elif r.payment_status == 'refunded' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Refunded</span>{% else %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">Unpaid</span>{% endif %}
+              {% if r.is_escrow_holding %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold"><i class="bi bi-hourglass-split"></i> Money on hold</span>{% elif r.payment_status == 'paid' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-cash"></i> Paid</span>{% elif r.payment_status == 'refunded' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Refunded</span>{% else %}<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">Unpaid</span>{% endif %}
             </div>
           </div>
 
@@ -107,6 +113,12 @@
               <strong class="text-gray-600">{{ r.payment_reference }}</strong>
             </div>
             {% endif %}
+            {% if r.payment_method or r.latest_pending_payment.payment_method %}
+            <div>
+              <div class="text-xs text-gray-500 uppercase">Payment Method</div>
+              <strong class="text-gray-700">{{ r.latest_pending_payment.payment_method|default:r.payment_method|default:"Not set"|capfirst }}</strong>
+            </div>
+            {% endif %}
           </div>
 
           {% if r.notes %}<div class="mt-3 text-sm text-gray-600 flex items-start gap-2"><i class="bi bi-chat-text mt-0.5"></i> {{ r.notes|truncatewords:25 }}</div>{% endif %}
@@ -116,17 +128,17 @@
             {% if r.status == 'pending' %}
             <form method="post" action="{% url 'lands:update_reservation_status' r.id 'approved' %}">
               {% csrf_token %}
-              <button class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check"></i> Approve Request</button>
+              <button class="btn-primary"><i class="bi bi-check"></i> Approve & Await Payment</button>
             </form>
-            <form method="post" action="{% url 'lands:update_reservation_status' r.id 'rejected' %}">
+            <form method="post" action="{% url 'lands:update_reservation_status' r.id 'rejected' %}" onsubmit="return confirm('Reject this booking request? This will notify the customer.')">
               {% csrf_token %}
-              <button class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"><i class="bi bi-x"></i> Reject</button>
+              <button class="btn-outline text-red-600 border-red-200 hover:bg-red-50"><i class="bi bi-x"></i> Reject</button>
             </form>
-            {% elif r.status == 'approved' %}
-            <div class="w-full mb-3 flex flex-col gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            {% elif r.status == 'awaiting_payment' %}
+            <div class="w-full mb-3 flex flex-col gap-2 p-3 bg-sky-50 border border-sky-200 rounded-lg">
               <div class="flex items-center gap-2">
-                <i class="bi bi-check-circle-fill text-green-600"></i>
-                <span class="text-sm text-green-800 font-medium">You have <strong>Accepted</strong> this booking.</span>
+                <i class="bi bi-cash text-sky-600"></i>
+                <span class="text-sm text-sky-800 font-medium">Booking approved. Waiting for customer payment.</span>
               </div>
             </div>
             
@@ -152,19 +164,19 @@
                   {% if r.payment_receipt %}
                   <div class="sm:col-span-2">
                     <span class="text-xs text-gray-500 block mb-1">Receipt/Proof:</span>
-                    <a href="{{ r.payment_receipt.url }}" target="_blank" class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#1a5c38] hover:bg-gray-50 no-underline font-medium">
-                      <i class="bi bi-file-earmark-image"></i> View Receipt Image
-                    </a>
+                  <a href="{{ r.payment_receipt.url }}" target="_blank" class="btn-outline no-underline text-sm">
+                    <i class="bi bi-file-earmark-image"></i> View Receipt Image
+                  </a>
                   </div>
                   {% endif %}
                 </div>
                 
                 <form method="post" action="{% url 'lands:confirm_payment_receipt' r.id %}" class="flex gap-2">
                   {% csrf_token %}
-                  <button type="submit" name="action" value="confirm" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors">
+                  <button type="submit" name="action" value="confirm" class="btn-primary">
                     <i class="bi bi-check-circle"></i> Confirm Funds Received
                   </button>
-                  <button type="submit" name="action" value="reject" class="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors">
+                  <button type="submit" name="action" value="reject" class="btn-outline text-red-600 border-red-200 hover:bg-red-50">
                     <i class="bi bi-x-circle"></i> Invalid Reference
                   </button>
                 </form>
@@ -174,7 +186,7 @@
                 <i class="bi bi-hourglass-split"></i> Awaiting payment details from customer...
               </div>
               <!-- Manual Mark Paid fallback -->
-              <button onclick="togglePayForm({{ r.id }})" class="px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors">
+              <button onclick="togglePayForm({{ r.id }})" class="btn-outline">
                 <i class="bi bi-pencil-square"></i> Manual Mark Paid
               </button>
               <div id="payform_{{ r.id }}" class="hidden mt-3 p-4 bg-amber-50 border border-amber-200 rounded-lg w-full">
@@ -195,7 +207,7 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Reference No.</label>
                     <input type="text" name="payment_reference" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g. NXA8234Y">
                   </div>
-                  <button type="submit" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check-circle"></i> Save & Confirm</button>
+                  <button type="submit" class="btn-primary"><i class="bi bi-check-circle"></i> Save & Confirm</button>
                 </form>
               </div>
             {% endif %}
@@ -203,8 +215,15 @@
             <form method="post" action="{% url 'lands:update_reservation_status' r.id 'cancelled' %}"
               onsubmit="return confirm('Cancel this approved booking? The customer will be notified by SMS.')" class="mt-2">
               {% csrf_token %}
-              <button class="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors"><i class="bi bi-slash-circle"></i> Cancel Booking</button>
+              <button class="btn-outline text-amber-700 border-amber-300 hover:bg-amber-50"><i class="bi bi-slash-circle"></i> Cancel Booking</button>
             </form>
+            {% elif r.status == 'approved' %}
+            <div class="w-full mb-3 flex flex-col gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div class="flex items-center gap-2">
+                <i class="bi bi-check-circle-fill text-green-600"></i>
+                <span class="text-sm text-green-800 font-medium">Payment confirmed. Access details are unlocked.</span>
+              </div>
+            </div>
             {% endif %}
           </div>
         </div>

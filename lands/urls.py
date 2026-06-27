@@ -5,6 +5,7 @@ app_name = "lands"
 
 urlpatterns = [
     path('',                                            views.land_list,                 name='land_list'),
+    path('browse/',                                     views.browse_lands,               name='browse_lands'),
     path('search/',                                     views.search_lands,              name='search_lands'),
     path('api/location-autocomplete/',                  views.location_autocomplete,     name='location_autocomplete'),
     path('api/districts/',                              views.districts_api,             name='districts_api'),
@@ -15,6 +16,7 @@ urlpatterns = [
     path('dashboard/customer/',                         views.customer_dashboard,        name='customer_dashboard'),
     path('reservations/',                               views.my_reservations,           name='my_reservations'),
     path('reservations/<int:pk>/cancel/',               views.cancel_reservation,        name='cancel_reservation'),
+    path('bookings/<int:pk>/refund-request/',            views.refund_request,            name='refund_request'),
     # Owner
     path('dashboard/',                                  views.owner_dashboard,           name='owner_dashboard'),
     path('add/',                                        views.add_land,                  name='add_land'),
@@ -27,6 +29,7 @@ urlpatterns = [
     path('<int:pk>/report/',  views.report_listing, name='report_listing'),
     # Messaging
     path('messages/',                                   views.inbox,            name='inbox'),
+    path('messages/contact-admin/',                     views.contact_admin,     name='contact_admin'),
     path('messages/send/',                              views.send_message,     name='send_message'),
     path('messages/<int:user_id>/',                     views.message_thread,   name='message_thread'),
     # Wishlist
@@ -47,5 +50,11 @@ urlpatterns = [
     path('payments/',                                   views.payments_and_bills,     name='payments_and_bills'),
     path('payments/manage/',                            views.manage_payments,        name='manage_payments'),
     path('bookings/<int:pk>/submit-payment/',           views.submit_payment,         name='submit_payment'),
+    path('reservations/<int:pk>/payment-options/',       views.reservation_payment_options, name='reservation_payment_options'),
     path('bookings/<int:pk>/confirm-payment/',          views.confirm_payment_receipt, name='confirm_payment_receipt'),
+    path('payments/<int:payment_id>/acknowledge-payout/', views.acknowledge_payout_received, name='acknowledge_payout_received'),
+    
+    # Admin Reported Lands
+    path('admin/reported-lands/',                       views.admin_reported_lands,    name='admin_reported_lands'),
+    path('admin/reported-lands/<int:report_id>/',       views.admin_report_detail,     name='admin_report_detail'),
 ]

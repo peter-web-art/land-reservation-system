@@ -12,7 +12,7 @@
       </div>
       <h1 class="text-3xl font-bold text-gray-900">My Reservations</h1>
     </div>
-    <a href="{% url 'lands:land_list' %}" class="mt-4 md:mt-0 inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+    <a href="{% url 'lands:browse_lands' %}" class="mt-4 md:mt-0 inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
       <i class="bi bi-search"></i> Browse Lands
     </a>
   </div>
@@ -34,7 +34,7 @@
     <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div class="flex items-stretch">
         <!-- Status bar -->
-        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
+        <div class="w-2 {% if r.status == 'pending' %}bg-amber-500{% elif r.status == 'awaiting_payment' %}bg-sky-500{% elif r.status == 'approved' %}bg-green-500{% elif r.status == 'rejected' %}bg-red-500{% else %}bg-gray-400{% endif %}"></div>
 
         <!-- Thumbnail -->
         <div class="w-24 h-24 flex-shrink-0">
@@ -52,9 +52,9 @@
               <a href="{% url 'lands:land_detail' r.land.id }}" class="font-semibold text-lg text-[#1a5c38] hover:underline no-underline">{{ r.land.title }}</a>
               <div class="text-gray-500 text-sm flex items-center gap-1"><i class="bi bi-geo-alt"></i> {{ r.land.location }}</div>
             </div>
-            <span class="mt-2 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold {% if r.status == 'pending' %}bg-amber-100 text-amber-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
-              {% if r.status == 'pending' %}<i class="bi bi-clock"></i>{% elif r.status == 'approved' %}<i class="bi bi-check-circle-fill"></i>{% elif r.status == 'rejected' %}<i class="bi bi-x-circle"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %}
-              {{ r.get_status_display }}
+            <span class="mt-2 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold {% if r.is_escrow_holding %}bg-blue-100 text-blue-700{% elif r.status == 'pending' %}bg-amber-100 text-amber-700{% elif r.status == 'awaiting_payment' %}bg-sky-100 text-sky-700{% elif r.status == 'approved' %}bg-green-100 text-green-700{% elif r.status == 'rejected' %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+              {% if r.is_escrow_holding %}<i class="bi bi-hourglass-split"></i>{% elif r.status == 'pending' %}<i class="bi bi-clock"></i>{% elif r.status == 'awaiting_payment' %}<i class="bi bi-cash"></i>{% elif r.status == 'approved' %}<i class="bi bi-check-circle-fill"></i>{% elif r.status == 'rejected' %}<i class="bi bi-x-circle"></i>{% else %}<i class="bi bi-dash-circle"></i>{% endif %}
+              {% if r.is_escrow_holding %}Money on hold and will be released after 24 hours{% else %}{{ r.get_status_display }}{% endif %}
             </span>
           </div>
 
@@ -62,19 +62,35 @@
             <span class="flex items-center gap-1"><i class="bi bi-calendar3"></i> {{ r.created_on|date:"M d, Y" }}</span>
             {% if r.start_date and r.end_date %}<span class="flex items-center gap-1"><i class="bi bi-arrow-left-right"></i> {{ r.start_date|date:"M d" }} &rarr; {{ r.end_date|date:"M d, Y" }} ({{ r.duration_display }})</span>{% endif %}
             <span class="font-semibold">Tsh {{ r.agreed_price|default:r.land.price }}</span>
-            {% if r.payment_status == 'paid' %}<span class="text-green-600 flex items-center gap-1"><i class="bi bi-check-circle-fill"></i> Paid</span>{% endif %}
+            {% if r.is_escrow_holding %}
+              <span class="text-blue-600 flex items-center gap-1"><i class="bi bi-hourglass-split"></i> Money on hold and will be released after 24 hours</span>
+            {% elif r.payment_status == 'paid' %}
+              <span class="text-green-600 flex items-center gap-1"><i class="bi bi-check-circle-fill"></i> Paid</span>
+            {% endif %}
           </div>
         </div>
 
         <!-- Actions -->
         <div class="p-4 flex flex-col gap-2 justify-center border-l border-gray-100">
           <a href="{% url 'lands:land_detail' r.land.id %}" class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors text-center no-underline"><i class="bi bi-eye"></i> View</a>
+          {% if not r.payment_confirmed and r.remaining_balance > 0 %}
+            {% if r.status == 'approved' or r.status == 'awaiting_payment' %}
+              {% if r.selected_operator_payment or r.payment_method %}
+                <a href="{% url 'lands:submit_payment' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-receipt"></i> {% if r.payment_reference or r.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}</a>
+                <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card"></i> Change Payment Method</a>
+              {% else %}
+                <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Continue payment</a>
+              {% endif %}
+            {% else %}
+              <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Continue payment</a>
+            {% endif %}
+          {% endif %}
           {% if r.status == 'pending' %}
           <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel this pending booking?')">
             {% csrf_token %}<button type="submit" class="w-full px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"><i class="bi bi-x"></i> Cancel</button>
           </form>
-          {% elif r.status == 'approved' %}
-          <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel your APPROVED booking? The owner will be notified.')">
+          {% elif r.status == 'awaiting_payment' %}
+          <form method="post" action="{% url 'lands:cancel_reservation' r.id %}" onsubmit="return confirm('Cancel your booking while awaiting payment? The owner will be notified.')">
             {% csrf_token %}<button type="submit" class="w-full px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"><i class="bi bi-slash-circle"></i> Cancel</button>
           </form>
           {% endif %}
@@ -88,7 +104,7 @@
     <i class="bi bi-calendar-x text-5xl text-gray-300 mb-4"></i>
     <h3 class="text-xl font-semibold text-gray-800 mb-2">No reservations yet</h3>
     <p class="text-gray-500 mb-4">Browse available lands and make your first reservation.</p>
-    <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
+    <a href="{% url 'lands:browse_lands' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
       <i class="bi bi-search"></i> Browse Lands
     </a>
   </div>

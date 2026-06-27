@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-3xl mx-auto bg-white border border-gray-100 rounded-xl p-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">Choose payment method for reservation</h2>
+    <p class="text-sm text-gray-600 mb-4">Select where you will send payment for this booking. The operator will see your selection and may follow up.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="space-y-3">
+        {% for cfg in configs %}
+        <label class="block p-3 border rounded-lg hover:border-gray-300 cursor-pointer flex items-start gap-3 {% if reservation.selected_operator_payment and reservation.selected_operator_payment.id == cfg.id %}bg-gray-50 border-gray-300{% endif %}">
+          <input type="radio" name="payment_config" value="{{ cfg.id }}" class="mt-1" {% if reservation.selected_operator_payment and reservation.selected_operator_payment.id == cfg.id %}checked{% endif %}>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold">{{ cfg.get_payment_method_display }} — {{ cfg.account_identifier }}</div>
+              <div class="text-xs text-gray-500">Priority {{ cfg.priority }}</div>
+            </div>
+            {% if cfg.instructions %}
+            <p class="mt-2 text-sm text-gray-700">{{ cfg.instructions|linebreaksbr }}</p>
+            {% endif %}
+            <div class="mt-2 text-xs text-gray-500">
+              {% if cfg.bank_name %}Bank: {{ cfg.bank_name }}{% endif %}{% if cfg.bank_branch %} · Branch: {{ cfg.bank_branch }}{% endif %}
+            </div>
+          </div>
+        </label>
+        {% empty %}
+        <p class="text-sm text-gray-600">No payment methods are currently available. Please contact support.</p>
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <button type="submit" class="btn-primary">Save selection</button>
+        <a href="{% url 'lands:my_reservations' %}" class="btn-outline no-underline text-sm">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

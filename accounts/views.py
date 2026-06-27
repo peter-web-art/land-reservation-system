@@ -21,7 +21,7 @@ import csv
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from .models import User, PersonalDetails, SystemSettings
+from .models import User, PersonalDetails, SystemSettings, OperatorPaymentConfig, Message
 
 try:
     from django_ratelimit.decorators import ratelimit
@@ -81,6 +81,20 @@ def safe_redirect_back(request, fallback):
     return redirect(fallback)
 
 
+def get_platform_fee_percentage():
+    settings_obj = SystemSettings.objects.first()
+    if not settings_obj:
+        settings_obj = SystemSettings.objects.create()
+    return settings_obj.platform_fee_percentage or Decimal('0')
+
+
+def apply_platform_fee_to_payment(payment):
+    fee_rate = get_platform_fee_percentage()
+    payment.platform_fee_rate = fee_rate
+    payment.platform_fee_amount = round((payment.amount or Decimal('0')) * fee_rate / Decimal('100'), 2)
+    return payment
+
+
 # ── Forms ──────────────────────────────────────────────────────────────────────
 
 class UserRegistrationForm(forms.ModelForm):
@@ -94,6 +108,19 @@ class UserRegistrationForm(forms.ModelForm):
         choices=[(User.ROLE_CUSTOMER, 'Customer'), (User.ROLE_OWNER, 'Land Owner')],
         initial=User.ROLE_CUSTOMER
     )
+    payout_method   = forms.ChoiceField(
+        choices=[
+            ('mpesa', 'M-Pesa'),
+            ('airtel', 'Airtel Money'),
+            ('tigo', 'Tigo Money'),
+            ('bank_transfer', 'Bank Transfer'),
+            ('bank_cheque', 'Bank Cheque'),
+        ],
+        required=False,
+        label='Payout Method'
+    )
+    account_identifier = forms.CharField(max_length=100, required=False, label='Account/Wallet Identifier')
+    account_holder_name = forms.CharField(max_length=200, required=False, label='Account Holder Name')
 
     class Meta:
         model  = User
@@ -146,6 +173,14 @@ class UserRegistrationForm(forms.ModelForm):
         if cleaned.get('role') == User.ROLE_CUSTOMER and not cleaned.get('phone'):
             raise forms.ValidationError({'phone': 'Phone number is required for customer signup.'})
         
+        if cleaned.get('role') == User.ROLE_OWNER:
+            if not cleaned.get('payout_method'):
+                raise forms.ValidationError({'payout_method': 'Payout method is required for Land Owner.'})
+            if not cleaned.get('account_identifier'):
+                raise forms.ValidationError({'account_identifier': 'Account identifier is required for Land Owner.'})
+            if not cleaned.get('account_holder_name'):
+                raise forms.ValidationError({'account_holder_name': 'Account holder name is required for Land Owner.'})
+
         return cleaned
 
     def save(self, commit=True):
@@ -180,6 +215,18 @@ class UserRegistrationForm(forms.ModelForm):
             details.surname = user.last_name or user.username
         details.updated_by = user
         details.save()
+
+    def save_payment_details(self, user):
+        if self.cleaned_data.get('role') == User.ROLE_OWNER:
+            from .models import PaymentDetails
+            PaymentDetails.objects.create(
+                user=user,
+                payment_method=self.cleaned_data.get('payout_method', 'mpesa'),
+                account_identifier=self.cleaned_data.get('account_identifier', ''),
+                account_holder_name=self.cleaned_data.get('account_holder_name', ''),
+                created_by=user,
+                updated_by=user
+            )
 
 
 class AdminUserRegistrationForm(UserRegistrationForm):
@@ -294,6 +341,14 @@ def login_view(request):
     auth_login(request, user, backend='accounts.backends.SuspendedAwareBackend')
     messages.success(request, f'Welcome back, {user.username}.')
 
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+
     # Auto-redirect based on user's stored role — no role selection needed
     from .decorators import role_based_redirect
     return redirect(role_based_redirect(user))
@@ -358,6 +413,7 @@ def register_verify(request):
                 user = form.save(commit=False)
                 user.save()
                 form.save_personal_details(user)
+                form.save_payment_details(user)
                 user.created_by = user
                 user.save(update_fields=['created_by'])
                 del request.session['registration_data']
@@ -393,9 +449,11 @@ def profile_edit(request):
 @admin_required
 def admin_portal(request):
     from lands.models import Land, Reservation, PaymentRecord
+    
 
     # Basic stats
     total_users    = User.objects.count()
+    total_admins   = User.objects.filter(role=User.ROLE_ADMIN).count()
     total_owners   = User.objects.filter(role=User.ROLE_OWNER).count()
     total_customers = User.objects.filter(role=User.ROLE_CUSTOMER).count()
     unverified     = User.objects.filter(role=User.ROLE_OWNER, is_verified=False).count()
@@ -403,6 +461,7 @@ def admin_portal(request):
     total_lands    = Land.objects.count()
     total_bookings = Reservation.objects.count()
     pending_book   = Reservation.objects.filter(status='pending').count()
+    awaiting_payment_book = Reservation.objects.filter(status='awaiting_payment').count()
     approved_book  = Reservation.objects.filter(status='approved').count()
 
     system_settings = SystemSettings.objects.first()
@@ -419,8 +478,18 @@ def admin_portal(request):
     monthly_revenue = confirmed_payments.filter(
         confirmed_on__gte=timezone.now() - timedelta(days=30)
     ).aggregate(total=Sum('platform_fee_amount'))['total'] or 0
-    owner_payout_total = gross_revenue - total_revenue
-    monthly_owner_payout = monthly_gross_revenue - monthly_revenue
+
+    # Owner payout should reflect funds waiting to be paid out to owners
+    pending_owner_payments = confirmed_payments.filter(owner_received_on__isnull=True)
+    pending_gross = pending_owner_payments.aggregate(total=Sum('amount'))['total'] or 0
+    pending_platform_fees = pending_owner_payments.aggregate(total=Sum('platform_fee_amount'))['total'] or 0
+    owner_payout_total = pending_gross - pending_platform_fees
+
+    # Monthly owner payout (pending) — confirmed in last 30 days and still not released
+    monthly_pending = pending_owner_payments.filter(confirmed_on__gte=timezone.now() - timedelta(days=30))
+    monthly_pending_gross = monthly_pending.aggregate(total=Sum('amount'))['total'] or 0
+    monthly_pending_fees = monthly_pending.aggregate(total=Sum('platform_fee_amount'))['total'] or 0
+    monthly_owner_payout = monthly_pending_gross - monthly_pending_fees
 
     # Recent data
     # Global Search Logic
@@ -625,12 +694,15 @@ def admin_portal(request):
     audit_logs.sort(key=lambda x: x['timestamp'], reverse=True)
     audit_logs = audit_logs[:40]
 
+    # Operator payment configs to show quick access in portal
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
+
     return render(request, 'accounts/admin_portal.html', {
-        'total_users': total_users, 'total_owners': total_owners,
+        'total_users': total_users, 'total_admins': total_admins, 'total_owners': total_owners,
         'total_customers': total_customers,
         'unverified': unverified, 'suspended': suspended,
         'total_lands': total_lands, 'total_bookings': total_bookings,
-        'pending_book': pending_book, 'approved_book': approved_book,
+        'pending_book': pending_book, 'awaiting_payment_book': awaiting_payment_book, 'approved_book': approved_book,
         'total_revenue': total_revenue, 'monthly_revenue': monthly_revenue,
         'gross_revenue': gross_revenue, 'monthly_gross_revenue': monthly_gross_revenue,
         'owner_payout_total': owner_payout_total, 'monthly_owner_payout': monthly_owner_payout,
@@ -651,6 +723,7 @@ def admin_portal(request):
         'system_settings': system_settings,
         'audit_logs': audit_logs,
         'registration_form': registration_form,
+        'operator_payment_configs': operator_payment_configs,
     })
 
 
@@ -723,6 +796,64 @@ def admin_user_action(request, user_id):
     return safe_redirect_back(request, 'accounts:admin_portal')
 
 
+class AdminMessageForm(forms.Form):
+    subject = forms.CharField(max_length=200, required=False, widget=forms.TextInput(attrs={'class': 'w-full px-4 py-3 border rounded'}))
+    body = forms.CharField(widget=forms.Textarea(attrs={'class': 'w-full px-4 py-3 border rounded', 'rows':4}))
+
+
+@admin_required
+def admin_compose_message(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    if request.method == 'POST':
+        form = AdminMessageForm(request.POST)
+        if form.is_valid():
+            Message.objects.create(
+                sender=request.user,
+                receiver=target,
+                subject=form.cleaned_data.get('subject', '').strip(),
+                body=form.cleaned_data.get('body', '').strip(),
+                
+            )
+            messages.success(request, f'Message sent to {target.username}.')
+            return redirect('accounts:admin_portal')
+    else:
+        form = AdminMessageForm()
+    return render(request, 'accounts/admin_message_compose.html', {'form': form, 'target': target})
+
+
+@admin_required
+def admin_message_thread(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    # Thread between request.user (admin) and target
+    thread_messages = Message.objects.filter(
+        (Q(sender=request.user) & Q(receiver=target)) | (Q(sender=target) & Q(receiver=request.user))
+    ).select_related('sender', 'receiver').order_by('created_on')
+
+    # Mark messages received by admin as read when viewing
+    unseen = thread_messages.filter(receiver=request.user, is_read=False)
+    if unseen.exists():
+        unseen.update(is_read=True)
+
+    # Compose reply
+    if request.method == 'POST':
+        form = AdminMessageForm(request.POST)
+        if form.is_valid():
+            Message.objects.create(
+                sender=request.user,
+                receiver=target,
+                subject=form.cleaned_data.get('subject', '').strip(),
+                body=form.cleaned_data.get('body', '').strip(),
+            )
+            messages.success(request, f'Reply sent to {target.username}.')
+            return redirect('accounts:admin_message_thread', user_id=target.id)
+    else:
+        form = AdminMessageForm()
+
+    return render(request, 'accounts/admin_message_thread.html', {
+        'target': target, 'messages': thread_messages, 'form': form
+    })
+
+
 @admin_required
 @require_http_methods(['POST'])
 def admin_booking_action(request, booking_id):
@@ -731,10 +862,10 @@ def admin_booking_action(request, booking_id):
     action = request.POST.get('action')
 
     if action == 'approve':
-        booking.status = 'approved'
+        booking.status = 'awaiting_payment'
         booking.updated_by = request.user
         booking.save()
-        messages.success(request, f'Booking #{booking.id} approved.')
+        messages.success(request, f'Booking #{booking.id} moved to awaiting payment.')
     elif action == 'reject':
         booking.status = 'rejected'
         booking.updated_by = request.user

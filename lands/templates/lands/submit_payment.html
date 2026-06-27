@@ -4,7 +4,7 @@
 <div class="min-h-screen bg-[#f3faf3] py-12">
   <div class="max-w-2xl mx-auto px-4">
     <div class="mb-8">
-      <a href="{% url 'lands:payments_and_bills' %}" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-[#1a5c38] no-underline transition-colors mb-4">
+      <a href="{% url 'lands:payments_and_bills' %}" class="btn-outline mb-4 no-underline text-sm">
         <i class="bi bi-arrow-left"></i> Back to Payments and Bills
       </a>
       <h1 class="text-3xl font-black text-gray-900 tracking-tight">Submit Payment Proof</h1>
@@ -38,7 +38,7 @@
             <label class="text-sm font-bold text-gray-700">Amount Paid</label>
             {{ form.amount }}
             {% if form.amount.errors %}<p class="text-xs text-red-600">{{ form.amount.errors|join:", " }}</p>{% endif %}
-            <p class="text-[10px] text-gray-400">Enter this installment amount only</p>
+            <p class="text-[10px] text-gray-400">Enter the full remaining balance only. Partial payments are not accepted.</p>
           </div>
           <div class="space-y-2">
             <label class="text-sm font-bold text-gray-700">Payment Method</label>
@@ -101,7 +101,13 @@
         {% endif %}
 
         <div class="pt-4">
-          <button type="submit" class="w-full py-4 bg-[#1a5c38] text-white rounded-2xl font-black text-lg hover:bg-[#134428] shadow-xl shadow-[#1a5c38]/20 transition-all active:scale-95">
+          {% if booking.land.owner_will_refund %}
+          <div class="mb-3 p-3 bg-green-50 border border-green-100 text-sm text-green-700 rounded-lg">Policy: The owner has defined a refund policy for this property. Funds are held in escrow for 24 hours after confirmation before release to the owner.</div>
+          {% else %}
+          <div class="mb-3 p-3 bg-amber-50 border border-amber-100 text-sm text-amber-700 rounded-lg">Policy: The owner has NOT defined a refund policy for this property. Funds are held in escrow for 24 hours after confirmation before release to the owner.</div>
+          {% endif %}
+
+          <button type="submit" class="btn-primary w-full text-lg">
             Submit Payment Details
           </button>
           <p class="text-center text-[11px] text-gray-400 mt-4">

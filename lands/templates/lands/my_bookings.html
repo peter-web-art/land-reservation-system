@@ -12,7 +12,7 @@
       <a href="{% url 'lands:payments_and_bills' %}" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-all no-underline">
         <i class="bi bi-receipt-cutoff mr-2"></i> Payments and Bills
       </a>
-      <a href="{% url 'lands:land_list' %}" class="inline-flex items-center justify-center px-6 py-3 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-all no-underline">
+      <a href="{% url 'lands:browse_lands' %}" class="inline-flex items-center justify-center px-6 py-3 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-all no-underline">
         <i class="bi bi-search mr-2"></i> Browse More Land
       </a>
     </div>
@@ -47,11 +47,13 @@
               <div class="flex items-center gap-2 mb-1">
                 <h3 class="text-xl font-bold text-gray-900">{{ b.land.title }}</h3>
                 <span class="text-xs font-medium px-2 py-0.5 rounded-full 
-                  {% if b.status == 'pending' %}bg-amber-100 text-amber-700
+                  {% if b.is_escrow_holding %}bg-blue-100 text-blue-700
+                  {% elif b.status == 'pending' %}bg-amber-100 text-amber-700
+                  {% elif b.status == 'awaiting_payment' %}bg-sky-100 text-sky-700
                   {% elif b.status == 'approved' %}bg-green-100 text-green-700
                   {% elif b.status == 'rejected' %}bg-red-100 text-red-700
                   {% else %}bg-gray-100 text-gray-700{% endif %}">
-                  {{ b.get_status_display }}
+                  {% if b.is_escrow_holding %}Money on hold and will be released after 24 hours{% else %}{{ b.get_status_display }}{% endif %}
                 </span>
               </div>
               <p class="text-sm text-gray-500 flex items-center gap-1">
@@ -64,7 +66,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-gray-100 mb-6 text-sm">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 py-4 border-y border-gray-100 mb-6 text-sm">
             <div>
               <p class="text-xs text-gray-400 mb-1">Booking Date</p>
               <p class="font-bold text-gray-700">{{ b.created_on|date:"M d, Y" }}</p>
@@ -77,8 +79,8 @@
             {% endif %}
             <div>
               <p class="text-xs text-gray-400 mb-1">Payment Status</p>
-              <p class="font-bold {% if b.payment_confirmed %}text-green-600{% else %}text-amber-600{% endif %}">
-                {% if b.payment_confirmed %}Paid & Confirmed{% elif b.payment_reference %}Payment Under Review{% else %}Unpaid{% endif %}
+              <p class="font-bold {% if b.is_escrow_holding %}text-blue-600{% elif b.payment_confirmed %}text-green-600{% else %}text-amber-600{% endif %}">
+                {% if b.is_escrow_holding %}Money on hold and will be released after 24 hours{% elif b.payment_confirmed %}Paid & Confirmed{% elif b.status == 'awaiting_payment' and b.payment_reference %}Payment Under Review{% elif b.status == 'awaiting_payment' %}Awaiting Payment{% else %}Unpaid{% endif %}
               </p>
             </div>
             <div>
@@ -89,7 +91,17 @@
             </div>
             <div>
               <p class="text-xs text-gray-400 mb-1">Owner Contact</p>
-              <p class="font-bold text-[#1a5c38]">{{ b.land.contact_phone|default:"See Details" }}</p>
+              <p class="font-bold text-[#1a5c38]">
+                {% if b.access_details_unlocked %}
+                  {{ b.land.contact_phone|default:"See Details" }}
+                {% else %}
+                  Locked until payment is confirmed
+                {% endif %}
+              </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Payment Method</p>
+              <p class="font-bold text-gray-700">{{ b.latest_pending_payment.payment_method|default:b.payment_method|default:"Not set"|capfirst }}</p>
             </div>
           </div>
 
@@ -98,11 +110,81 @@
               <i class="bi bi-eye"></i> View Details
             </a>
             
-            {% if b.status == 'approved' or b.status == 'pending' %}
-              {% if not b.payment_confirmed %}
-                <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-6 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
-                  <i class="bi bi-cash-coin"></i> {% if b.payment_reference %}Update Payment Info{% else %}Submit Payment Proof{% endif %}
+            {% if not b.payment_confirmed and b.remaining_balance > 0 %}
+              {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
+                {% if b.selected_operator_payment or b.payment_method %}
+                  <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
+                    <i class="bi bi-cash-coin"></i> {% if b.payment_reference or b.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                  </a>
+                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                    <i class="bi bi-credit-card"></i> Change Payment Method
+                  </a>
+                {% else %}
+                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                    <i class="bi bi-credit-card-2-front"></i> Continue payment
+                  </a>
+                {% endif %}
+              {% else %}
+                <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                  <i class="bi bi-credit-card-2-front"></i> Continue payment
                 </a>
+              {% endif %}
+            {% endif %}
+            {% if b.status == 'approved' and not b.refund_requested %}
+              <a href="{% url 'lands:refund_request' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors no-underline">
+                <i class="bi bi-arrow-counterclockwise"></i> Request refund
+              </a>
+            {% elif b.refund_requested %}
+              <span class="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold">
+                <i class="bi bi-clock-history"></i> Refund requested
+              </span>
+            {% endif %}
+            {% if b.status == 'pending' or b.status == 'awaiting_payment' %}
+              <form method="post" action="{% url 'lands:cancel_reservation' b.id %}" onsubmit="return confirm('Cancel this booking?')" class="inline-flex">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                  <i class="bi bi-slash-circle"></i> Cancel
+                </button>
+              </form>
+            {% endif %}
+            {% comment %} Show operator account identifier for chosen or default method {% endcomment %}
+            {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
+              {% if b.selected_operator_payment %}
+                {% with cfg=b.selected_operator_payment %}
+                  {% if cfg and cfg.account_identifier %}
+                    <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                      <i class="bi bi-phone"></i>
+                      <div class="text-xs">Pay via {{ cfg.get_payment_method_display }} — <strong class="text-sm">{{ cfg.account_identifier }}</strong></div>
+                    </div>
+                  {% else %}
+                    {% with owner_pd=b.land.owner.payment_details %}
+                      {% if owner_pd and owner_pd.account_identifier and owner_pd.payment_method == b.payment_method %}
+                        <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                          <i class="bi bi-person-lines-fill"></i>
+                          <div class="text-xs">Owner ({% if b.land.owner.get_full_name %}{{ b.land.owner.get_full_name }}{% else %}{{ b.land.owner.username }}{% endif %}) — <strong class="text-sm">{{ owner_pd.account_identifier }}</strong></div>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  {% endif %}
+                {% endwith %}
+              {% else %}
+                {% with cfg=operator_payment_configs|first %}
+                  {% if cfg and cfg.account_identifier %}
+                    <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                      <i class="bi bi-phone"></i>
+                      <div class="text-xs">Pay via {{ cfg.get_payment_method_display }} — <strong class="text-sm">{{ cfg.account_identifier }}</strong></div>
+                    </div>
+                  {% else %}
+                    {% with owner_pd=b.land.owner.payment_details %}
+                      {% if owner_pd and owner_pd.account_identifier and owner_pd.payment_method == b.payment_method %}
+                        <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                          <i class="bi bi-person-lines-fill"></i>
+                          <div class="text-xs">Owner ({% if b.land.owner.get_full_name %}{{ b.land.owner.get_full_name }}{% else %}{{ b.land.owner.username }}{% endif %}) — <strong class="text-sm">{{ owner_pd.account_identifier }}</strong></div>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  {% endif %}
+                {% endwith %}
               {% endif %}
             {% endif %}
           </div>
@@ -118,7 +200,7 @@
     </div>
     <h3 class="text-2xl font-bold text-gray-900 mb-2">No bookings yet</h3>
     <p class="text-gray-500 max-w-sm mx-auto mb-8">You haven't made any land reservations yet. Start browsing to find your perfect plot.</p>
-    <a href="{% url 'lands:land_list' %}" class="px-8 py-3 bg-[#1a5c38] text-white rounded-xl font-bold hover:bg-[#134428] transition-colors no-underline">Start Browsing</a>
+    <a href="{% url 'lands:browse_lands' %}" class="px-8 py-3 bg-[#1a5c38] text-white rounded-xl font-bold hover:bg-[#134428] transition-colors no-underline">Start Browsing</a>
   </div>
   {% endif %}
 </div>

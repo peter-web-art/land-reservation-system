@@ -11,7 +11,7 @@
     <div class="flex-1">
       <!-- Header -->
       <div class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl mb-4">
-        <a href="{% url 'lands:inbox' %}" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Back to messages">
+        <a href="{% url 'lands:inbox' %}" class="btn-outline no-underline text-sm" title="Back to messages">
           <i class="bi bi-chevron-left text-xl"></i>
         </a>
         <div class="w-12 h-12 rounded-full bg-[#1a5c38] text-white flex items-center justify-center font-bold overflow-hidden">
@@ -54,7 +54,7 @@
         <form method="post" action="" class="flex gap-2" id="composeForm">
           {% csrf_token %}
           <textarea name="body" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]" id="composeInput" placeholder="Type a message..." rows="1" required></textarea>
-          <button type="submit" class="px-4 py-2 bg-[#1a5c38] text-white rounded-lg hover:bg-[#134428] transition-colors" id="sendBtn" title="Send message">
+          <button type="submit" class="btn-primary" id="sendBtn" title="Send message">
             <i class="bi bi-send-fill"></i>
           </button>
         </form>
@@ -119,7 +119,7 @@
       {% endfor %}
 
       <!-- Quick actions -->
-      <a href="{% url 'lands:inbox' %}" class="flex items-center justify-center gap-2 w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+      <a href="{% url 'lands:inbox' %}" class="btn-outline w-full no-underline text-sm">
         <i class="bi bi-arrow-left"></i> All messages
       </a>
     </div>

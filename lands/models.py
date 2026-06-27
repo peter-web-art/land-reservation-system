@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
 from accounts.models import User, AuditBase
+from django.urls import reverse
 
 
 class Utility(AuditBase):
@@ -107,6 +108,7 @@ class Land(AuditBase):
     is_draft      = models.BooleanField(default=False, help_text='Whether this land listing is a draft')
     wizard_step   = models.PositiveIntegerField(default=1, help_text='The current step in the registration wizard')
     view_count    = models.PositiveIntegerField(default=0, help_text='Number of detail page views')
+    owner_will_refund = models.BooleanField(default=True, help_text='Whether the owner will refund a deposited amount (shown to customers)')
 
     def save(self, *args, **kwargs):
         # Auto-generate land_id if not provided
@@ -154,9 +156,11 @@ class Land(AuditBase):
         else:
             total = self.size
 
+        active_statuses = ['pending', 'awaiting_payment', 'approved']
+
         if self.usage == 'sale':
-            # Sum all approved and pending sales to avoid overselling
-            sales = self.reservations.filter(status__in=['approved', 'pending'])
+            # Sum all active sales to avoid overselling
+            sales = self.reservations.filter(status__in=active_statuses)
             booked = Decimal('0')
             for s in sales:
                 if s.requested_size is None:
@@ -171,7 +175,7 @@ class Land(AuditBase):
             end_date = start_date + timedelta(days=1)
             
         overlaps = self.reservations.filter(
-            status__in=['approved', 'pending'],
+            status__in=active_statuses,
             start_date__lt=end_date,
             end_date__gt=start_date
         )
@@ -217,6 +221,26 @@ class Land(AuditBase):
         return self.current_remaining_size > 0
 
     @property
+    def availability_state(self):
+        """Return a normalized availability state for UI display."""
+        remaining = self.current_remaining_size
+        if remaining <= 0:
+            return 'unavailable'
+        if self.size and remaining < self.size:
+            return 'partial'
+        return 'available'
+
+    @property
+    def availability_label(self):
+        """Human-friendly status label based on remaining size."""
+        remaining = self.current_remaining_size
+        if remaining <= 0:
+            return 'Unavailable at the moment'
+        if self.size and remaining < self.size:
+            return f'{remaining} {self.get_size_unit_display()} available'
+        return f'{remaining} {self.get_size_unit_display()} available'
+
+    @property
     def is_reserved(self):
         """Land is 'Reserved' if it has any approved reservations at all."""
         return self.has_approved_reservations
@@ -237,7 +261,7 @@ class Land(AuditBase):
         # To not overcomplicate, we'll return all bookings with their requested sizes.
         return list(
             self.reservations.filter(
-                status__in=['approved', 'pending'],
+                status__in=['approved', 'awaiting_payment', 'pending'],
                 start_date__isnull=False,
                 end_date__isnull=False,
                 end_date__gte=today,
@@ -252,7 +276,7 @@ class Land(AuditBase):
             return today
             
         booked = self.reservations.filter(
-            status__in=['approved', 'pending'],
+            status__in=['approved', 'awaiting_payment', 'pending'],
             end_date__gte=today,
         ).order_by('end_date')
         
@@ -376,8 +400,11 @@ class LandImage(AuditBase):
 
 class Reservation(AuditBase):
     RESERVATION_STATUS = [
-        ('pending', 'Pending'), ('approved', 'Approved'),
-        ('rejected', 'Rejected'), ('cancelled', 'Cancelled'),
+        ('pending', 'Pending'),
+        ('awaiting_payment', 'Awaiting Payment'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
     ]
     PAYMENT_STATUS = [
         ('unpaid', 'Unpaid'), ('paid', 'Paid'), ('refunded', 'Refunded'),
@@ -403,13 +430,17 @@ class Reservation(AuditBase):
     payment_reference = models.CharField(max_length=100, blank=True, null=True)
     payment_receipt   = models.ImageField(upload_to='payments/receipts/', blank=True, null=True, help_text='Upload proof of payment (screenshot/receipt)')
     payment_date      = models.DateField(null=True, blank=True, help_text='Date when payment was made')
-    payment_confirmed = models.BooleanField(default=False, help_text='True if owner has confirmed receipt of funds')
+    payment_confirmed = models.BooleanField(default=False, help_text='True if admin has confirmed the customer payment')
     amount_paid    = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     agreed_price   = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True,
                       help_text='Final agreed price for this booking')
     requested_size = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                       help_text='Size requested by customer (if partial)')
     notes          = models.TextField(blank=True)
+    refund_requested = models.BooleanField(default=False, help_text='True if the customer has requested a refund')
+    refund_reason = models.TextField(blank=True, help_text='Customer reason for refund request')
+    refund_requested_on = models.DateTimeField(null=True, blank=True)
+    selected_operator_payment = models.ForeignKey('accounts.OperatorPaymentConfig', null=True, blank=True, on_delete=models.SET_NULL, related_name='selected_reservations', help_text='Operator payment method chosen by customer')
 
     class Meta:
         # BUG #2 FIX: Add database indexes for faster queries on common filters
@@ -521,11 +552,104 @@ class Reservation(AuditBase):
 
     @property
     def payment_review_status(self):
-        if self.remaining_balance <= 0:
+        if self.payments.filter(status='confirmed').exists():
             return 'confirmed'
         if self.payments.filter(status='submitted').exists() or self.payment_reference:
             return 'submitted'
         return 'pending'
+
+    @property
+    def is_awaiting_payment(self):
+        return self.status == 'awaiting_payment'
+
+    @property
+    def is_escrow_holding(self):
+        """Returns True if the reservation payment is confirmed but currently held in escrow (within 24h)."""
+        if not self.payment_confirmed:
+            return False
+        confirmed_payments = self.payments.filter(status='confirmed', owner_received_on__isnull=True)
+        if not confirmed_payments.exists():
+            return False
+        from datetime import timedelta
+        from django.utils import timezone
+        now = timezone.now()
+        for payment in confirmed_payments:
+            if payment.confirmed_on and now < payment.confirmed_on + timedelta(hours=24):
+                return True
+        return False
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to send a notification to the customer when a reservation
+        transitions to 'approved' (booking confirmed). The notification contains
+        a link to payment options so the customer can proceed with any required payments.
+        """
+        old_status = None
+        if self.pk:
+            try:
+                old = Reservation.objects.get(pk=self.pk)
+                old_status = old.status
+            except Reservation.DoesNotExist:
+                old_status = None
+
+        super().save(*args, **kwargs)
+
+        # Send notification when reservation becomes approved
+        try:
+            if self.status == 'approved' and old_status != 'approved' and self.customer:
+                Notification.objects.create(
+                    user=self.customer,
+                    notification_type='booking_approved',
+                    title='Booking Confirmed — Make Payment',
+                    message=(
+                        f"Your booking for '{self.land.title}' has been confirmed. "
+                        f"Tap Make payment to choose a payment method and continue."
+                    ),
+                    link=f"{reverse('lands:payments_and_bills')}?booking={self.pk}"
+                )
+                # If there's a submitted payment attached to this reservation, copy key details
+                try:
+                    latest = self.latest_pending_payment
+                    if latest:
+                        update_fields = {}
+                        if not self.payment_reference and latest.payment_reference:
+                            update_fields['payment_reference'] = latest.payment_reference
+                        if not self.payment_date and latest.payment_date:
+                            update_fields['payment_date'] = latest.payment_date
+                        if not self.payment_method and latest.payment_method:
+                            update_fields['payment_method'] = latest.payment_method
+                        # Avoid copying receipt file here to prevent file handling complexity;
+                        # admins can view receipts from the PaymentRecord.
+                        if update_fields:
+                            Reservation.objects.filter(pk=self.pk).update(**update_fields)
+
+                        # Notify the owner that a payment reference has been submitted for this approved booking
+                        Notification.objects.create(
+                            user=self.land.owner,
+                            notification_type='payment',
+                            title='Payment Submitted for Approved Booking',
+                            message=(
+                                f"Customer {self.customer.username} submitted payment reference {latest.payment_reference} "
+                                f"for booking '{self.land.title}'. Please review in Manage Payments."
+                            ),
+                            link=reverse('lands:manage_payments')
+                        )
+                except Exception:
+                    import logging
+                    logging.exception('Failed to copy submitted payment details or notify owner')
+        except Exception:
+            # Avoid breaking save on notification errors; log to console for now
+            import logging
+            logging.exception('Failed to create booking_approved notification')
+
+    @property
+    def access_details_unlocked(self):
+        """True when the customer has both approval and a fully confirmed payment."""
+        # Unlock access details when booking is approved and there is at least
+        # some payment activity (either a submitted payment or a fully
+        # confirmed payment). This allows owner contact to be shown for
+        # partial payments too.
+        return self.status == 'approved' and (self.payment_confirmed or self.submitted_amount_total > 0)
 
     @property
     def is_fully_paid(self):
@@ -550,6 +674,13 @@ class PaymentRecord(AuditBase):
     platform_fee_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     platform_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     confirmed_on = models.DateTimeField(null=True, blank=True)
+    owner_received_on = models.DateTimeField(null=True, blank=True, help_text='When the owner confirmed receipt of released funds')
+    # Cached owner payout/contact details at time of confirmation
+    owner_name = models.CharField(max_length=200, blank=True, null=True, help_text='Cached owner full name for payout')
+    owner_phone = models.CharField(max_length=30, blank=True, null=True, help_text='Cached owner phone for payout')
+    owner_email = models.EmailField(blank=True, null=True, help_text='Cached owner email for payout')
+    owner_payment_method = models.CharField(max_length=50, blank=True, null=True, help_text='Owner preferred payout method at confirmation')
+    owner_account_identifier = models.CharField(max_length=200, blank=True, null=True, help_text='Owner payout identifier (M-Pesa number / bank account)')
 
     class Meta:
         ordering = ['-created_on']
@@ -561,6 +692,41 @@ class PaymentRecord(AuditBase):
     def owner_net_amount(self):
         fee = self.platform_fee_amount or Decimal('0')
         return max(Decimal('0'), (self.amount or Decimal('0')) - fee)
+
+    @property
+    def payout_release_available_on(self):
+        if not self.confirmed_on:
+            return None
+        return self.confirmed_on + timedelta(days=1)
+
+    @property
+    def payout_release_due_on(self):
+        if not self.confirmed_on:
+            return None
+        return self.confirmed_on + timedelta(hours=24)
+
+    @property
+    def owner_payout_status(self):
+        if self.status != 'confirmed':
+            return 'pending'
+        if self.owner_received_on:
+            return 'received'
+        if not self.confirmed_on:
+            return 'waiting'
+        now = timezone.now()
+        if now < self.payout_release_available_on:
+            return 'holding'
+        if now <= self.payout_release_due_on:
+            return 'release_window'
+        return 'overdue'
+
+    @property
+    def payout_window_display(self):
+        if not self.confirmed_on:
+            return 'Pending admin confirmation'
+        start = self.payout_release_available_on
+        end = self.payout_release_due_on
+        return f'{start:%b %d, %Y %H:%M} - {end:%b %d, %Y %H:%M}'
 
 
 class Wishlist(AuditBase):
@@ -614,3 +780,47 @@ class Notification(AuditBase):
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+
+class LandReport(AuditBase):
+    """
+    Stores reports/flags submitted by users against suspicious land listings.
+    Admin can review and take action on reported lands.
+    """
+    REASON_CHOICES = [
+        ('spam', 'Spam or Misleading'),
+        ('fake', 'Fake or Fraudulent'),
+        ('illegal', 'Illegal Activity'),
+        ('harassment', 'Harassment or Abuse'),
+        ('scam', 'Suspected Scam'),
+        ('inappropriate', 'Inappropriate Content'),
+        ('duplicate', 'Duplicate Listing'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('reviewed', 'Under Review'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+    
+    land = models.ForeignKey(Land, on_delete=models.CASCADE, related_name='reports')
+    reported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='land_reports')
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
+    description = models.TextField(help_text='Detailed explanation of the report')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    admin_notes = models.TextField(blank=True, help_text='Admin notes on investigation or action taken')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='land_reports_reviewed')
+    reviewed_on = models.DateTimeField(null=True, blank=True)
+    is_spam = models.BooleanField(default=False, help_text='Mark as spam report itself')
+
+    class Meta:
+        ordering = ['-created_on']
+        verbose_name = 'Land Report'
+        verbose_name_plural = 'Land Reports'
+        unique_together = ('land', 'reported_by')  # One report per user per land
+
+    def __str__(self):
+        return f"Report: {self.land.title} by {self.reported_by.username} ({self.get_reason_display()})"

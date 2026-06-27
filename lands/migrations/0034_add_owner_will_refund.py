@@ -1,0 +1,16 @@
+# Generated migration adding owner_will_refund to Land
+from django.db import migrations, models
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('lands', '0033_paymentrecord_owner_account_identifier_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='land',
+            name='owner_will_refund',
+            field=models.BooleanField(default=True, help_text='Whether the owner will refund a deposited amount (shown to customers)'),
+        ),
+    ]

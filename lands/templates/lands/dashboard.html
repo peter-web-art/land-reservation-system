@@ -9,15 +9,18 @@
       <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ user.first_name|default:user.username }}</h1>
       <p class="text-gray-500 mt-1">Manage your lands and reservations</p>
     </div>
-    <div class="flex gap-3 mt-4 md:mt-0">
-      <a href="{% url 'lands:manage_payments' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors no-underline">
+    <div class="flex flex-wrap gap-3 mt-4 md:mt-0 md:justify-end">
+      <a href="{% url 'lands:contact_admin' %}" class="btn-outline no-underline">
+        <i class="bi bi-chat-left-text"></i> Contact Support
+      </a>
+      <a href="{% url 'lands:manage_payments' %}" class="btn-primary no-underline">
         <i class="bi bi-cash-stack"></i> Manage Payments
       </a>
-      <a href="{% url 'lands:calendar_view' %}" class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
+      <a href="{% url 'lands:calendar_view' %}" class="btn-outline no-underline">
         <i class="bi bi-calendar3"></i> Calendar
       </a>
       <form method="post" action="{% url 'lands:switch_mode' %}">{% csrf_token %}
-        <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+        <button type="submit" class="btn-outline">
           Switch to traveling
         </button>
       </form>
@@ -46,6 +49,11 @@
       <div class="text-sm text-gray-500">Confirmed</div>
       <div class="text-2xl font-bold text-[#1a5c38]">{{ approved_count }}</div>
     </div>
+    <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="bg-white border border-amber-200 rounded-xl p-4 shadow-sm no-underline hover:shadow-md transition-shadow">
+      <div class="text-sm text-amber-700">Refund Requests</div>
+      <div class="text-2xl font-bold text-amber-700">{{ refund_requests_count|default:"0" }}</div>
+      <div class="text-xs text-gray-500 mt-1">Click to review refund reasons</div>
+    </a>
   </div>
 
   <!-- Earnings Stats -->
@@ -68,6 +76,32 @@
     </div>
   </div>
 
+  {% if refund_requests %}
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Recent Refund Requests</h2>
+      <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="text-[#1a5c38] hover:underline text-sm">Open all refund requests &rarr;</a>
+    </div>
+    <div class="space-y-3">
+      {% for r in refund_requests %}
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
+          <div class="text-sm text-gray-600">
+            {{ r.customer.get_full_name|default:r.customer.username }} &middot;
+            {{ r.refund_requested_on|date:"M d, Y H:i" }}
+          </div>
+          <div class="text-sm text-amber-800 mt-1">{{ r.refund_reason|truncatewords:20 }}</div>
+        </div>
+        <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="inline-flex items-center justify-center px-4 py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-sm font-semibold hover:bg-amber-100 transition-colors no-underline">
+          <i class="bi bi-arrow-right-circle"></i> Review
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Pending reservation requests -->
   {% if recent_bookings %}
   <div class="mb-8">
@@ -86,7 +120,7 @@
           <div class="flex items-center gap-2">
             <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
             {% if r.start_date and r.start_date > today %}
-            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-200">Pre-Booking</span>
+            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold uppercase tracking-wide border border-blue-200">Scheduled Booking</span>
             {% endif %}
           </div>
           <div class="text-sm text-gray-500">
@@ -98,8 +132,20 @@
         <div class="flex gap-2">
           {% if r.status == 'pending' %}
           <form method="post" action="{% url 'lands:update_reservation_status' r.id 'approved' %}">{% csrf_token %}
-            <button class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check-lg"></i> Accept</button>
+            <button class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] transition-colors"><i class="bi bi-check-lg"></i> Accept & Await Payment</button>
           </form>
+          <form method="post" action="{% url 'lands:update_reservation_status' r.id 'rejected' %}" onsubmit="return confirm('Reject this booking request? This will notify the customer.')">
+            {% csrf_token %}
+            <button class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors ml-2"><i class="bi bi-x-lg"></i> Reject</button>
+          </form>
+          {% elif r.is_escrow_holding %}
+          <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold border border-blue-200">
+            <i class="bi bi-hourglass-split"></i> Money on hold and will be released after 24 hours
+          </span>
+          {% elif r.status == 'awaiting_payment' %}
+          <span class="px-3 py-1.5 bg-sky-100 text-sky-700 rounded-lg text-sm font-semibold border border-sky-200">
+            <i class="bi bi-cash"></i> Awaiting Payment
+          </span>
           {% elif r.status == 'approved' %}
           <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-semibold border border-green-200">
             <i class="bi bi-check-circle-fill"></i> Accepted
@@ -119,7 +165,7 @@
   <!-- Your Lands -->
   <div>
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold text-gray-900">Your Land Posts</h2>
+      <h2 class="text-xl font-semibold text-gray-900">Your Listings</h2>
       <a href="{% url 'lands:add_land' %}" class="inline-flex items-center gap-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:border-gray-400 hover:bg-gray-50 transition-colors no-underline">
         <i class="bi bi-plus-lg"></i> Add new
       </a>
@@ -168,7 +214,7 @@
               </span>
               {% else %}
               <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold border border-gray-200">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Sold/Reserved
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Occupied / Unavailable
               </span>
               {% endif %}
             </td>

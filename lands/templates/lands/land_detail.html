@@ -18,11 +18,11 @@
       <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{{ land.title }}</h1>
     </div>
     <div class="flex items-center gap-2 mt-4 md:mt-0">
-      <button onclick="shareLand()" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+      <button onclick="shareLand()" class="btn-outline">
         <i class="bi bi-share"></i>
         <span>Share</span>
       </button>
-      <button onclick="toggleSave()" id="saveBtn" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors {% if is_wishlisted %}text-red-500{% endif %}">
+      <button onclick="toggleSave()" id="saveBtn" class="btn-outline {% if is_wishlisted %}text-red-500 border-red-200{% endif %}">
         <i class="bi bi-heart{% if is_wishlisted %}-fill{% endif %}"></i>
         <span>{% if is_wishlisted %}Saved{% else %}Save{% endif %}</span>
       </button>
@@ -105,10 +105,12 @@
         {% endif %}
         <span>·</span>
         <span>
-          {% if not land.has_approved_reservations %}
+          {% if land.availability_state == 'available' %}
           <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold"><i class="bi bi-check-circle"></i> Available</span>
+          {% elif land.availability_state == 'partial' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-pie-chart"></i> Partially occupied</span>
           {% else %}
-          <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i class="bi bi-clock"></i> Reserved (Pre-booking open)</span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold"><i class="bi bi-x-circle"></i> Unavailable at the moment</span>
           {% endif %}
         </span>
       </div>
@@ -333,7 +335,14 @@
           <i class="bi bi-telephone text-[#1a5c38]"></i>
           Contact
         </h2>
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and user == land.owner %}
+        {% if land.contact_phone %}
+        <p class="mb-2 text-gray-700"><i class="bi bi-phone"></i> {{ land.contact_phone }}</p>
+        {% endif %}
+        {% if land.contact_email %}
+        <p class="text-gray-700"><i class="bi bi-envelope"></i> {{ land.contact_email }}</p>
+        {% endif %}
+        {% elif can_view_owner_contact %}
         {% if land.contact_phone %}
         <p class="mb-2 text-gray-700"><i class="bi bi-phone"></i> {{ land.contact_phone }}</p>
         {% endif %}
@@ -341,7 +350,7 @@
         <p class="text-gray-700"><i class="bi bi-envelope"></i> {{ land.contact_email }}</p>
         {% endif %}
         {% else %}
-        <p class="text-sm text-gray-500">Sign in to contact the owner directly and keep your conversations inside LandReserve.</p>
+        <p class="text-sm text-gray-500">Owner contact details are hidden until your booking is approved and fully paid. Use the platform messages and payment flow first.</p>
         {% endif %}
       </div>
     </div>
@@ -380,17 +389,21 @@
             <a href="{% url 'lands:delete_land' land.id %}" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold text-center hover:border-gray-400 hover:bg-gray-50 transition-colors"><i class="bi bi-trash"></i> Delete</a>
           </div>
         {% elif user.is_authenticated and user.role != 'admin' %}
-          {% if land.has_approved_reservations %}
-          <a href="{% url 'lands:book_land' land.id %}" class="block w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
-            <i class="bi bi-calendar-plus mr-1"></i> Pre-Book This Land
+          {% if land.availability_state == 'unavailable' %}
+          <button type="button" class="btn-primary w-full mt-4 opacity-60 cursor-not-allowed" onclick="alert('This land is booked / unavailable at the moment.'); return false;">
+            <i class="bi bi-x-circle mr-1"></i> Unavailable at the Moment
+          </button>
+          {% elif land.availability_state == 'partial' %}
+          <a href="{% url 'lands:book_land' land.id %}" class="btn-primary w-full mt-4">
+            <i class="bi bi-calendar-plus mr-1"></i> Reserve Remaining Space
           </a>
           {% else %}
-          <a href="{% url 'lands:book_land' land.id %}" class="block w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
+          <a href="{% url 'lands:book_land' land.id %}" class="btn-primary w-full mt-4">
             <i class="bi bi-calendar-check mr-1"></i> Reserve Now
           </a>
           {% endif %}
-          {% if user != land.owner %}
-          <button onclick="document.getElementById('msgOwnerModal').classList.remove('hidden');" class="w-full mt-2 px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          {% if user != land.owner and user.role == 'customer' and can_view_owner_contact or user != land.owner and user.role == 'customer' and land.owner.is_verified %}
+          <button onclick="document.getElementById('msgOwnerModal').classList.remove('hidden');" class="btn-outline w-full mt-2">
             Contact Owner
           </button>
           {% endif %}
@@ -399,17 +412,21 @@
             Admin accounts are not allowed to book land.
           </div>
           {% if user != land.owner %}
-          <button onclick="document.getElementById('msgOwnerModal').classList.remove('hidden');" class="w-full mt-2 px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:border-gray-400 hover:bg-gray-50 transition-colors">
+          <button onclick="document.getElementById('msgOwnerModal').classList.remove('hidden');" class="btn-outline w-full mt-2">
             Contact Owner
           </button>
           {% endif %}
         {% else %}
-          {% if land.has_approved_reservations %}
-          <button onclick="openModal('login')" class="w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
-            Log in to Pre-Book
+          {% if land.availability_state == 'unavailable' %}
+          <button type="button" onclick="alert('This land is booked / unavailable at the moment.')" class="btn-primary w-full mt-4 opacity-60 cursor-not-allowed">
+            Unavailable at the Moment
+          </button>
+          {% elif land.availability_state == 'partial' %}
+          <button onclick="openModal('login')" class="btn-primary w-full mt-4">
+            Log in to Reserve Remaining Space
           </button>
           {% else %}
-          <button onclick="openModal('login')" class="w-full mt-4 px-6 py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-center hover:bg-[#134428] transition-colors">
+          <button onclick="openModal('login')" class="btn-primary w-full mt-4">
             Log in to Reserve
           </button>
           {% endif %}
@@ -482,7 +499,7 @@
 {% endif %}
 
 <!-- Message Modal -->
-{% if user.is_authenticated and user != land.owner %}
+{% if user.is_authenticated and user != land.owner and user.role == 'admin' or user.is_authenticated and user != land.owner and user.role == 'customer' and can_view_owner_contact or user.is_authenticated and user != land.owner and user.role == 'customer' and land.owner.is_verified %}
 <div class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center" id="msgOwnerModal" onclick="if(event.target===this)this.classList.add('hidden')">
   <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
     <div class="flex items-center justify-between p-4 border-b border-gray-200">

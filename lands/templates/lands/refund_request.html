@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Request Refund - Land Reserve{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-[#f3faf3] py-12">
+  <div class="max-w-2xl mx-auto px-4">
+    <div class="mb-8">
+      <a href="{% url 'lands:my_bookings' %}" class="btn-outline mb-4 no-underline text-sm">
+        <i class="bi bi-arrow-left"></i> Back to My Bookings
+      </a>
+      <h1 class="text-3xl font-black text-gray-900 tracking-tight">Request Refund</h1>
+      <p class="text-gray-500 mt-2">
+        Booking: <strong>{{ booking.land.title }}</strong>. Approved bookings cannot be cancelled directly, so submit a reason here for review.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-xl shadow-[#1a5c38]/5 border border-gray-100 overflow-hidden">
+      <div class="p-6 bg-amber-50 border-b border-amber-100">
+        <div class="text-sm text-amber-800 font-semibold">Reason required</div>
+        <div class="text-sm text-amber-700 mt-1">Explain why the refund is necessary. Keep it clear and factual.</div>
+      </div>
+
+      <form method="post" class="p-8 space-y-6">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <div class="space-y-2">
+          <label class="text-sm font-bold text-gray-700">Refund Reason</label>
+          {{ form.reason }}
+          {% if form.reason.errors %}<p class="text-xs text-red-600">{{ form.reason.errors|join:", " }}</p>{% endif %}
+          <p class="text-[10px] text-gray-400">Minimum 20 characters.</p>
+        </div>
+
+        <div class="pt-2 flex items-center gap-3">
+          <button type="submit" class="btn-primary">
+            Submit Refund Request
+          </button>
+          <a href="{% url 'lands:my_bookings' %}" class="btn-outline no-underline text-sm">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

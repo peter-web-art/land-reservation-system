@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Browse Land Posts{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-4">Browse Land Posts</h1>
+  <p class="text-sm text-gray-600 mb-6">Listing of public land posts — filter, paginate, and open details when ready.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for land in lands %}
+    <div class="bg-white rounded-lg border p-4 shadow-sm">
+      <a href="{% url 'lands:land_detail' land.id %}" class="no-underline text-inherit">
+        <div class="h-36 bg-gray-100 rounded overflow-hidden mb-3">
+          {% if land.primary_image %}
+            <img src="{{ land.primary_image.url }}" alt="{{ land.title }}" class="w-full h-full object-cover">
+          {% endif %}
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">{{ land.title }}</h3>
+        <p class="text-sm text-gray-600">{{ land.location }}</p>
+        <div class="mt-2 flex items-center justify-between">
+          <div class="text-green-700 font-bold">Tsh {{ land.price|intcomma }}</div>
+          {% if user.is_authenticated %}
+            <form method="post" action="{% url 'lands:toggle_wishlist' land.id %}">{% csrf_token %}
+              <button type="submit" class="text-sm text-gray-500">{% if land.id in wishlisted_ids %}Saved{% else %}Save{% endif %}</button>
+            </form>
+          {% endif %}
+        </div>
+      </a>
+    </div>
+    {% empty %}
+    <div class="col-span-3 text-gray-600">No listings found.</div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border rounded mr-2">Previous</a>
+    {% endif %}
+    <span class="text-sm">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border rounded ml-2">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

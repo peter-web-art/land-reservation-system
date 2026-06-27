@@ -21,7 +21,11 @@
     </div>
     <div class="p-6">
       <p class="text-gray-600 mb-4">
-        Fill out the form below and our support team will get back to you as soon as possible.
+        {% if user.is_authenticated %}
+          Fill out the form below and our support team will get back to you. Since you are logged in, this message will start a thread in your <a href="{% url 'lands:inbox' %}" class="text-[#1a5c38] font-semibold hover:underline">Inbox</a> where you can follow up and chat directly with support.
+        {% else %}
+          Fill out the form below and our support team will get back to you as soon as possible.
+        {% endif %}
       </p>
 
       <form method="post">
@@ -64,7 +68,7 @@
           <span class="text-sm text-gray-500 mt-1 block">Be as detailed as possible to help us assist you better.</span>
         </div>
 
-        <button type="submit" class="w-full py-3 bg-[#1a5c38] text-white rounded-lg font-semibold text-lg hover:bg-[#134428] transition-colors">
+        <button type="submit" class="btn-primary w-full text-lg">
           <i class="bi bi-send"></i> Send Message
         </button>
       </form>

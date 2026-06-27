@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-8">
+  <h2 class="text-2xl font-semibold">Send message to {{ target.username }}</h2>
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    <div class="mb-3">
+      {{ form.subject.label_tag }}
+      {{ form.subject }}
+    </div>
+    <div class="mb-3">
+      {{ form.body.label_tag }}
+      {{ form.body }}
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn-primary">Send</button>
+      <a href="{% url 'accounts:admin_portal' %}" class="btn-outline no-underline">Back</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -275,11 +275,13 @@
               {% endif %}
             </div>
 
-            <div class="absolute top-3 right-3">
-               {% if land.is_available %}
+           <div class="absolute top-3 right-3">
+               {% if land.availability_state == 'available' %}
                <span class="inline-flex items-center rounded-lg bg-green-500/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm">Available</span>
+               {% elif land.availability_state == 'partial' %}
+               <span class="inline-flex items-center rounded-lg bg-amber-500/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm">Partially occupied</span>
                {% else %}
-               <span class="inline-flex items-center rounded-lg bg-amber-500/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm" title="Booked{% if land.get_active_reservation %} until {{ land.get_active_reservation.end_date|date:'M d' }}{% endif %}">Reserved</span>
+               <span class="inline-flex items-center rounded-lg bg-red-500/90 backdrop-blur-sm px-2.5 py-1 text-xs font-bold text-white shadow-sm">Unavailable</span>
                {% endif %}
             </div>
           </div>
@@ -306,7 +308,11 @@
               {% if land.size %}
               <div class="flex items-center gap-1.5" title="Available Size">
                 <i class="bi bi-rulers text-[#1a5c38]"></i>
-                <span class="truncate font-medium text-[#1a5c38]">Remained: {{ land.current_remaining_size }} / {{ land.size }} {{ land.get_size_unit_display }}</span>
+               {% if land.availability_state == 'unavailable' %}
+               <span class="truncate font-medium text-red-700">Unavailable at the moment</span>
+               {% else %}
+               <span class="truncate font-medium text-[#1a5c38]">{{ land.current_remaining_size }} / {{ land.size }} {{ land.get_size_unit_display }} available</span>
+               {% endif %}
               </div>
               {% endif %}
               <div class="flex items-center gap-1.5" title="Land Use">
@@ -338,28 +344,48 @@
             </div>
             <div class="mt-5 flex gap-2">
               {% if user.is_authenticated %}
-                <a href="{% url 'lands:land_detail' land.id %}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
+                {% if land.availability_state == 'unavailable' %}
+                <button type="button" onclick="alert('This land is booked / unavailable at the moment.')" class="btn-outline flex-1 cursor-not-allowed opacity-60 text-sm">
+                  <i class="bi bi-eye"></i> View Details
+                </button>
+                <button type="button" onclick="alert('This land is booked / unavailable at the moment.')" class="btn-primary flex-1 cursor-not-allowed opacity-60 text-sm">
+                  <i class="bi bi-x-circle"></i> Unavailable
+                </button>
+                {% elif land.availability_state == 'partial' %}
+                <a href="{% url 'lands:land_detail' land.id %}" class="btn-outline flex-1 no-underline text-sm">
                   <i class="bi bi-eye"></i> View Details
                 </a>
-                {% if land.has_approved_reservations %}
-                <a href="{% url 'lands:book_land' land.id %}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">
-                  <i class="bi bi-calendar-plus"></i> Pre-Book
+                <a href="{% url 'lands:book_land' land.id %}" class="btn-primary flex-1 no-underline text-sm">
+                  <i class="bi bi-calendar-plus"></i> Reserve Remaining Space
                 </a>
                 {% else %}
-                <a href="{% url 'lands:book_land' land.id %}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors no-underline">
+                <a href="{% url 'lands:land_detail' land.id %}" class="btn-outline flex-1 no-underline text-sm">
+                  <i class="bi bi-eye"></i> View Details
+                </a>
+                <a href="{% url 'lands:book_land' land.id %}" class="btn-primary flex-1 no-underline text-sm">
                   <i class="bi bi-calendar-check"></i> Reserve Now
                 </a>
                 {% endif %}
               {% else %}
-                <a href="{% url 'lands:land_detail' land.id %}" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
+                {% if land.availability_state == 'unavailable' %}
+                <button type="button" onclick="alert('This land is booked / unavailable at the moment.')" class="btn-outline flex-1 cursor-not-allowed opacity-60 text-sm">
                   <i class="bi bi-eye"></i> View Details
-                </a>
-                {% if land.has_approved_reservations %}
-                <button type="button" onclick="openModal('login')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors cursor-pointer">
-                  <i class="bi bi-calendar-plus"></i> Pre-Book
+                </button>
+                <button type="button" onclick="alert('This land is booked / unavailable at the moment.')" class="btn-primary flex-1 cursor-not-allowed opacity-60 text-sm">
+                  <i class="bi bi-x-circle"></i> Unavailable
+                </button>
+                {% elif land.availability_state == 'partial' %}
+                <button type="button" onclick="openModal('login')" class="btn-outline flex-1 cursor-pointer text-sm">
+                  <i class="bi bi-eye"></i> View Details
+                </button>
+                <button type="button" onclick="openModal('login')" class="btn-primary flex-1 cursor-pointer">
+                  <i class="bi bi-calendar-plus"></i> Reserve Remaining Space
                 </button>
                 {% else %}
-                <button type="button" onclick="openModal('login')" class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors cursor-pointer">
+                <button type="button" onclick="openModal('login')" class="btn-outline flex-1 cursor-pointer text-sm">
+                  <i class="bi bi-eye"></i> View Details
+                </button>
+                <button type="button" onclick="openModal('login')" class="btn-primary flex-1 cursor-pointer">
                   <i class="bi bi-calendar-check"></i> Reserve Now
                 </button>
                 {% endif %}

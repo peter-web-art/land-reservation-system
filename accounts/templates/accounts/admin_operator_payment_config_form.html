@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Payment Method - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-8" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+                <a href="{% url 'accounts:admin_portal' %}" class="inline-flex items-center text-gray-700 hover:text-primary">
+                    <i class="bi bi-speedometer2 mr-2"></i>Admin Portal
+                </a>
+            </li>
+            <li class="inline-flex items-center">
+                <i class="bi bi-chevron-right text-gray-400 mr-2"></i>
+                <a href="{% url 'accounts:admin_operator_payment_config' %}" class="text-gray-700 hover:text-primary">
+                    Payment Configuration
+                </a>
+            </li>
+            <li>
+                <div class="flex items-center">
+                    <i class="bi bi-chevron-right text-gray-400 mx-2"></i>
+                    <span class="text-gray-700">{{ action }} Payment Method</span>
+                </div>
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">{{ action }} Payment Method</h1>
+        <p class="text-lg text-gray-600">Configure payment details where customers should send payments</p>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white rounded-lg shadow-md border border-gray-200">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Form Errors -->
+            {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    {% for error in form.non_field_errors %}
+                        <p class="text-red-700">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Payment Method -->
+            <div>
+                <label for="{{ form.payment_method.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.payment_method.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.payment_method }}
+                {% if form.payment_method.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.payment_method.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Account Identifier -->
+            <div>
+                <label for="{{ form.account_identifier.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.account_identifier.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.account_identifier }}
+                {% if form.account_identifier.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.account_identifier.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-sm text-gray-600">{{ form.account_identifier.help_text }}</p>
+            </div>
+
+            <!-- Account Holder Name -->
+            <div>
+                <label for="{{ form.account_holder_name.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.account_holder_name.label }} <span class="text-red-500">*</span>
+                </label>
+                {{ form.account_holder_name }}
+                {% if form.account_holder_name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.account_holder_name.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-sm text-gray-600">Your business or operator name</p>
+            </div>
+
+            <!-- Bank Details Section -->
+            <div class="border-t pt-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Bank Details (Optional)</h3>
+                <p class="text-sm text-gray-600 mb-4">Leave blank if using mobile money (M-Pesa, Airtel, Tigo)</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.bank_name.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                            {{ form.bank_name.label }}
+                        </label>
+                        {{ form.bank_name }}
+                        {% if form.bank_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.bank_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.bank_branch.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                            {{ form.bank_branch.label }}
+                        </label>
+                        {{ form.bank_branch }}
+                        {% if form.bank_branch.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.bank_branch.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div>
+                <label for="{{ form.instructions.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.instructions.label }}
+                </label>
+                {{ form.instructions }}
+                {% if form.instructions.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.instructions.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-sm text-gray-600">{{ form.instructions.help_text }}</p>
+            </div>
+
+            <!-- Active Status -->
+            <div class="flex items-center">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}" class="ml-2 text-sm text-gray-900">
+                    {{ form.is_active.label }}
+                </label>
+            </div>
+
+            <!-- Priority -->
+            <div>
+                <label for="{{ form.priority.id_for_label }}" class="block text-sm font-medium text-gray-900 mb-2">
+                    {{ form.priority.label }}
+                </label>
+                {{ form.priority }}
+                {% if form.priority.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.priority.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-sm text-gray-600">Lower numbers appear first. 0 = highest priority.</p>
+            </div>
+
+            <!-- Form Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+                <button id="savePaymentBtn" type="submit" class="flex-1 px-6 py-2 text-white rounded-lg font-medium transition-colors" style="background-color: var(--primary, #1a5c38); display:inline-flex; align-items:center; justify-content:center;">
+                    <i class="bi bi-check-circle mr-2"></i>Save Payment Method
+                </button>
+                <a href="{% url 'accounts:admin_operator_payment_config' %}" class="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% comment %} Styles moved to static/css/admin_operator_payment.css {% endcomment %}
+{% endblock %}

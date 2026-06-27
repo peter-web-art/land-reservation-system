@@ -22,6 +22,7 @@ LAND_TYPE_CHOICES = [
 def global_context(request):
     from lands.models import Land, Message
     unread_messages = 0
+    unread_notifications = 0
     current_mode = 'customer'
     can_switch_mode = False
     register_form_state = request.session.pop('register_form_state', None)
@@ -31,6 +32,11 @@ def global_context(request):
             unread_messages = Message.objects.filter(recipient=request.user, is_read=False).count()
         except Exception:
             unread_messages = 0
+        try:
+            from lands.models import Notification
+            unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+        except Exception:
+            unread_notifications = 0
         is_admin = request.user.is_staff or getattr(request.user, 'role', None) == 'admin'
         is_owner_capable = getattr(request.user, 'role', None) == 'owner' or getattr(request.user, 'is_owner', False)
         if is_admin:
@@ -42,12 +48,12 @@ def global_context(request):
         else:
             current_mode = 'customer'
             can_switch_mode = False
-
     return {
         'tanzania_regions':      TANZANIA_REGIONS,
         'tanzania_regions_json': json.dumps(TANZANIA_REGIONS),
         'total_active_lands':    0,
         'unread_messages':        unread_messages,
+        'unread_notifications':   unread_notifications,
         'current_mode':           current_mode,
         'can_switch_mode':        can_switch_mode,
         'register_form_state':    register_form_state,

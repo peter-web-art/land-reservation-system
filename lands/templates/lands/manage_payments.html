@@ -47,7 +47,25 @@
     <a href="?payment=awaiting" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'awaiting' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Awaiting Reference</a>
     <a href="?payment=review" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'review' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Need Review</a>
     <a href="?payment=confirmed" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'confirmed' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">Confirmed</a>
+    <a href="?payment=refunds" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {% if request.GET.payment == 'refunds' %}bg-[#1a5c38] text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+      Refunds
+      {% if refund_requests_count %}<span class="ml-1 px-2 py-0.5 rounded-full text-xs {% if request.GET.payment == 'refunds' %}bg-white/20 text-white{% else %}bg-amber-100 text-amber-700{% endif %}">{{ refund_requests_count }}</span>{% endif %}
+    </a>
   </div>
+
+  {% if refund_requests_count and request.GET.payment != 'refunds' %}
+  <div class="mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <div class="font-semibold">There {% if refund_requests_count == 1 %}is 1 refund request{% else %}are {{ refund_requests_count }} refund requests{% endif %} awaiting review.</div>
+        <div class="text-sm text-amber-800">Open the Refunds tab to review the customer's reason and booking details.</div>
+      </div>
+      <a href="?payment=refunds" class="inline-flex items-center justify-center px-4 py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-sm font-semibold hover:bg-amber-100 transition-colors no-underline">
+        <i class="bi bi-arrow-right-circle"></i> View refunds
+      </a>
+    </div>
+  </div>
+  {% endif %}
 
   {% if reservations %}
   <div class="space-y-5">
@@ -64,7 +82,7 @@
                 {% else %}bg-amber-100 text-amber-700{% endif %}">
                 {% if booking.payment_review_status == 'confirmed' %}Funds Received{% elif booking.payment_review_status == 'submitted' %}Reference Waiting Review{% else %}Waiting for Customer{% endif %}
               </span>
-              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if booking.status == 'approved' %}bg-green-50 text-green-700{% else %}bg-amber-50 text-amber-700{% endif %}">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if booking.status == 'approved' %}bg-green-50 text-green-700{% elif booking.status == 'awaiting_payment' %}bg-sky-50 text-sky-700{% else %}bg-amber-50 text-amber-700{% endif %}">
                 {{ booking.get_status_display }}
               </span>
             </div>
@@ -78,7 +96,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 text-sm">
           <div>
             <div class="text-xs text-gray-500 uppercase">Confirmed Paid</div>
             <div class="font-semibold text-green-700">Tsh {{ booking.confirmed_amount_total }}</div>
@@ -86,6 +104,10 @@
           <div>
             <div class="text-xs text-gray-500 uppercase">Platform Fee</div>
             <div class="font-semibold text-amber-700">Tsh {{ booking.platform_fee_total }}</div>
+          <div>
+            <div class="text-xs text-gray-500 uppercase">Payment Method</div>
+            <div class="font-semibold text-gray-900">{{ booking.latest_pending_payment.payment_method|default:booking.payment_method|default:"Not set"|capfirst }}</div>
+          </div>
           </div>
           <div>
             <div class="text-xs text-gray-500 uppercase">Owner Net</div>
@@ -118,6 +140,18 @@
           <a href="{{ booking.payment_receipt.url }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
             <i class="bi bi-file-earmark-image"></i> View Receipt
           </a>
+        </div>
+        {% endif %}
+
+        {% if booking.refund_requested %}
+        <div class="mt-4 p-4 rounded-xl border border-amber-200 bg-amber-50">
+          <div class="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+            <i class="bi bi-arrow-counterclockwise"></i> Refund request submitted
+          </div>
+          <div class="text-sm text-amber-900 mt-2">{{ booking.refund_reason|default:"No reason provided." }}</div>
+          {% if booking.refund_requested_on %}
+          <div class="text-xs text-amber-700 mt-2">Requested on {{ booking.refund_requested_on|date:"M d, Y H:i" }}</div>
+          {% endif %}
         </div>
         {% endif %}
 

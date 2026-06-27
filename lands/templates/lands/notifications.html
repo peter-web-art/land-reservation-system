@@ -8,7 +8,8 @@
       <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
       <p class="text-gray-500">Stay updated on your bookings and messages</p>
     </div>
-    <a href="{% url 'lands:land_list' %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+    <a href="{{ back_url }}" class="btn-outline no-underline text-sm"
+      onclick="if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) { history.back(); return false; }">
       <i class="bi bi-arrow-left"></i> Back
     </a>
   </div>
@@ -38,9 +39,15 @@
         </div>
         <div class="text-sm text-gray-600 mt-1">{{ n.message }}</div>
         {% if n.link %}
-        <a href="{{ n.link }}" class="inline-flex items-center gap-1 mt-2 text-sm text-[#1a5c38] hover:underline">
-          View details <i class="bi bi-arrow-right"></i>
-        </a>
+        <div class="mt-3">
+          <a href="{{ n.link }}" class="{% if n.notification_type == 'booking_approved' %}btn-primary{% else %}btn-outline{% endif %} no-underline text-sm">
+            {% if n.notification_type == 'booking_approved' %}
+              <i class="bi bi-credit-card"></i> Make payment
+            {% else %}
+              View details <i class="bi bi-arrow-right"></i>
+            {% endif %}
+          </a>
+        </div>
         {% endif %}
       </div>
       {% if not n.is_read %}

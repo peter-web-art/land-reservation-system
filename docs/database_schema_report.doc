@@ -83,7 +83,7 @@
     </table>
 
     <h3>3.2 Table: lands_land</h3>
-    <p>Stores detailed information about listed properties.</p>
+    <p>Stores detailed information about posted properties.</p>
     <table>
         <thead>
             <tr>

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirm Delete - Payment Configuration{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-2xl">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Delete Payment Method</h1>
+        <p class="text-lg text-gray-600">This action cannot be undone</p>
+    </div>
+
+    <!-- Warning Alert -->
+    <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg mb-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="bi bi-exclamation-triangle text-red-500 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="font-semibold text-red-900 mb-2">Are you sure?</h3>
+                <p class="text-red-700">
+                    You are about to delete the following payment method. Customers will no longer be able to use this method to submit payments.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Method Details -->
+    <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-gray-600 text-sm">Payment Method</p>
+                <p class="text-lg font-semibold text-gray-900">{{ config.get_payment_method_display }}</p>
+            </div>
+            <div>
+                <p class="text-gray-600 text-sm">Account</p>
+                <p class="text-lg font-semibold text-gray-900">{{ config.account_identifier }}</p>
+            </div>
+            <div>
+                <p class="text-gray-600 text-sm">Account Holder</p>
+                <p class="text-lg font-semibold text-gray-900">{{ config.account_holder_name }}</p>
+            </div>
+            <div>
+                <p class="text-gray-600 text-sm">Status</p>
+                <p class="text-lg font-semibold">
+                    {% if config.is_active %}
+                        <span class="text-green-600">Active</span>
+                    {% else %}
+                        <span class="text-gray-500">Inactive</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Form -->
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <!-- Confirmation Checkbox -->
+        <div class="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <input type="checkbox" id="confirm" name="confirm" required class="w-4 h-4 text-red-600 rounded">
+            <label for="confirm" class="ml-2 text-sm text-gray-900">
+                I understand this will delete this payment method and customers will not be able to use it anymore
+            </label>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-4 border-t">
+            <button type="submit" class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+                <i class="bi bi-trash mr-2"></i>Delete Payment Method
+            </button>
+            <a href="{% url 'accounts:admin_operator_payment_config' %}" class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors text-center">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

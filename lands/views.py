@@ -5,20 +5,22 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django import forms
 from django.http import JsonResponse
-from django.db.models import Q, F, Sum
+from django.db.models import Q, F, Sum, Count
 from django.conf import settings
 from django.utils import timezone
-from django.utils.html import strip_tags
+from django.utils.html import strip_tags, format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.core.paginator import Paginator
-from accounts.decorators import owner_required, customer_required
+from django.urls import reverse
+from accounts.decorators import owner_required, customer_required, admin_required
 import bleach, re
 from datetime import date as date_cls, timedelta
 from decimal import Decimal
 
-from .models import Land, Reservation, PaymentRecord, Message, Wishlist, Notification, Utility, LandImage
+from .models import Land, Reservation, PaymentRecord, Message, Wishlist, Notification, Utility, LandImage, LandReport
 import json
 from accounts.models import SystemSettings
+from accounts.models import SystemSettings, OperatorPaymentConfig
 
 User = get_user_model()
 
@@ -42,6 +44,13 @@ def create_notification(user, notification_type, title, message, link=''):
         message=message,
         link=link
     )
+
+
+def notify_admins(notification_type, title, message, link=''):
+    """Send a notification to every active admin/staff account."""
+    admin_users = User.objects.filter(Q(is_staff=True) | Q(role=User.ROLE_ADMIN), is_active=True)
+    for admin in admin_users:
+        create_notification(admin, notification_type, title, message, link)
 
 
 def get_platform_fee_percentage():
@@ -68,6 +77,40 @@ def sanitize_text(value, max_length=None):
     if max_length:
         cleaned = cleaned[:max_length]
     return cleaned
+
+
+def validate_land_gallery_submission(request, existing_positions=None):
+    if request.POST.get('save_draft') == 'true':
+        return None
+
+    uploaded_images = request.FILES.getlist('gallery_images')
+    uploaded_positions = request.POST.getlist('image_positions')
+    existing_positions = list(existing_positions or [])
+
+    if not uploaded_images:
+        total_images = len(existing_positions)
+        if total_images < 3:
+            return f'At least 3 photos are required. You currently have {total_images} photo(s).'
+        if len(set(existing_positions)) != len(existing_positions):
+            return 'Choose different viewing directions for each photo.'
+        return None
+
+    if len(uploaded_images) != len(uploaded_positions):
+        return 'Each photo must include both an image and a viewing direction.'
+
+    if any(not position for position in uploaded_positions):
+        return 'Choose a viewing direction for every uploaded photo.'
+
+    combined_positions = existing_positions + uploaded_positions
+    total_images = len(existing_positions) + len(uploaded_images)
+
+    if total_images < 3:
+        return f'At least 3 photos are required. You currently have {total_images} photo(s).'
+
+    if len(set(combined_positions)) != len(combined_positions):
+        return 'Choose different viewing directions for each photo.'
+
+    return None
 
 
 def safe_redirect(request, target_url, fallback, **kwargs):
@@ -106,6 +149,14 @@ def send_sms_notification(phone_number, message):
 # ── Forms ─────────────────────────────────────────────────────────────────────
 
 class LandForm(forms.ModelForm):
+    owner_will_refund = forms.TypedChoiceField(
+        choices=((True, 'Owner will refund'), (False, 'Owner will not refund')),
+        coerce=lambda v: (v == 'True' or v is True),
+        widget=forms.RadioSelect,
+        initial=True,
+        label='Refund policy'
+    )
+
     class Meta:
         model  = Land
         fields = ['land_id', 'title', 'description', 'price', 'price_unit',
@@ -114,7 +165,7 @@ class LandForm(forms.ModelForm):
                   'usage', 'size', 'size_unit', 'land_use',
                   'topography', 'soil_fertility', 'utilities', 'additional_utilities_notes',
                   'weekly_discount', 'monthly_discount',
-                  'contact_phone', 'contact_email', 'land_image_path', 'wizard_step']
+                  'contact_phone', 'contact_email', 'land_image_path', 'wizard_step', 'owner_will_refund']
 
     def __init__(self, *args, **kwargs):
         self.is_draft = kwargs.pop('is_draft', False)
@@ -326,14 +377,61 @@ class PaymentSubmissionForm(forms.ModelForm):
         self.fields['payment_reference'].required = True
         self.fields['payment_date'].required = True
         self.fields['amount'].required = True
+        if self.reservation and not self.is_bound:
+            self.fields['amount'].initial = self.reservation.remaining_balance
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
         if amount is None or amount <= 0:
             raise forms.ValidationError('Enter a valid payment amount.')
-        if self.reservation and amount > self.reservation.remaining_balance:
-            raise forms.ValidationError(f'Amount cannot exceed remaining balance of Tsh {self.reservation.remaining_balance}.')
+        if self.reservation and amount != self.reservation.remaining_balance:
+            raise forms.ValidationError(
+                f'You must pay the full remaining balance of Tsh {self.reservation.remaining_balance}.'
+            )
         return amount
+
+
+class RefundRequestForm(forms.Form):
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 5,
+            'placeholder': 'Explain why you are requesting a refund...',
+            'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors',
+        }),
+        min_length=20,
+        max_length=1000,
+        help_text='Give a clear reason with enough detail.',
+    )
+
+@login_required
+def reservation_payment_options(request, pk):
+    """Allow customer to view available operator payment methods and choose one for a reservation."""
+    reservation = get_object_or_404(Reservation, pk=pk)
+    if request.user != reservation.customer:
+        messages.error(request, 'You are not authorized to view payment options for this reservation.')
+        return redirect('lands:my_reservations')
+
+    configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
+
+    if request.method == 'POST':
+        try:
+            config_id = int(request.POST.get('payment_config'))
+            config = OperatorPaymentConfig.objects.get(pk=config_id, is_active=True)
+            reservation.selected_operator_payment = config
+            if not reservation.payment_method:
+                reservation.payment_method = config.payment_method
+            reservation.save()
+            messages.success(request, 'Payment method selection saved. Please continue to submit your payment details.')
+            if reservation.remaining_balance > 0 and reservation.status not in ['rejected', 'cancelled']:
+                return redirect('lands:submit_payment', pk=reservation.pk)
+            return redirect('lands:my_reservations')
+        except Exception:
+            messages.error(request, 'Invalid selection.')
+
+    return render(request, 'lands/reservation_payment_options.html', {
+        'reservation': reservation,
+        'configs': configs,
+    })
 
 
 # ── Views ─────────────────────────────────────────────────────────────────────
@@ -396,19 +494,22 @@ def land_list(request):
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
     if availability == 'available':
         map_pins_qs = [l for l in map_pins_qs if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
          'price': l.price_display, 'location': l.location, 'type': l.usage,
-         'status': 'available' if l.is_available else 'reserved'}
+         'status': l.availability_state,
+         'availability_label': l.availability_label,
+         'remaining_size': str(l.current_remaining_size),
+         'total_size': str(l.size) if l.size is not None else ''}
         for l in map_pins_qs[:200]
     ])
 
     # Availability filter (may convert queryset → list — must happen after sort & map_pins)
     if availability == 'available':
         lands = [l for l in lands if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         lands = [l for l in lands if not l.is_available]
 
     paginator = Paginator(lands, 12)
@@ -444,6 +545,36 @@ def land_list(request):
             'availability': availability,
             'sort': request.GET.get('sort', 'newest'),
         },
+        'show_login_prompt': False,
+    })
+
+
+def browse_lands(request):
+    """Simplified listing page for browsing all land posts (no homepage sections).
+    Intended as a direct 'browse' landing where users can scan listings only.
+    """
+    lands_qs = Land.objects.filter(is_active=True, is_draft=False).select_related('owner').order_by('-created_on')
+
+    # Basic filters supported on browse page (keyword, location)
+    keyword = request.GET.get('keyword', '')
+    location = request.GET.get('location', '')
+    if keyword:
+        lands_qs = lands_qs.filter(Q(title__icontains=keyword) | Q(description__icontains=keyword))
+    if location:
+        lands_qs = lands_qs.filter(Q(location__icontains=location) | Q(title__icontains=location))
+
+    paginator = Paginator(lands_qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    wishlisted_ids = []
+    if request.user.is_authenticated:
+        wishlisted_ids = list(Wishlist.objects.filter(user=request.user).values_list('land_id', flat=True))
+
+    return render(request, 'lands/browse.html', {
+        'lands': page_obj,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'wishlisted_ids': wishlisted_ids,
         'show_login_prompt': False,
     })
 
@@ -550,19 +681,22 @@ def search_lands(request):
     map_pins_qs = lands.filter(latitude__isnull=False, longitude__isnull=False)
     if availability == 'available':
         map_pins_qs = [l for l in map_pins_qs if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         map_pins_qs = [l for l in map_pins_qs if not l.is_available]
     map_pins = json.dumps([
         {'id': l.id, 'title': l.title, 'lat': l.latitude, 'lng': l.longitude,
          'price': l.price_display, 'location': l.location, 'type': l.usage,
-         'status': 'available' if l.is_available else 'reserved'}
+         'status': l.availability_state,
+         'availability_label': l.availability_label,
+         'remaining_size': str(l.current_remaining_size),
+         'total_size': str(l.size) if l.size is not None else ''}
         for l in map_pins_qs[:200]
     ])
 
     # Availability filter (may convert QS → list — must happen after sort & map_pins)
     if availability == 'available':
         lands = [l for l in lands if l.is_available]
-    elif availability == 'reserved':
+    elif availability in ['reserved', 'unavailable']:
         lands = [l for l in lands if not l.is_available]
 
     paginator = Paginator(lands, 12)
@@ -599,6 +733,17 @@ def land_detail(request, pk):
     is_wishlisted = False
     if request.user.is_authenticated:
         is_wishlisted = Wishlist.objects.filter(user=request.user, land=land).exists()
+        can_view_owner_contact = (
+            request.user == land.owner or
+            Reservation.objects.filter(
+                land=land,
+                customer=request.user,
+                status='approved',
+                payment_confirmed=True,
+            ).exists()
+        )
+    else:
+        can_view_owner_contact = False
 
     # Build booked periods for availability calendar
     booked_periods = []
@@ -622,6 +767,7 @@ def land_detail(request, pk):
 
     return render(request, 'lands/land_detail.html', {
         'land': land, 'similar_lands': similar, 'is_wishlisted': is_wishlisted,
+        'can_view_owner_contact': can_view_owner_contact,
         'booked_periods_json': json.dumps(booked_periods),
         'next_available_date': land.next_available_date.isoformat(),
         'crop_suggestions': crop_suggestions,
@@ -690,7 +836,7 @@ def book_land(request, pk):
             if request.user.is_authenticated:
                 existing = Reservation.objects.filter(
                     land=land, customer=request.user,
-                    status__in=['pending', 'approved']).exists()
+                    status__in=['pending', 'awaiting_payment', 'approved']).exists()
                 if existing:
                     messages.warning(request,
                         'You already have an active or pending booking for this land.')
@@ -701,7 +847,7 @@ def book_land(request, pk):
                 if guest_email:
                     existing = Reservation.objects.filter(
                         land=land, customer_email=guest_email,
-                        status__in=['pending', 'approved']).exists()
+                        status__in=['pending', 'awaiting_payment', 'approved']).exists()
                     if existing:
                         messages.warning(request,
                             'A booking for this land already exists with this email address.')
@@ -764,24 +910,76 @@ def my_reservations(request):
 @require_http_methods(['POST'])
 def cancel_reservation(request, pk):
     r = get_object_or_404(Reservation, pk=pk, customer=request.user)
-    if r.status == 'pending':
+    if r.status == 'approved':
+        messages.error(request, 'Approved bookings cannot be cancelled directly. Please request a refund instead.')
+        return redirect('lands:refund_request', pk=r.pk)
+    if r.status in ['pending', 'awaiting_payment']:
         r.status = 'cancelled'
         r.save()
         messages.success(request, 'Pending reservation cancelled.')
-    elif r.status == 'approved':
-        # FIX #7: approved cancellations need confirmation + owner SMS
-        r.status = 'cancelled'
-        r.save()
-        owner_phone = r.land.contact_phone or (r.land.owner.phone if r.land.owner else None)
-        if owner_phone:
-            send_sms_notification(owner_phone,
-                f"⚠️ Customer {r.customer_name or r.customer.username} has CANCELLED "
-                f"their approved booking for '{r.land.title}'.")
-        messages.warning(request,
-            'Your approved booking has been cancelled. The owner has been notified.')
     else:
         messages.error(request, 'This reservation cannot be cancelled.')
     return redirect('lands:my_reservations')
+
+
+@login_required
+@customer_required
+def refund_request(request, pk):
+    booking = get_object_or_404(Reservation, pk=pk, customer=request.user)
+
+    if booking.status != 'approved':
+        messages.error(request, 'Refund requests are only available for approved bookings.')
+        return redirect('lands:my_bookings')
+
+    if booking.refund_requested:
+        messages.info(request, 'You have already requested a refund for this booking.')
+        return redirect('lands:my_bookings')
+
+    if request.method == 'POST':
+        form = RefundRequestForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason'].strip()
+            booking.refund_requested = True
+            booking.refund_reason = reason
+            booking.refund_requested_on = timezone.now()
+            booking.updated_by = request.user
+            booking.save(update_fields=['refund_requested', 'refund_reason', 'refund_requested_on', 'updated_by', 'updated_on'])
+
+            owner_phone = booking.land.contact_phone or (booking.land.owner.phone if booking.land.owner else None)
+            if owner_phone:
+                send_sms_notification(
+                    owner_phone,
+                    f"Customer {booking.customer_name or booking.customer.username} requested a refund for '{booking.land.title}'."
+                )
+
+            if booking.land.owner:
+                create_notification(
+                    user=booking.land.owner,
+                    notification_type='payment',
+                    title='Refund Request Submitted',
+                    message=(
+                        f"Customer {booking.customer_name or booking.customer.username} requested a refund for "
+                        f"'{booking.land.title}'. Reason: {reason[:120]}"
+                    ),
+                    link=reverse('lands:manage_payments'),
+                )
+
+            create_notification(
+                user=request.user,
+                notification_type='payment',
+                title='Refund Request Received',
+                message=f"Your refund request for '{booking.land.title}' has been submitted for review.",
+                link=reverse('lands:my_bookings'),
+            )
+            messages.success(request, 'Refund request submitted. The owner will review your reason.')
+            return redirect('lands:my_bookings')
+    else:
+        form = RefundRequestForm(initial={'reason': booking.refund_reason})
+
+    return render(request, 'lands/refund_request.html', {
+        'booking': booking,
+        'form': form,
+    })
 
 
 @customer_required
@@ -790,18 +988,19 @@ def customer_dashboard(request):
     qs        = Reservation.objects.filter(customer=request.user)
     total     = qs.count()
     pending   = qs.filter(status='pending').count()
+    awaiting_payment = qs.filter(status='awaiting_payment').count()
     approved  = qs.filter(status='approved').count()
     cancelled = qs.filter(status='cancelled').count()
     recent    = qs.select_related('land').order_by('-created_on')[:5]
     wishlist_count = Wishlist.objects.filter(user=request.user).count()
     wishlist_items = Wishlist.objects.filter(user=request.user).select_related('land', 'land__owner')[:4]
     featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')[:4]
-    active_reservations = qs.filter(status__in=['pending', 'approved']).select_related('land', 'land__owner').order_by('-created_on')[:6]
+    active_reservations = qs.filter(status__in=['pending', 'awaiting_payment', 'approved']).select_related('land', 'land__owner').order_by('-created_on')[:6]
     unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
     latest_notifications = Notification.objects.filter(user=request.user).select_related('user')[:3]
     return render(request, 'lands/customer_dashboard.html', {
         'total': total, 'pending': pending,
-        'approved': approved, 'cancelled': cancelled,
+        'approved': approved, 'awaiting_payment': awaiting_payment, 'cancelled': cancelled,
         'recent_reservations': recent,
         'active_reservations': active_reservations,
         'featured_lands': featured_lands,
@@ -843,6 +1042,11 @@ def owner_dashboard(request):
     
     pending_count  = Reservation.objects.filter(land_id__in=ids, status='pending').count()
     approved_count = Reservation.objects.filter(land_id__in=ids, status='approved').count()
+    refund_requests = (Reservation.objects
+                       .filter(land_id__in=ids, refund_requested=True)
+                       .select_related('land', 'customer')
+                       .order_by('-refund_requested_on', '-created_on'))
+    refund_requests_count = refund_requests.count()
     available_count = sum(1 for l in published_lands if l.is_available)
     recent_bookings = (Reservation.objects
                        .filter(land_id__in=ids)
@@ -888,7 +1092,9 @@ def owner_dashboard(request):
         'published_count': published_lands.count(),
         'pending_count': pending_count,
         'approved_count': approved_count,
+        'refund_requests_count': refund_requests_count,
         'available_count': available_count,
+        'refund_requests': refund_requests[:5],
         'recent_bookings': recent_bookings,
         'total_views': total_views,
         'total_wishlists': total_wishlists,
@@ -904,7 +1110,6 @@ def owner_dashboard(request):
 @owner_required
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def add_land(request):
-    initial_step = 1
     if request.method == 'POST':
         initial_step = int(request.POST.get('current_step', 1) or 1)
         is_draft = request.POST.get('save_draft') == 'true'
@@ -914,29 +1119,29 @@ def add_land(request):
             land.owner = request.user
             is_draft = request.POST.get('save_draft') == 'true'
             land.is_draft = is_draft
-            land.wizard_step = initial_step
+            land.wizard_step = int(request.POST.get('current_step', 1))
             land.save()
             form.save_m2m()
 
-            # Handle multiple images
-            images = request.FILES.getlist('gallery_images')
-            positions = request.POST.getlist('image_positions')
-            
-            for i, img in enumerate(images):
-                pos = positions[i] if i < len(positions) else 'other'
-                LandImage.objects.create(
-                    land=land,
-                    image=img,
-                    position=pos,
-                    is_primary=(i == 0 and not land.land_image_path),
-                    order=i
-                )
+                # Handle multiple images
+                images = request.FILES.getlist('gallery_images')
+                positions = request.POST.getlist('image_positions')
+                
+                for i, img in enumerate(images):
+                    pos = positions[i]
+                    LandImage.objects.create(
+                        land=land,
+                        image=img,
+                        position=pos,
+                        is_primary=(i == 0 and not land.land_image_path),
+                        order=i
+                    )
 
-            if is_draft:
-                messages.success(request, f'"{land.title}" saved as draft.')
-            else:
-                messages.success(request, f'"{land.title}" published successfully.')
-            return redirect('lands:owner_dashboard')
+                if is_draft:
+                    messages.success(request, f'"{land.title}" saved as draft.')
+                else:
+                    messages.success(request, f'"{land.title}" published successfully.')
+                return redirect('lands:owner_dashboard')
     else:
         initial = {
             'contact_phone': getattr(request.user, 'phone', ''),
@@ -960,25 +1165,25 @@ def edit_land(request, pk):
             is_draft = request.POST.get('save_draft') == 'true'
             land = form.save(commit=False)
             land.is_draft = is_draft
-            land.wizard_step = initial_step
+            land.wizard_step = int(request.POST.get('current_step', 1))
             land.save()
             form.save_m2m()
 
-            # Handle multiple images
-            images = request.FILES.getlist('gallery_images')
-            positions = request.POST.getlist('image_positions')
-            
-            for i, img in enumerate(images):
-                pos = positions[i] if i < len(positions) else 'other'
-                LandImage.objects.create(
-                    land=land,
-                    image=img,
-                    position=pos,
-                    order=land.images.count() + i
-                )
+                # Handle multiple images
+                images = request.FILES.getlist('gallery_images')
+                positions = request.POST.getlist('image_positions')
+                
+                for i, img in enumerate(images):
+                    pos = positions[i]
+                    LandImage.objects.create(
+                        land=land,
+                        image=img,
+                        position=pos,
+                        order=land.images.count() + i
+                    )
 
-            messages.success(request, 'Draft updated.' if is_draft else 'Land published successfully!')
-            return redirect('lands:owner_dashboard')
+                messages.success(request, 'Draft updated.' if is_draft else 'Land published successfully!')
+                return redirect('lands:owner_dashboard')
     else:
         form = LandForm(instance=land)
     
@@ -1013,13 +1218,15 @@ def reservations_management(request):
                      .select_related('land', 'customer')
                      .order_by('-created_on'))
     pending_count = qs.filter(status='pending').count()
+    awaiting_payment_count = qs.filter(status='awaiting_payment').count()
     sf = request.GET.get('status')
-    if sf in ['pending', 'approved', 'rejected', 'cancelled']:
+    if sf in ['pending', 'awaiting_payment', 'approved', 'rejected', 'cancelled']:
         qs = qs.filter(status=sf)
     from django.utils import timezone
     return render(request, 'lands/reservations_management.html', {
         'reservations': qs,
         'pending_count': pending_count,
+        'awaiting_payment_count': awaiting_payment_count,
         'today': timezone.now().date(),
     })
 
@@ -1031,7 +1238,7 @@ def calendar_view(request):
     
     events = []
     for land in lands:
-        for res in land.reservations.filter(status__in=['pending', 'approved']):
+        for res in land.reservations.filter(status__in=['pending', 'awaiting_payment', 'approved']):
             if res.start_date and res.end_date:
                 event = {
                     'id': res.id,
@@ -1041,7 +1248,7 @@ def calendar_view(request):
                     'status': res.status,
                     'land_id': land.id,
                     'land_title': land.title,
-                    'color': '#22c55e' if res.status == 'approved' else '#f59e0b',
+                    'color': '#22c55e' if res.status == 'approved' else '#38bdf8' if res.status == 'awaiting_payment' else '#f59e0b',
                 }
                 events.append(event)
     
@@ -1059,7 +1266,10 @@ def update_reservation_status(request, pk, status):
         messages.error(request, 'Permission denied.')
         return redirect('lands:owner_dashboard')
 
-    if status not in ['approved', 'rejected', 'cancelled']:
+    if status == 'approved':
+        status = 'awaiting_payment'
+
+    if status not in ['awaiting_payment', 'rejected', 'cancelled']:
         messages.error(request, 'Invalid status.')
         return redirect('lands:reservations_management')
 
@@ -1067,10 +1277,10 @@ def update_reservation_status(request, pk, status):
 
     # FIX #2: overlap check before approving rent bookings
     # BUG #3 FIX: Check both APPROVED and PENDING overlaps to prevent double-booking
-    if status == 'approved' and r.land.usage == 'rent':
+    if status == 'awaiting_payment' and r.land.usage == 'rent':
         if r.start_date and r.end_date:
             conflict = Reservation.objects.filter(
-                land=r.land, status__in=['approved', 'pending'],
+                land=r.land, status__in=['approved', 'awaiting_payment', 'pending'],
                 start_date__lt=r.end_date,
                 end_date__gt=r.start_date
             ).exclude(pk=r.pk).exists()
@@ -1082,7 +1292,7 @@ def update_reservation_status(request, pk, status):
                 return redirect('lands:reservations_management')
 
     r.status = status
-    if status == 'approved':
+    if status == 'awaiting_payment':
         pm = request.POST.get('payment_method', '').strip()
         pr = request.POST.get('payment_reference', '').strip()
         if pm: r.payment_method = pm
@@ -1090,7 +1300,7 @@ def update_reservation_status(request, pk, status):
     r.save()
 
     # SMS on approval
-    if status == 'approved' and old_status != 'approved':
+    if status == 'awaiting_payment' and old_status != 'awaiting_payment':
         customer_phone = r.customer_phone
         if not customer_phone and r.customer:
             details = getattr(r.customer, 'personal_details', None)
@@ -1103,7 +1313,7 @@ def update_reservation_status(request, pk, status):
                 date_info = f' ({r.start_date} to {r.end_date})'
             send_sms_notification(customer_phone,
                 f"Your booking for '{r.land.title}'{date_info} is approved. "
-                f"Contact owner: {r.land.contact_phone or 'see listing'}.")
+                "Please complete payment in LandReserve to unlock access details.")
         
         # Create notification for customer
         customer = r.customer if r.customer else None
@@ -1111,8 +1321,8 @@ def update_reservation_status(request, pk, status):
             create_notification(
                 customer, 'booking_approved',
                 'Booking Approved',
-                f"Your booking for '{r.land.title}' has been approved!",
-                f'/lands/reservations/'
+                f"Your booking for '{r.land.title}' has been approved. Tap Make payment to choose a payment method and complete your booking.",
+                f"{reverse('lands:payments_and_bills')}?booking={r.id}"
             )
 
     # SMS on rejection
@@ -1146,36 +1356,163 @@ def update_reservation_status(request, pk, status):
 @login_required
 @require_http_methods(['POST'])
 def mark_payment(request, pk):
-    r = get_object_or_404(Reservation, pk=pk)
-    if r.land.owner != request.user:
-        messages.error(request, 'Permission denied.')
-        return redirect('lands:reservations_management')
-    payment_method = request.POST.get('payment_method', '').strip()
-    payment_ref = request.POST.get('payment_reference', '').strip()
-    if payment_method:
-        r.payment_method = payment_method
-    if payment_ref:
-        r.payment_reference = payment_ref
-    r.payment_status = 'paid'
-    r.payment_confirmed = True
-    r.amount_paid = r.agreed_price or r.total_amount or r.land.price
-    r.save()
-    messages.success(request, 'Payment recorded.')
+    r = get_object_or_404(Reservation, pk=pk, land__owner=request.user)
+    messages.info(
+        request,
+        'Payment verification is now handled by admin. Use the admin payments panel to confirm customer payments.'
+    )
     return redirect('lands:reservations_management')
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADMIN REPORTED LANDS DASHBOARD
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@admin_required
+def admin_reported_lands(request):
+    """
+    Admin dashboard to view all reported lands.
+    Shows reports grouped by land and allows admin to review and take action.
+    """
+    # Get filter status
+    status = request.GET.get('status', 'submitted')
+    search = request.GET.get('search', '')
+    
+    # Get all reports, filter by status
+    reports_qs = LandReport.objects.select_related('land', 'land__owner', 'reported_by').order_by('-created_on')
+    
+    if status != 'all':
+        reports_qs = reports_qs.filter(status=status)
+    
+    if search:
+        reports_qs = reports_qs.filter(
+            Q(land__title__icontains=search) |
+            Q(land__owner__username__icontains=search) |
+            Q(reported_by__username__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    # Group reports by land
+    lands_with_reports = {}
+    for report in reports_qs:
+        land_id = report.land.id
+        if land_id not in lands_with_reports:
+            lands_with_reports[land_id] = {
+                'land': report.land,
+                'reports': [],
+                'total_reports': 0,
+                'critical': False,
+                'latest_status': 'submitted'
+            }
+        lands_with_reports[land_id]['reports'].append(report)
+        lands_with_reports[land_id]['total_reports'] = len(lands_with_reports[land_id]['reports'])
+        if report.status != 'dismissed':
+            lands_with_reports[land_id]['latest_status'] = report.status
+    
+    # Pagination
+    paginator = Paginator(list(lands_with_reports.values()), 15)
+    page_number = request.GET.get('page', 1)
+    lands_page = paginator.get_page(page_number)
+    
+    # Get stats
+    total_reports = LandReport.objects.count()
+    submitted_reports = LandReport.objects.filter(status='submitted').count()
+    under_review = LandReport.objects.filter(status='reviewed').count()
+    resolved = LandReport.objects.filter(status='resolved').count()
+    
+    context = {
+        'lands_page': lands_page,
+        'paginator': paginator,
+        'status': status,
+        'search': search,
+        'total_reports': total_reports,
+        'submitted_reports': submitted_reports,
+        'under_review': under_review,
+        'resolved': resolved,
+        'status_choices': LandReport.STATUS_CHOICES,
+    }
+    
+    return render(request, 'lands/admin_reported_lands.html', context)
+
+
+@login_required
+@admin_required
+def admin_report_detail(request, report_id):
+    """
+    Admin view for detailed report inspection and action.
+    """
+    report = get_object_or_404(LandReport, pk=report_id)
+    related_reports = LandReport.objects.filter(land=report.land).exclude(pk=report_id).order_by('-created_on')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        admin_notes = request.POST.get('admin_notes', '')
+        new_status = request.POST.get('status', 'submitted')
+        
+        report.admin_notes = admin_notes
+        report.status = new_status
+        report.reviewed_by = request.user
+        report.reviewed_on = timezone.now()
+        
+        if action == 'suspend_land':
+            report.land.is_active = False
+            report.land.save()
+            messages.success(request, f'Land "{report.land.title}" has been suspended.')
+        elif action == 'suspend_owner':
+            report.land.owner.is_suspended = True
+            report.land.owner.is_active = False
+            report.land.owner.save()
+            messages.success(request, f'Owner "{report.land.owner.username}" has been suspended.')
+        elif action == 'dismiss':
+            report.status = 'dismissed'
+            messages.success(request, 'Report dismissed.')
+        elif action == 'mark_spam':
+            report.is_spam = True
+            messages.success(request, 'Report marked as spam.')
+        
+        report.save()
+        messages.success(request, 'Report action recorded.')
+        return redirect('lands:admin_reported_lands')
+    
+    context = {
+        'report': report,
+        'related_reports': related_reports,
+        'reason_choices': LandReport.REASON_CHOICES,
+        'status_choices': LandReport.STATUS_CHOICES,
+    }
+    
+    return render(request, 'lands/admin_report_detail.html', context)
 
 
 @login_required
 def report_listing(request, pk):
     """Allow authenticated users to flag a suspicious listing."""
     if request.method == 'POST':
-        reason = sanitize_text(request.POST.get('reason', ''), 500)
-        land   = get_object_or_404(Land, pk=pk)
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(
-            f"LISTING REPORT: land_id={pk} '{land.title}' reported by "
-            f"user={request.user.username} reason='{reason}'")
-        messages.success(request, 'Report submitted. Our team will review this listing.')
+        reason = sanitize_text(request.POST.get('reason', ''), 50)
+        description = sanitize_text(request.POST.get('description', ''), 1000)
+        land = get_object_or_404(Land, pk=pk)
+        
+        # Check if user already reported this land
+        existing_report = LandReport.objects.filter(land=land, reported_by=request.user).first()
+        if existing_report:
+            messages.warning(request, 'You have already reported this listing. Our team will review it soon.')
+        else:
+            # Create report record
+            LandReport.objects.create(
+                land=land,
+                reported_by=request.user,
+                reason=reason,
+                description=description,
+            )
+            messages.success(request, 'Report submitted. Our team will review this listing.')
+            
+            # Log for backup
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"LISTING REPORT: land_id={pk} '{land.title}' reported by "
+                f"user={request.user.username} reason='{reason}'")
     return redirect('lands:land_detail', pk=pk)
 
 
@@ -1190,6 +1527,22 @@ def inbox(request):
     return render(request, 'lands/inbox.html', {
         'received': received, 'sent': sent, 'tab': tab, 'unread_count': unread_count,
     })
+
+
+@login_required
+def contact_admin(request):
+    """
+    Finds the first active admin/operator user and redirects the user to the message thread with them.
+    """
+    admin = User.objects.filter(Q(is_staff=True) | Q(role='admin'), is_active=True).first()
+    if not admin:
+        admin = User.objects.filter(Q(is_staff=True) | Q(role='admin')).first()
+        
+    if not admin:
+        messages.error(request, 'No administrator is currently available to receive messages.')
+        return redirect('lands:inbox')
+        
+    return redirect('lands:message_thread', user_id=admin.id)
 
 
 @login_required
@@ -1209,9 +1562,19 @@ def send_message(request):
         land = None
         if land_id:
             land = Land.objects.filter(pk=land_id).first()
-        Message.objects.create(
+        msg = Message.objects.create(
             sender=request.user, recipient=recipient,
             land=land, subject=subject, body=body
+        )
+        # Create a notification for the recipient
+        is_admin_recipient = recipient.is_staff or recipient.role == 'admin'
+        link = f"/admin-portal/owner-requests/{msg.id}/" if is_admin_recipient else f"/lands/messages/{request.user.id}/"
+        create_notification(
+            user=recipient,
+            notification_type='message_received',
+            title=f"New message from {request.user.get_full_name() or request.user.username}",
+            message=body[:200],
+            link=link
         )
         messages.success(request, f'Message sent to {recipient.username}.')
         return redirect('lands:inbox')
@@ -1232,9 +1595,19 @@ def message_thread(request, user_id):
         land_id = request.POST.get('land')
         land = Land.objects.filter(pk=land_id).first() if land_id else None
         if body:
-            Message.objects.create(
+            msg = Message.objects.create(
                 sender=request.user, recipient=other_user,
                 land=land, body=body
+            )
+            # Create a notification for the recipient
+            is_admin_recipient = other_user.is_staff or other_user.role == 'admin'
+            link = f"/admin-portal/owner-requests/{msg.id}/" if is_admin_recipient else f"/lands/messages/{request.user.id}/"
+            create_notification(
+                user=other_user,
+                notification_type='message_received',
+                title=f"New message from {request.user.get_full_name() or request.user.username}",
+                message=body[:200],
+                link=link
             )
             messages.success(request, 'Reply sent.')
         return redirect('lands:message_thread', user_id=other_user.pk)
@@ -1363,6 +1736,35 @@ def help_center(request):
         except Exception as e:
             logger.warning(f"Failed to send support email: {e}")
         
+        # Create database Message if authenticated
+        if request.user.is_authenticated:
+            admin = User.objects.filter(Q(is_staff=True) | Q(role='admin'), is_active=True).first()
+            if not admin:
+                admin = User.objects.filter(Q(is_staff=True) | Q(role='admin')).first()
+            
+            if admin:
+                msg = Message.objects.create(
+                    sender=request.user,
+                    recipient=admin,
+                    subject=f"[{category.upper()}] {subject}",
+                    body=message_body
+                )
+                
+                # Notify admin/operator
+                create_notification(
+                    user=admin,
+                    notification_type='message_received',
+                    title=f"New Support Request from {request.user.username}",
+                    message=f"[{category.upper()}] {subject}",
+                    link=f"/admin-portal/owner-requests/{msg.id}/"
+                )
+                
+                messages.success(
+                    request,
+                    "Thank you for contacting us. We've received your message and will respond within 24 hours. You can follow and track this conversation in your Inbox.",
+                )
+                return redirect('lands:inbox')
+
         messages.success(
             request,
             "Thank you for contacting us. We've received your message and will respond within 24 hours.",
@@ -1377,11 +1779,27 @@ def help_center(request):
 @login_required
 def my_notifications(request):
     from lands.models import Notification
-    notifications = Notification.objects.filter(user=request.user)[:50]
-    unread_count = notifications.filter(is_read=False).count()
+    base_qs = Notification.objects.filter(user=request.user).order_by('-created_on')
+    unread_count = base_qs.filter(is_read=False).count()
+    notifications = base_qs[:50]
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer and not url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        referer = ''
+    if not referer:
+        if request.user.is_staff or request.user.role == User.ROLE_ADMIN:
+            referer = reverse('accounts:admin_portal')
+        elif request.user.role == User.ROLE_OWNER or request.user.is_owner:
+            referer = reverse('lands:owner_dashboard')
+        else:
+            referer = reverse('lands:customer_dashboard')
     return render(request, 'lands/notifications.html', {
         'notifications': notifications,
         'unread_count': unread_count,
+        'back_url': referer,
     })
 
 
@@ -1449,7 +1867,8 @@ def live_search(request):
 def my_bookings(request):
     """View for customers to track their own land reservations."""
     bookings = Reservation.objects.filter(customer=request.user).select_related('land').order_by('-created_on')
-    return render(request, 'lands/my_bookings.html', {'bookings': bookings})
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
+    return render(request, 'lands/my_bookings.html', {'bookings': bookings, 'operator_payment_configs': operator_payment_configs})
 
 
 @login_required
@@ -1460,18 +1879,26 @@ def payments_and_bills(request):
                 .select_related('land', 'land__owner')
                 .prefetch_related('payments')
                 .order_by('-created_on'))
+    focus_booking_id = request.GET.get('booking')
+    focus_booking = None
+    if focus_booking_id:
+        focus_booking = bookings.filter(pk=focus_booking_id).first()
     active_bookings = bookings.exclude(status__in=['rejected', 'cancelled'])
     outstanding_total = sum(
         booking.remaining_balance
         for booking in active_bookings
         if booking.remaining_balance > 0
     )
+    operator_payment_configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
     return render(request, 'lands/payments_and_bills.html', {
         'bookings': bookings,
         'unpaid_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'pending'),
         'under_review_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'submitted'),
         'confirmed_count': sum(1 for booking in active_bookings if booking.payment_review_status == 'confirmed'),
         'outstanding_total': outstanding_total,
+        'operator_payment_configs': operator_payment_configs,
+        'focus_booking': focus_booking,
+        'focus_booking_id': focus_booking_id,
     })
 
 
@@ -1480,8 +1907,8 @@ def payments_and_bills(request):
 def submit_payment(request, pk):
     """View for customers to submit payment proof (reference/receipt)."""
     booking = get_object_or_404(Reservation.objects.prefetch_related('payments'), pk=pk, customer=request.user)
-    if booking.status not in ['pending', 'approved']:
-        messages.error(request, 'This booking is no longer open for payment updates.')
+    if booking.status not in ['pending', 'approved', 'awaiting_payment']:
+        messages.error(request, 'You can submit payment only while the booking is still active.')
         return redirect('lands:payments_and_bills')
     if booking.remaining_balance <= 0:
         messages.info(request, 'This booking is already fully paid.')
@@ -1505,18 +1932,26 @@ def submit_payment(request, pk):
             booking.updated_by = request.user
             booking.save()
             
-            create_notification(
-                user=booking.land.owner,
+            notify_admins(
                 notification_type='payment',
                 title="Payment Submitted",
-                message=f"Customer {request.user.username} submitted Tsh {payment.amount} for {booking.land.title}. Verify reference: {payment.payment_reference}.",
-                link=f"/lands/payments/manage/"
+                message=(
+                    f"Customer {request.user.username} submitted Tsh {payment.amount} for {booking.land.title}. "
+                    f"Review reference: {payment.payment_reference}."
+                ),
+                link=reverse('accounts:admin_payment_detail', args=[payment.pk])
             )
             
-            messages.success(request, "Payment details submitted successfully. The owner will verify and confirm receipt shortly.")
+            messages.success(request, "Payment details submitted successfully. An admin will review and confirm it.")
             return redirect('lands:payments_and_bills')
     else:
-        form = PaymentSubmissionForm(reservation=booking, initial={'payment_method': booking.payment_method})
+        initial_payment_method = booking.payment_method
+        if not initial_payment_method and booking.selected_operator_payment:
+            initial_payment_method = booking.selected_operator_payment.payment_method
+        form = PaymentSubmissionForm(
+            reservation=booking,
+            initial={'payment_method': initial_payment_method}
+        )
         
     return render(request, 'lands/submit_payment.html', {
         'form': form,
@@ -1539,25 +1974,36 @@ def manage_payments(request):
     if payment_filter == 'awaiting':
         reservations = reservations.filter(Q(payment_reference__isnull=True) | Q(payment_reference=''))
     elif payment_filter == 'review':
-        reservations = reservations.filter(~Q(payment_reference__isnull=True), ~Q(payment_reference=''), payment_confirmed=False)
+        reservations = reservations.filter(payments__status='submitted').distinct()
     elif payment_filter == 'confirmed':
-        reservations = reservations.filter(payment_confirmed=True)
+        reservations = reservations.filter(payments__status='confirmed').distinct()
+    elif payment_filter == 'payout':
+        reservations = reservations.filter(payments__status='confirmed', payments__owner_received_on__isnull=True).distinct()
+    elif payment_filter == 'received':
+        reservations = reservations.filter(payments__owner_received_on__isnull=False).distinct()
+    elif payment_filter == 'refunds':
+        reservations = reservations.filter(refund_requested=True)
 
     owner_reservations = Reservation.objects.filter(land__owner=request.user).exclude(status__in=['rejected', 'cancelled'])
+    refund_requests = owner_reservations.filter(refund_requested=True).select_related('land', 'customer').order_by('-refund_requested_on', '-created_on')
     confirmed_income = sum(booking.confirmed_amount_total for booking in owner_reservations.prefetch_related('payments'))
     platform_fee_total = sum(booking.platform_fee_total for booking in owner_reservations.prefetch_related('payments'))
     owner_net_total = sum(booking.owner_net_total for booking in owner_reservations.prefetch_related('payments'))
     expected_income = sum(
         (booking.total_amount or Decimal('0'))
         for booking in owner_reservations
-        if booking.status in ['pending', 'approved']
+        if booking.status in ['pending', 'awaiting_payment', 'approved']
     )
 
     return render(request, 'lands/manage_payments.html', {
         'reservations': reservations,
         'awaiting_count': owner_reservations.filter(Q(payment_reference__isnull=True) | Q(payment_reference='')).count(),
-        'review_count': owner_reservations.filter(~Q(payment_reference__isnull=True), ~Q(payment_reference=''), payment_confirmed=False).count(),
-        'confirmed_count': owner_reservations.filter(payment_confirmed=True).count(),
+        'review_count': owner_reservations.filter(payments__status='submitted').distinct().count(),
+        'confirmed_count': owner_reservations.filter(payments__status='confirmed').distinct().count(),
+        'refund_requests_count': refund_requests.count(),
+        'refund_requests': refund_requests[:8],
+        'payout_pending_count': owner_reservations.filter(payments__status='confirmed', payments__owner_received_on__isnull=True).distinct().count(),
+        'payout_received_count': owner_reservations.filter(payments__owner_received_on__isnull=False).distinct().count(),
         'confirmed_income': confirmed_income,
         'platform_fee_total': platform_fee_total,
         'owner_net_total': owner_net_total,
@@ -1566,10 +2012,10 @@ def manage_payments(request):
 
 
 @login_required
-@owner_required
+@admin_required
 def confirm_payment_receipt(request, pk):
-    """View for owners to confirm they have received the funds."""
-    booking = get_object_or_404(Reservation, pk=pk, land__owner=request.user)
+    """Admin review action for customer-submitted payment proof."""
+    booking = get_object_or_404(Reservation, pk=pk)
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1609,7 +2055,7 @@ def confirm_payment_receipt(request, pk):
                     payment_method=payment_method or None,
                     payment_reference=payment_reference or f'MANUAL-{booking.id}-{timezone.now().strftime("%Y%m%d%H%M%S")}',
                     payment_date=booking.payment_date or timezone.now().date(),
-                    notes='Recorded manually by owner.',
+                    notes='Recorded manually by admin.',
                     status='confirmed',
                     confirmed_on=timezone.now(),
                     created_by=request.user,
@@ -1630,8 +2076,10 @@ def confirm_payment_receipt(request, pk):
             booking.amount_paid = booking.confirmed_amount_total
             booking.payment_confirmed = booking.remaining_balance <= 0
             booking.payment_status = 'paid' if booking.remaining_balance <= 0 else 'unpaid'
-            if booking.status == 'pending':
+            if booking.remaining_balance <= 0:
                 booking.status = 'approved'
+            elif booking.status == 'pending':
+                booking.status = 'awaiting_payment'
             booking.updated_by = request.user
             booking.save()
             
@@ -1640,11 +2088,25 @@ def confirm_payment_receipt(request, pk):
                     user=booking.customer,
                     notification_type='payment',
                     title="Payment Confirmed",
-                    message=f"The owner confirmed Tsh {payment.amount if payment else booking.amount_paid} for {booking.land.title}. Remaining balance: Tsh {booking.remaining_balance}.",
+                    message=f"Admin confirmed Tsh {payment.amount if payment else booking.amount_paid} for {booking.land.title}. Your booking is now updated and access details are unlocked when payment is complete.",
                     link=f"/lands/payments/"
                 )
-            
-            messages.success(request, f"Payment for booking #{booking.id} has been confirmed.")
+            if booking.land.owner:
+                release_note = 'Funds will be released within 24 hours to 7 days.'
+                if payment and payment.confirmed_on:
+                    release_note = f"Funds are held until {payment.payout_release_due_on:%b %d, %Y}."
+                create_notification(
+                    user=booking.land.owner,
+                    notification_type='payment',
+                    title="Customer Payment Confirmed",
+                    message=(
+                        f"Admin confirmed Tsh {payment.amount if payment else booking.amount_paid} for {booking.land.title}. "
+                        f"{release_note}"
+                    ),
+                    link="/lands/payments/manage/"
+                )
+
+            messages.success(request, f"Payment for booking #{booking.id} has been confirmed by admin.")
         
         elif action == 'reject':
             rejected_amount = None
@@ -1669,9 +2131,46 @@ def confirm_payment_receipt(request, pk):
                     user=booking.customer,
                     notification_type='payment',
                     title="Payment Reference Rejected",
-                    message=f"The owner could not verify your submitted payment of Tsh {rejected_amount or 0} for {booking.land.title}. Please check the details and resubmit.",
+                    message=f"Admin could not verify your submitted payment of Tsh {rejected_amount or 0} for {booking.land.title}. Please check the details and resubmit.",
                     link=f"/lands/payments/"
                 )
             messages.warning(request, "Payment reference rejected. Customer has been notified to resubmit.")
 
+    return redirect('lands:manage_payments')
+
+
+@login_required
+@owner_required
+@require_http_methods(['POST'])
+def acknowledge_payout_received(request, payment_id):
+    payment = get_object_or_404(
+        PaymentRecord,
+        pk=payment_id,
+        reservation__land__owner=request.user,
+    )
+
+    if payment.status != 'confirmed':
+        messages.error(request, 'Only admin-confirmed payments can be acknowledged.')
+        return redirect('lands:manage_payments')
+
+    if payment.owner_received_on:
+        messages.info(request, 'This payout was already acknowledged.')
+        return redirect('lands:manage_payments')
+
+    payment.owner_received_on = timezone.now()
+    payment.updated_by = request.user
+    payment.save(update_fields=['owner_received_on', 'updated_by', 'updated_on'])
+
+    if payment.reservation.customer:
+        create_notification(
+            user=payment.reservation.customer,
+            notification_type='payment',
+            title='Owner Acknowledged Payout',
+            message=(
+                f"The owner acknowledged receipt of the released payout for {payment.reservation.land.title}."
+            ),
+            link='/lands/payments/'
+        )
+
+    messages.success(request, 'Payout receipt acknowledged successfully.')
     return redirect('lands:manage_payments')
