@@ -269,32 +269,18 @@
           </div>
         </div>
       {% else %}
-        {% if request.resolver_match.url_name == 'land_list' or request.resolver_match.url_name == 'home' %}
-          <div class="flex items-center gap-3">
-            <button type="button" 
-              class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#1a5c38] transition-colors"
-              onclick="openModal('login')">
-              Sign In
-            </button>
-            <button type="button"
-              class="px-5 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-bold hover:bg-[#134428] transition-all shadow-sm hover:shadow-md"
-              onclick="openModal('register')">
-              Sign Up
-            </button>
-          </div>
-        {% else %}
-          <button type="button"
-            class="hidden md:inline-flex items-center justify-center px-4 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] transition-colors"
-            onclick="openModal('register')">
-            <i class="bi bi-plus-lg mr-1"></i>Add new post
-          </button>
-          <button
-            class="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
+        <div class="flex items-center gap-3">
+          <button type="button" 
+            class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-[#1a5c38] transition-colors"
             onclick="openModal('login')">
-            <i class="bi bi-list text-base"></i>
-            <i class="bi bi-person-circle text-lg text-gray-400"></i>
+            Sign In
           </button>
-        {% endif %}
+          <button type="button"
+            class="px-5 py-2 bg-[#1a5c38] text-white rounded-full text-sm font-bold hover:bg-[#134428] transition-all shadow-sm hover:shadow-md"
+            onclick="openModal('register')">
+            Sign Up
+          </button>
+        </div>
       {% endif %}
     </div>
   </nav>

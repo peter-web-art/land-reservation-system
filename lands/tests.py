@@ -43,6 +43,15 @@ class LandAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Ocean View Plot')
 
+    def test_book_land_page_handles_missing_price(self):
+        self.land.price = None
+        self.land.save(update_fields=['price'])
+
+        response = self.client.get(reverse('lands:book_land', args=[self.land.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Ocean View Plot')
+
     def test_send_message_ignores_external_referer_redirect(self):
         self.client.force_login(self.customer)
 
@@ -58,6 +67,68 @@ class LandAccessTests(TestCase):
         )
 
         self.assertRedirects(response, reverse('lands:inbox'))
+
+
+class LandPublishWizardTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username='wizard-owner',
+            password='pass12345',
+            email='wizard-owner@example.com',
+            role=User.ROLE_OWNER,
+            is_owner=True,
+        )
+
+    def test_publish_land_accepts_selected_district(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('lands:add_land'),
+            {
+                'title': 'Meru Plot',
+                'description': 'Good access road.',
+                'usage': 'rent',
+                'land_use': 'residential',
+                'region': 'arusha',
+                'district': 'Arusha City',
+                'ward': 'Sekei',
+                'street': 'Old Moshi Road',
+                'topography': 'flat',
+                'soil_fertility': 'moderate',
+                'weekly_discount': '0',
+                'monthly_discount': '0',
+                'current_step': '6',
+            },
+        )
+
+        self.assertRedirects(response, reverse('lands:owner_dashboard'))
+        land = Land.objects.get(title='Meru Plot')
+        self.assertEqual(land.owner, self.owner)
+        self.assertEqual(land.district, 'Arusha City')
+        self.assertFalse(land.is_draft)
+
+    def test_invalid_publish_keeps_current_step(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('lands:add_land'),
+            {
+                'title': 'Invalid Discount Plot',
+                'usage': 'rent',
+                'land_use': 'residential',
+                'region': 'arusha',
+                'district': 'Arusha City',
+                'topography': 'flat',
+                'soil_fertility': 'moderate',
+                'weekly_discount': '95',
+                'monthly_discount': '0',
+                'current_step': '6',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="6"')
+        self.assertContains(response, 'Must be 0')
 
 
 class PaymentTrackingTests(TestCase):

@@ -127,6 +127,7 @@ class LandForm(forms.ModelForm):
         self.fields['additional_utilities_notes'].required = False
         self.fields['land_id'].required = False
         self.fields['land_image_path'].required = False
+        self.fields['wizard_step'].required = False
 
         if self.is_draft:
             # If saving as draft, only title is strictly required
@@ -141,10 +142,13 @@ class LandForm(forms.ModelForm):
             })
         else:
             self.fields['land_id'].widget = forms.HiddenInput()
-        # Pre-populate districts if editing an existing land
-        if self.instance and self.instance.pk and self.instance.region:
+        submitted_region = self.data.get(self.add_prefix('region')) if self.is_bound else None
+        region_for_districts = submitted_region or (
+            self.instance.region if self.instance and self.instance.pk else None
+        )
+        if region_for_districts:
             from .tanzania_locations import get_districts_for_region
-            districts = get_districts_for_region(self.instance.region)
+            districts = get_districts_for_region(region_for_districts)
             choices = [('', '-- Chagua Wilaya --')] + [(d, d) for d in districts]
             self.fields['district'].widget = forms.Select(choices=choices)
         owner = getattr(self.instance, 'owner', None)
@@ -711,9 +715,9 @@ def book_land(request, pk):
             
             base_price = (land.calculate_price(r.start_date, r.end_date)
                               if r.start_date and r.end_date else land.price)
-            if r.requested_size and land.size:
+            if base_price is not None and r.requested_size and land.size:
                 base_price = base_price * (Decimal(str(r.requested_size)) / land.size)
-            r.agreed_price = round(base_price, 2)
+            r.agreed_price = round(base_price, 2) if base_price is not None else None
             
             if request.user.is_authenticated:
                 r.customer = request.user
@@ -729,12 +733,18 @@ def book_land(request, pk):
     else:
         form = ReservationForm(user=request.user, land=land, initial=initial)
 
+    if land.price is None:
+        price_per_day = 0.0
+    elif land.price_unit == 'month':
+        price_per_day = float(land.price / 30)
+    elif land.price_unit == 'year':
+        price_per_day = float(land.price / 365)
+    else:
+        price_per_day = float(land.price)
+
     return render(request, 'lands/book_land.html', {
         'land': land, 'form': form,
-        'price_per_day': float(
-            land.price / 30 if land.price_unit == 'month'
-            else land.price / 365 if land.price_unit == 'year'
-            else land.price),
+        'price_per_day': price_per_day,
         'weekly_discount':  float(land.weekly_discount),
         'monthly_discount': float(land.monthly_discount),
     })
@@ -894,7 +904,9 @@ def owner_dashboard(request):
 @owner_required
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def add_land(request):
+    initial_step = 1
     if request.method == 'POST':
+        initial_step = int(request.POST.get('current_step', 1) or 1)
         is_draft = request.POST.get('save_draft') == 'true'
         form = LandForm(request.POST, request.FILES, is_draft=is_draft)
         if form.is_valid():
@@ -902,7 +914,7 @@ def add_land(request):
             land.owner = request.user
             is_draft = request.POST.get('save_draft') == 'true'
             land.is_draft = is_draft
-            land.wizard_step = int(request.POST.get('current_step', 1))
+            land.wizard_step = initial_step
             land.save()
             form.save_m2m()
 
@@ -931,7 +943,7 @@ def add_land(request):
             'contact_email': request.user.email,
         }
         form = LandForm(initial=initial)
-    return render(request, 'lands/add_land.html', {'form': form, 'land': None, 'initial_step': 1})
+    return render(request, 'lands/add_land.html', {'form': form, 'land': None, 'initial_step': initial_step})
 
 
 # FIX #4: owner_required
@@ -939,14 +951,16 @@ def add_land(request):
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def edit_land(request, pk):
     land = get_object_or_404(Land, pk=pk, owner=request.user)
+    initial_step = land.wizard_step
     if request.method == 'POST':
+        initial_step = int(request.POST.get('current_step', land.wizard_step) or land.wizard_step)
         is_draft = request.POST.get('save_draft') == 'true'
         form = LandForm(request.POST, request.FILES, instance=land, is_draft=is_draft)
         if form.is_valid():
             is_draft = request.POST.get('save_draft') == 'true'
             land = form.save(commit=False)
             land.is_draft = is_draft
-            land.wizard_step = int(request.POST.get('current_step', 1))
+            land.wizard_step = initial_step
             land.save()
             form.save_m2m()
 
@@ -973,7 +987,7 @@ def edit_land(request, pk):
         return render(request, 'lands/add_land.html', {
             'form': form, 
             'land': land, 
-            'initial_step': land.wizard_step
+            'initial_step': initial_step
         })
     
     return render(request, 'lands/edit_land.html', {'form': form, 'land': land})
