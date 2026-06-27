@@ -17,9 +17,25 @@
         <i class="bi bi-search mr-2"></i> Browse Land
       </a>
       {% if focus_booking %}
-      <a href="#booking-{{ focus_booking.id }}" class="btn-primary no-underline">
-        <i class="bi bi-lightning-charge mr-2"></i> Continue payment
-      </a>
+        {% if focus_booking.payment_confirmed or focus_booking.remaining_balance <= 0 %}
+          <span class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+            Payment complete
+          </span>
+        {% elif focus_booking.status == 'approved' or focus_booking.status == 'awaiting_payment' %}
+          {% if focus_booking.selected_operator_payment or focus_booking.payment_method %}
+            <a href="{% url 'lands:submit_payment' focus_booking.id %}" class="btn-primary no-underline">
+              <i class="bi bi-lightning-charge mr-2"></i> {% if focus_booking.payment_reference or focus_booking.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+            </a>
+          {% else %}
+            <a href="{% url 'lands:reservation_payment_options' focus_booking.id %}" class="btn-primary no-underline">
+              <i class="bi bi-lightning-charge mr-2"></i> Continue payment
+            </a>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'lands:reservation_payment_options' focus_booking.id %}" class="btn-primary no-underline">
+            <i class="bi bi-lightning-charge mr-2"></i> Continue payment
+          </a>
+        {% endif %}
       {% endif %}
     </div>
   </div>
@@ -258,18 +274,23 @@
           <a href="{% url 'lands:land_detail' booking.land.id %}" class="btn-outline no-underline text-sm">
             <i class="bi bi-eye"></i> View Land
           </a>
-          {% if booking.status == 'approved' and not booking.payment_confirmed %}
-            <a href="{% url 'lands:payments_and_bills' %}?booking={{ booking.id }}#booking-{{ booking.id }}" class="btn-primary no-underline text-sm">
-              <i class="bi bi-credit-card-2-front"></i> Make payment
-            </a>
-          {% elif booking.status == 'awaiting_payment' and not booking.payment_confirmed %}
-            {% if booking.selected_operator_payment %}
-              <a href="{% url 'lands:submit_payment' booking.id %}" class="btn-primary no-underline text-sm">
-                <i class="bi bi-receipt"></i> {% if booking.payment_reference %}Update Reference{% else %}Submit Reference{% endif %}
-              </a>
+          {% if not booking.payment_confirmed and booking.remaining_balance > 0 %}
+            {% if booking.status == 'approved' or booking.status == 'awaiting_payment' %}
+              {% if booking.selected_operator_payment or booking.payment_method %}
+                <a href="{% url 'lands:submit_payment' booking.id %}" class="btn-primary no-underline text-sm">
+                  <i class="bi bi-receipt"></i> {% if booking.payment_reference or booking.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                </a>
+                <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="btn-outline no-underline text-sm">
+                  <i class="bi bi-credit-card"></i> Change payment method
+                </a>
+              {% else %}
+                <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="btn-primary no-underline text-sm">
+                  <i class="bi bi-credit-card-2-front"></i> Continue payment
+                </a>
+              {% endif %}
             {% else %}
-              <a href="{% url 'lands:payments_and_bills' %}?booking={{ booking.id }}#booking-{{ booking.id }}" class="btn-primary no-underline text-sm">
-                <i class="bi bi-credit-card-2-front"></i> Choose Payment Method
+              <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="btn-primary no-underline text-sm">
+                <i class="bi bi-credit-card-2-front"></i> Continue payment
               </a>
             {% endif %}
           {% endif %}

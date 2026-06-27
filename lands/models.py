@@ -437,6 +437,9 @@ class Reservation(AuditBase):
     requested_size = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                       help_text='Size requested by customer (if partial)')
     notes          = models.TextField(blank=True)
+    refund_requested = models.BooleanField(default=False, help_text='True if the customer has requested a refund')
+    refund_reason = models.TextField(blank=True, help_text='Customer reason for refund request')
+    refund_requested_on = models.DateTimeField(null=True, blank=True)
     selected_operator_payment = models.ForeignKey('accounts.OperatorPaymentConfig', null=True, blank=True, on_delete=models.SET_NULL, related_name='selected_reservations', help_text='Operator payment method chosen by customer')
 
     class Meta:

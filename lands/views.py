@@ -377,14 +377,31 @@ class PaymentSubmissionForm(forms.ModelForm):
         self.fields['payment_reference'].required = True
         self.fields['payment_date'].required = True
         self.fields['amount'].required = True
+        if self.reservation and not self.is_bound:
+            self.fields['amount'].initial = self.reservation.remaining_balance
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
         if amount is None or amount <= 0:
             raise forms.ValidationError('Enter a valid payment amount.')
-        if self.reservation and amount > self.reservation.remaining_balance:
-            raise forms.ValidationError(f'Amount cannot exceed remaining balance of Tsh {self.reservation.remaining_balance}.')
+        if self.reservation and amount != self.reservation.remaining_balance:
+            raise forms.ValidationError(
+                f'You must pay the full remaining balance of Tsh {self.reservation.remaining_balance}.'
+            )
         return amount
+
+
+class RefundRequestForm(forms.Form):
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 5,
+            'placeholder': 'Explain why you are requesting a refund...',
+            'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors',
+        }),
+        min_length=20,
+        max_length=1000,
+        help_text='Give a clear reason with enough detail.',
+    )
 
 @login_required
 def reservation_payment_options(request, pk):
@@ -401,8 +418,12 @@ def reservation_payment_options(request, pk):
             config_id = int(request.POST.get('payment_config'))
             config = OperatorPaymentConfig.objects.get(pk=config_id, is_active=True)
             reservation.selected_operator_payment = config
+            if not reservation.payment_method:
+                reservation.payment_method = config.payment_method
             reservation.save()
-            messages.success(request, 'Payment method selection saved. Please follow the instructions to complete your payment.')
+            messages.success(request, 'Payment method selection saved. Please continue to submit your payment details.')
+            if reservation.remaining_balance > 0 and reservation.status not in ['rejected', 'cancelled']:
+                return redirect('lands:submit_payment', pk=reservation.pk)
             return redirect('lands:my_reservations')
         except Exception:
             messages.error(request, 'Invalid selection.')
@@ -889,24 +910,76 @@ def my_reservations(request):
 @require_http_methods(['POST'])
 def cancel_reservation(request, pk):
     r = get_object_or_404(Reservation, pk=pk, customer=request.user)
+    if r.status == 'approved':
+        messages.error(request, 'Approved bookings cannot be cancelled directly. Please request a refund instead.')
+        return redirect('lands:refund_request', pk=r.pk)
     if r.status in ['pending', 'awaiting_payment']:
         r.status = 'cancelled'
         r.save()
         messages.success(request, 'Pending reservation cancelled.')
-    elif r.status == 'approved':
-        # FIX #7: approved cancellations need confirmation + owner SMS
-        r.status = 'cancelled'
-        r.save()
-        owner_phone = r.land.contact_phone or (r.land.owner.phone if r.land.owner else None)
-        if owner_phone:
-            send_sms_notification(owner_phone,
-                f"⚠️ Customer {r.customer_name or r.customer.username} has CANCELLED "
-                f"their approved booking for '{r.land.title}'.")
-        messages.warning(request,
-            'Your approved booking has been cancelled. The owner has been notified.')
     else:
         messages.error(request, 'This reservation cannot be cancelled.')
     return redirect('lands:my_reservations')
+
+
+@login_required
+@customer_required
+def refund_request(request, pk):
+    booking = get_object_or_404(Reservation, pk=pk, customer=request.user)
+
+    if booking.status != 'approved':
+        messages.error(request, 'Refund requests are only available for approved bookings.')
+        return redirect('lands:my_bookings')
+
+    if booking.refund_requested:
+        messages.info(request, 'You have already requested a refund for this booking.')
+        return redirect('lands:my_bookings')
+
+    if request.method == 'POST':
+        form = RefundRequestForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason'].strip()
+            booking.refund_requested = True
+            booking.refund_reason = reason
+            booking.refund_requested_on = timezone.now()
+            booking.updated_by = request.user
+            booking.save(update_fields=['refund_requested', 'refund_reason', 'refund_requested_on', 'updated_by', 'updated_on'])
+
+            owner_phone = booking.land.contact_phone or (booking.land.owner.phone if booking.land.owner else None)
+            if owner_phone:
+                send_sms_notification(
+                    owner_phone,
+                    f"Customer {booking.customer_name or booking.customer.username} requested a refund for '{booking.land.title}'."
+                )
+
+            if booking.land.owner:
+                create_notification(
+                    user=booking.land.owner,
+                    notification_type='payment',
+                    title='Refund Request Submitted',
+                    message=(
+                        f"Customer {booking.customer_name or booking.customer.username} requested a refund for "
+                        f"'{booking.land.title}'. Reason: {reason[:120]}"
+                    ),
+                    link=reverse('lands:manage_payments'),
+                )
+
+            create_notification(
+                user=request.user,
+                notification_type='payment',
+                title='Refund Request Received',
+                message=f"Your refund request for '{booking.land.title}' has been submitted for review.",
+                link=reverse('lands:my_bookings'),
+            )
+            messages.success(request, 'Refund request submitted. The owner will review your reason.')
+            return redirect('lands:my_bookings')
+    else:
+        form = RefundRequestForm(initial={'reason': booking.refund_reason})
+
+    return render(request, 'lands/refund_request.html', {
+        'booking': booking,
+        'form': form,
+    })
 
 
 @customer_required
@@ -969,6 +1042,11 @@ def owner_dashboard(request):
     
     pending_count  = Reservation.objects.filter(land_id__in=ids, status='pending').count()
     approved_count = Reservation.objects.filter(land_id__in=ids, status='approved').count()
+    refund_requests = (Reservation.objects
+                       .filter(land_id__in=ids, refund_requested=True)
+                       .select_related('land', 'customer')
+                       .order_by('-refund_requested_on', '-created_on'))
+    refund_requests_count = refund_requests.count()
     available_count = sum(1 for l in published_lands if l.is_available)
     recent_bookings = (Reservation.objects
                        .filter(land_id__in=ids)
@@ -1014,7 +1092,9 @@ def owner_dashboard(request):
         'published_count': published_lands.count(),
         'pending_count': pending_count,
         'approved_count': approved_count,
+        'refund_requests_count': refund_requests_count,
         'available_count': available_count,
+        'refund_requests': refund_requests[:5],
         'recent_bookings': recent_bookings,
         'total_views': total_views,
         'total_wishlists': total_wishlists,
@@ -1845,8 +1925,8 @@ def payments_and_bills(request):
 def submit_payment(request, pk):
     """View for customers to submit payment proof (reference/receipt)."""
     booking = get_object_or_404(Reservation.objects.prefetch_related('payments'), pk=pk, customer=request.user)
-    if booking.status != 'awaiting_payment':
-        messages.error(request, 'You can submit payment only after the booking is awaiting payment.')
+    if booking.status not in ['pending', 'approved', 'awaiting_payment']:
+        messages.error(request, 'You can submit payment only while the booking is still active.')
         return redirect('lands:payments_and_bills')
     if booking.remaining_balance <= 0:
         messages.info(request, 'This booking is already fully paid.')
@@ -1883,7 +1963,13 @@ def submit_payment(request, pk):
             messages.success(request, "Payment details submitted successfully. An admin will review and confirm it.")
             return redirect('lands:payments_and_bills')
     else:
-        form = PaymentSubmissionForm(reservation=booking, initial={'payment_method': booking.payment_method})
+        initial_payment_method = booking.payment_method
+        if not initial_payment_method and booking.selected_operator_payment:
+            initial_payment_method = booking.selected_operator_payment.payment_method
+        form = PaymentSubmissionForm(
+            reservation=booking,
+            initial={'payment_method': initial_payment_method}
+        )
         
     return render(request, 'lands/submit_payment.html', {
         'form': form,
@@ -1913,8 +1999,11 @@ def manage_payments(request):
         reservations = reservations.filter(payments__status='confirmed', payments__owner_received_on__isnull=True).distinct()
     elif payment_filter == 'received':
         reservations = reservations.filter(payments__owner_received_on__isnull=False).distinct()
+    elif payment_filter == 'refunds':
+        reservations = reservations.filter(refund_requested=True)
 
     owner_reservations = Reservation.objects.filter(land__owner=request.user).exclude(status__in=['rejected', 'cancelled'])
+    refund_requests = owner_reservations.filter(refund_requested=True).select_related('land', 'customer').order_by('-refund_requested_on', '-created_on')
     confirmed_income = sum(booking.confirmed_amount_total for booking in owner_reservations.prefetch_related('payments'))
     platform_fee_total = sum(booking.platform_fee_total for booking in owner_reservations.prefetch_related('payments'))
     owner_net_total = sum(booking.owner_net_total for booking in owner_reservations.prefetch_related('payments'))
@@ -1929,6 +2018,8 @@ def manage_payments(request):
         'awaiting_count': owner_reservations.filter(Q(payment_reference__isnull=True) | Q(payment_reference='')).count(),
         'review_count': owner_reservations.filter(payments__status='submitted').distinct().count(),
         'confirmed_count': owner_reservations.filter(payments__status='confirmed').distinct().count(),
+        'refund_requests_count': refund_requests.count(),
+        'refund_requests': refund_requests[:8],
         'payout_pending_count': owner_reservations.filter(payments__status='confirmed', payments__owner_received_on__isnull=True).distinct().count(),
         'payout_received_count': owner_reservations.filter(payments__owner_received_on__isnull=False).distinct().count(),
         'confirmed_income': confirmed_income,

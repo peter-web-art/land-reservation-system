@@ -73,13 +73,16 @@
         <!-- Actions -->
         <div class="p-4 flex flex-col gap-2 justify-center border-l border-gray-100">
           <a href="{% url 'lands:land_detail' r.land.id %}" class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors text-center no-underline"><i class="bi bi-eye"></i> View</a>
-          {% if r.status == 'approved' and not r.payment_confirmed %}
-            <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Make payment</a>
-          {% elif r.status == 'awaiting_payment' and not r.payment_confirmed %}
-            {% if r.selected_operator_payment %}
-              <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card"></i> Make payment</a>
+          {% if not r.payment_confirmed and r.remaining_balance > 0 %}
+            {% if r.status == 'approved' or r.status == 'awaiting_payment' %}
+              {% if r.selected_operator_payment or r.payment_method %}
+                <a href="{% url 'lands:submit_payment' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-receipt"></i> {% if r.payment_reference or r.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}</a>
+                <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card"></i> Change Payment Method</a>
+              {% else %}
+                <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Continue payment</a>
+              {% endif %}
             {% else %}
-              <a href="{% url 'lands:payments_and_bills' %}?booking={{ r.id }}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Make payment</a>
+              <a href="{% url 'lands:reservation_payment_options' r.id %}" class="px-3 py-1.5 bg-[#1a5c38] text-white rounded-lg text-sm font-medium hover:bg-[#134428] transition-colors text-center no-underline"><i class="bi bi-credit-card-2-front"></i> Continue payment</a>
             {% endif %}
           {% endif %}
           {% if r.status == 'pending' %}

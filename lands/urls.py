@@ -16,6 +16,7 @@ urlpatterns = [
     path('dashboard/customer/',                         views.customer_dashboard,        name='customer_dashboard'),
     path('reservations/',                               views.my_reservations,           name='my_reservations'),
     path('reservations/<int:pk>/cancel/',               views.cancel_reservation,        name='cancel_reservation'),
+    path('bookings/<int:pk>/refund-request/',            views.refund_request,            name='refund_request'),
     # Owner
     path('dashboard/',                                  views.owner_dashboard,           name='owner_dashboard'),
     path('add/',                                        views.add_land,                  name='add_land'),

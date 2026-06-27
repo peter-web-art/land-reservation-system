@@ -38,7 +38,7 @@
             <label class="text-sm font-bold text-gray-700">Amount Paid</label>
             {{ form.amount }}
             {% if form.amount.errors %}<p class="text-xs text-red-600">{{ form.amount.errors|join:", " }}</p>{% endif %}
-            <p class="text-[10px] text-gray-400">Enter this installment amount only</p>
+            <p class="text-[10px] text-gray-400">Enter the full remaining balance only. Partial payments are not accepted.</p>
           </div>
           <div class="space-y-2">
             <label class="text-sm font-bold text-gray-700">Payment Method</label>

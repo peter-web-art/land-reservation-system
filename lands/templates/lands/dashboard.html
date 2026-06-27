@@ -49,6 +49,11 @@
       <div class="text-sm text-gray-500">Confirmed</div>
       <div class="text-2xl font-bold text-[#1a5c38]">{{ approved_count }}</div>
     </div>
+    <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="bg-white border border-amber-200 rounded-xl p-4 shadow-sm no-underline hover:shadow-md transition-shadow">
+      <div class="text-sm text-amber-700">Refund Requests</div>
+      <div class="text-2xl font-bold text-amber-700">{{ refund_requests_count|default:"0" }}</div>
+      <div class="text-xs text-gray-500 mt-1">Click to review refund reasons</div>
+    </a>
   </div>
 
   <!-- Earnings Stats -->
@@ -70,6 +75,32 @@
       <div class="text-2xl font-bold text-amber-800">{{ total_bookings|default:"0" }}</div>
     </div>
   </div>
+
+  {% if refund_requests %}
+  <div class="mb-8">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-900">Recent Refund Requests</h2>
+      <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="text-[#1a5c38] hover:underline text-sm">Open all refund requests &rarr;</a>
+    </div>
+    <div class="space-y-3">
+      {% for r in refund_requests %}
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <div>
+          <div class="font-semibold text-gray-900">{{ r.land.title }}</div>
+          <div class="text-sm text-gray-600">
+            {{ r.customer.get_full_name|default:r.customer.username }} &middot;
+            {{ r.refund_requested_on|date:"M d, Y H:i" }}
+          </div>
+          <div class="text-sm text-amber-800 mt-1">{{ r.refund_reason|truncatewords:20 }}</div>
+        </div>
+        <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="inline-flex items-center justify-center px-4 py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-sm font-semibold hover:bg-amber-100 transition-colors no-underline">
+          <i class="bi bi-arrow-right-circle"></i> Review
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Pending reservation requests -->
   {% if recent_bookings %}

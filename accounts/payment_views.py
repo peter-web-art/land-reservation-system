@@ -1050,6 +1050,10 @@ def owner_payment_dashboard(request):
         'available_count': len(available_payments),
         'released_count': len(released_payments),
         'owner_payment_details': owner_payment_details,
+        # Safe, template-friendly display values (avoid attribute lookup on None)
+        'owner_payment_method_display': owner_payment_details.get_payment_method_display() if owner_payment_details else None,
+        'owner_payment_account_identifier': owner_payment_details.account_identifier if owner_payment_details else None,
+        'owner_payment_account_holder_name': owner_payment_details.account_holder_name if owner_payment_details else None,
     }
     
     return render(request, 'accounts/owner_payment_dashboard.html', context)

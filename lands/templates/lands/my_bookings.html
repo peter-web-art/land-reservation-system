@@ -110,33 +110,48 @@
               <i class="bi bi-eye"></i> View Details
             </a>
             
-            {% if b.status == 'awaiting_payment' %}
-              {% if not b.payment_confirmed %}
-                <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-6 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
-                  <i class="bi bi-cash-coin"></i> {% if b.payment_reference %}Update Payment Info{% else %}Submit Payment Proof{% endif %}
+            {% if not b.payment_confirmed and b.remaining_balance > 0 %}
+              {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
+                {% if b.selected_operator_payment or b.payment_method %}
+                  <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
+                    <i class="bi bi-cash-coin"></i> {% if b.payment_reference or b.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                  </a>
+                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                    <i class="bi bi-credit-card"></i> Change Payment Method
+                  </a>
+                {% else %}
+                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                    <i class="bi bi-credit-card-2-front"></i> Continue payment
+                  </a>
+                {% endif %}
+              {% else %}
+                <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                  <i class="bi bi-credit-card-2-front"></i> Continue payment
                 </a>
               {% endif %}
             {% endif %}
-            {% if b.status == 'approved' and not b.payment_confirmed %}
-              <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                <i class="bi bi-credit-card-2-front"></i> Make payment
+            {% if b.status == 'approved' and not b.refund_requested %}
+              <a href="{% url 'lands:refund_request' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors no-underline">
+                <i class="bi bi-arrow-counterclockwise"></i> Request refund
               </a>
-            {% elif b.status == 'awaiting_payment' and not b.payment_confirmed %}
-              {% if b.selected_operator_payment %}
-                <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                  <i class="bi bi-credit-card"></i> Make payment
-                </a>
-              {% else %}
-                <a href="{% url 'lands:payments_and_bills' %}?booking={{ b.id }}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                  <i class="bi bi-credit-card-2-front"></i> Make payment
-                </a>
-              {% endif %}
+            {% elif b.refund_requested %}
+              <span class="inline-flex items-center gap-2 px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg text-sm font-semibold">
+                <i class="bi bi-clock-history"></i> Refund requested
+              </span>
+            {% endif %}
+            {% if b.status == 'pending' or b.status == 'awaiting_payment' %}
+              <form method="post" action="{% url 'lands:cancel_reservation' b.id %}" onsubmit="return confirm('Cancel this booking?')" class="inline-flex">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors">
+                  <i class="bi bi-slash-circle"></i> Cancel
+                </button>
+              </form>
             {% endif %}
             {% comment %} Show operator account identifier for chosen or default method {% endcomment %}
             {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
               {% if b.selected_operator_payment %}
                 {% with cfg=b.selected_operator_payment %}
-                  {% if cfg and (b.payment_method == cfg.payment_method or not b.payment_method) and cfg.account_identifier %}
+                  {% if cfg and cfg.account_identifier %}
                     <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
                       <i class="bi bi-phone"></i>
                       <div class="text-xs">Pay via {{ cfg.get_payment_method_display }} — <strong class="text-sm">{{ cfg.account_identifier }}</strong></div>
@@ -154,7 +169,7 @@
                 {% endwith %}
               {% else %}
                 {% with cfg=operator_payment_configs|first %}
-                  {% if cfg and (b.payment_method == cfg.payment_method or not b.payment_method) and cfg.account_identifier %}
+                  {% if cfg and cfg.account_identifier %}
                     <div class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
                       <i class="bi bi-phone"></i>
                       <div class="text-xs">Pay via {{ cfg.get_payment_method_display }} — <strong class="text-sm">{{ cfg.account_identifier }}</strong></div>

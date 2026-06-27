@@ -23,7 +23,7 @@
     <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
       <div>
         <div class="text-xs text-gray-500 uppercase font-semibold">Method</div>
-        <div class="font-semibold text-gray-900">{{ owner_payment_details.get_payment_method_display }}</div>
+        <div class="font-semibold text-gray-900">{{ owner_payment_method_display|default:"Not set" }}</div>
       </div>
       <div>
         <div class="text-xs text-gray-500 uppercase font-semibold">Account</div>
@@ -124,9 +124,23 @@
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
             </p>
             <p class="text-xs text-gray-500 ml-15 mt-1">
-              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
-              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
-                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              Payout to: <strong class="text-gray-700">
+                {% if item.payment.owner_payment_method %}
+                  {{ item.payment.owner_payment_method|capfirst }}
+                  {% elif owner_payment_details %}
+                  {{ owner_payment_method_display|default:"Not set" }}
+                {% else %}
+                  Not set
+                {% endif %}
+              </strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details %}
+                - <span class="break-all">
+                  {% if item.payment.owner_account_identifier %}
+                    {{ item.payment.owner_account_identifier }}
+                  {% elif owner_payment_details %}
+                    {{ owner_payment_account_identifier|default:"" }}
+                  {% endif %}
+                </span>
               {% endif %}
             </p>
           </div>
@@ -181,9 +195,23 @@
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
             </p>
             <p class="text-xs text-gray-500 ml-15 mt-1">
-              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
-              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
-                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              Payout to: <strong class="text-gray-700">
+                {% if item.payment.owner_payment_method %}
+                  {{ item.payment.owner_payment_method|capfirst }}
+                {% elif owner_payment_details %}
+                  {{ owner_payment_method_display|default:"Not set" }}
+                {% else %}
+                  Not set
+                {% endif %}
+              </strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details %}
+                - <span class="break-all">
+                  {% if item.payment.owner_account_identifier %}
+                    {{ item.payment.owner_account_identifier }}
+                  {% elif owner_payment_details %}
+                    {{ owner_payment_account_identifier|default:"" }}
+                  {% endif %}
+                </span>
               {% endif %}
             </p>
           </div>
@@ -238,9 +266,23 @@
               Customer: <strong>{{ item.payment.reservation.customer.get_full_name|default:item.payment.reservation.customer.username }}</strong>
             </p>
             <p class="text-xs text-gray-500 ml-15 mt-1">
-              Payout to: <strong class="text-gray-700">{{ item.payment.owner_payment_method|default:owner_payment_details.get_payment_method_display|default:"Not set" }}</strong>
-              {% if item.payment.owner_account_identifier or owner_payment_details.account_identifier %}
-                - <span class="break-all">{{ item.payment.owner_account_identifier|default:owner_payment_details.account_identifier }}</span>
+              Payout to: <strong class="text-gray-700">
+                {% if item.payment.owner_payment_method %}
+                  {{ item.payment.owner_payment_method|capfirst }}
+                {% elif owner_payment_details %}
+                  {{ owner_payment_method_display|default:"Not set" }}
+                {% else %}
+                  Not set
+                {% endif %}
+              </strong>
+              {% if item.payment.owner_account_identifier or owner_payment_details %}
+                - <span class="break-all">
+                  {% if item.payment.owner_account_identifier %}
+                    {{ item.payment.owner_account_identifier }}
+                  {% elif owner_payment_details %}
+                    {{ owner_payment_account_identifier|default:"" }}
+                  {% endif %}
+                </span>
               {% endif %}
             </p>
           </div>
