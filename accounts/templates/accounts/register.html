@@ -30,7 +30,12 @@
                         </div>
                         <div class="mb-3">
                             <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" name="password" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="loginPassword" name="password" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('loginPassword', 'loginPasswordIcon')">
+                                    <i class="bi bi-eye-fill" id="loginPasswordIcon"></i>
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
@@ -50,11 +55,21 @@
                         </div>
                         <div class="mb-3">
                             <label for="signupPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="signupPassword" name="password1" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="signupPassword" name="password1" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('signupPassword', 'signupPasswordIcon')">
+                                    <i class="bi bi-eye-fill" id="signupPasswordIcon"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="signupConfirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="signupConfirmPassword" name="password2" required>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="signupConfirmPassword" name="password2" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('signupConfirmPassword', 'signupConfirmPasswordIcon')">
+                                    <i class="bi bi-eye-fill" id="signupConfirmPasswordIcon"></i>
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-success w-100">Sign Up</button>
                     </form>
@@ -62,5 +77,25 @@
             </div>
     </div>
 </div>
+
+<script>
+// Password visibility toggle
+function togglePasswordVisibility(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  
+  if (!input || !icon) return;
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('bi-eye-fill');
+    icon.classList.add('bi-eye-slash-fill');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('bi-eye-slash-fill');
+    icon.classList.add('bi-eye-fill');
+  }
+}
+</script>
 
 {% endblock %}

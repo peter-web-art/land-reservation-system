@@ -27,7 +27,9 @@
 
   <!-- Filter tabs -->
   <div class="flex flex-wrap gap-2 mb-6">
-    <a href="?" class="pill {% if not request.GET.status %}pill-active{% else %}pill-inactive{% endif %}">All</a>
+    <a href="?" class="pill {% if not request.GET.status %}pill-active{% else %}pill-inactive{% endif %}">
+      All <span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ total_count }}</span>
+    </a>
     <a href="?status=pending" class="pill {% if request.GET.status == 'pending' %}pill-active{% else %}pill-inactive{% endif %}">
       <i class="bi bi-clock"></i> Pending
       {% if pending_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ pending_count }}</span>{% endif %}
@@ -36,9 +38,18 @@
       <i class="bi bi-cash"></i> Awaiting Payment
       {% if awaiting_payment_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ awaiting_payment_count }}</span>{% endif %}
     </a>
-    <a href="?status=approved" class="pill {% if request.GET.status == 'approved' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-check-circle"></i> Approved</a>
-    <a href="?status=rejected" class="pill {% if request.GET.status == 'rejected' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-x-circle"></i> Rejected</a>
-    <a href="?status=cancelled" class="pill {% if request.GET.status == 'cancelled' %}pill-active{% else %}pill-inactive{% endif %}"><i class="bi bi-dash-circle"></i> Cancelled</a>
+    <a href="?status=approved" class="pill {% if request.GET.status == 'approved' %}pill-active{% else %}pill-inactive{% endif %}">
+      <i class="bi bi-check-circle"></i> Approved
+      {% if approved_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ approved_count }}</span>{% endif %}
+    </a>
+    <a href="?status=rejected" class="pill {% if request.GET.status == 'rejected' %}pill-active{% else %}pill-inactive{% endif %}">
+      <i class="bi bi-x-circle"></i> Rejected
+      {% if rejected_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ rejected_count }}</span>{% endif %}
+    </a>
+    <a href="?status=cancelled" class="pill {% if request.GET.status == 'cancelled' %}pill-active{% else %}pill-inactive{% endif %}">
+      <i class="bi bi-dash-circle"></i> Cancelled
+      {% if cancelled_count %}<span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">{{ cancelled_count }}</span>{% endif %}
+    </a>
   </div>
 
   {% if reservations %}

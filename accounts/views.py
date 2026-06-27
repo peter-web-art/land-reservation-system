@@ -463,6 +463,8 @@ def admin_portal(request):
     pending_book   = Reservation.objects.filter(status='pending').count()
     awaiting_payment_book = Reservation.objects.filter(status='awaiting_payment').count()
     approved_book  = Reservation.objects.filter(status='approved').count()
+    rejected_book  = Reservation.objects.filter(status='rejected').count()
+    cancelled_book = Reservation.objects.filter(status='cancelled').count()
 
     system_settings = SystemSettings.objects.first()
     if not system_settings:
@@ -703,6 +705,7 @@ def admin_portal(request):
         'unverified': unverified, 'suspended': suspended,
         'total_lands': total_lands, 'total_bookings': total_bookings,
         'pending_book': pending_book, 'awaiting_payment_book': awaiting_payment_book, 'approved_book': approved_book,
+        'rejected_book': rejected_book, 'cancelled_book': cancelled_book,
         'total_revenue': total_revenue, 'monthly_revenue': monthly_revenue,
         'gross_revenue': gross_revenue, 'monthly_gross_revenue': monthly_gross_revenue,
         'owner_payout_total': owner_payout_total, 'monthly_owner_payout': monthly_owner_payout,

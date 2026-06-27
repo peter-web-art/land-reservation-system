@@ -275,11 +275,11 @@
 </div>
 
 <!-- Booking Review Modal -->
-<div class="fixed inset-0 z-[60] bg-black/50 hidden flex items-center justify-center" id="reviewModal" onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-xl mx-4 overflow-hidden">
+<div class="fixed inset-0 z-[100] bg-black/50 hidden items-start justify-center p-4" id="reviewModal" aria-hidden="true" style="z-index: 100; padding-top: 5rem;">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-y-auto" id="reviewModalCard" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle" style="max-height: calc(100vh - 6rem);">
     <div class="flex items-center justify-between p-4 border-b border-gray-200">
-      <h3 class="font-semibold flex items-center gap-2"><i class="bi bi-clipboard-check"></i> Review Your Booking</h3>
-      <button onclick="document.getElementById('reviewModal').classList.add('hidden')" class="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+      <h3 class="font-semibold flex items-center gap-2" id="reviewModalTitle"><i class="bi bi-clipboard-check"></i> Review Your Booking</h3>
+      <button type="button" class="text-2xl text-gray-400 hover:text-gray-600" data-review-close>&times;</button>
     </div>
     <div class="p-4 space-y-4">
       <!-- Property Info -->
@@ -335,10 +335,10 @@
     </div>
     
     <div class="flex gap-3 p-4 border-t border-gray-200">
-      <button type="button" onclick="document.getElementById('reviewModal').classList.add('hidden')" class="btn-outline flex-1">
+      <button type="button" class="btn-outline flex-1" data-review-close>
         <i class="bi bi-pencil"></i> Edit
       </button>
-      <button type="button" onclick="submitBookingForm()" class="btn-primary flex-1">
+      <button type="button" class="btn-primary flex-1" id="confirmBookingBtn">
         <i class="bi bi-check-circle"></i> Confirm Booking
       </button>
     </div>
@@ -431,18 +431,6 @@ function updatePricing() {
   const mda = document.getElementById('monthlyDiscAmt');
   if (wda && weeks >= 1 && weeklyDisc > 0 && weeks < 4) wda.textContent = '-' + formatPrice(base * weeklyDisc / 100);
   if (mda && weeks >= 4 && monthlyDisc > 0) mda.textContent = '-' + formatPrice(base * monthlyDisc / 100);
-  const db = document.getElementById('discountBadge');
-  const nc = document.getElementById('nightsCount');
-  if (!el) return;
-  el.classList.remove('hidden');
-  el.style.background = isError ? '#ffebee' : '#d1fae5';
-  dt.style.color = isError ? '#c62828' : '#065f46';
-  dt.textContent = text;
-  if (nc) nc.textContent = days ? days + ' nights' : '';
-  if (db) { 
-    db.classList.toggle('hidden', !(hasDiscount && !isError)); 
-    db.textContent = hasDiscount ? 'Discount!' : ''; 
-  }
 }
 
 function hideDuration() {
@@ -450,24 +438,43 @@ function hideDuration() {
   if (el) el.classList.add('hidden');
 }
 
-function showError(msg) { showDuration(msg, true, false, 0); }
-
 function clearError() { 
   const el = document.getElementById('durationInfo'); 
   if (el) el.classList.add('hidden'); 
 }
 
+function closeReviewModal() {
+  const modal = document.getElementById('reviewModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function openReviewModal() {
+  const modal = document.getElementById('reviewModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
 function submitBookingForm() {
   const form = document.getElementById('bookingForm');
   if (form) {
+    if (form.reportValidity && !form.reportValidity()) {
+      closeReviewModal();
+      return;
+    }
     // Disable the button to prevent double submission
-    const btn = document.querySelector('#reviewModal button[onclick="submitBookingForm()"]');
+    const btn = document.getElementById('confirmBookingBtn');
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Confirming...';
       btn.classList.add('opacity-75', 'cursor-not-allowed');
     }
-    form.submit();
+    if (form.requestSubmit) form.requestSubmit();
+    else form.submit();
   }
 }
 
@@ -484,7 +491,36 @@ if (rs) {
   rs.addEventListener('change', updatePricing);
 }
 
-document.getElementById('reviewBookingBtn').addEventListener('click', function() {
+const reviewModal = document.getElementById('reviewModal');
+const reviewModalCard = document.getElementById('reviewModalCard');
+const reviewBookingBtn = document.getElementById('reviewBookingBtn');
+const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+
+if (reviewModal) {
+  reviewModal.addEventListener('click', function(event) {
+    if (event.target === reviewModal) closeReviewModal();
+  });
+}
+
+if (reviewModalCard) {
+  reviewModalCard.addEventListener('click', function(event) {
+    event.stopPropagation();
+  });
+}
+
+document.querySelectorAll('[data-review-close]').forEach(function(button) {
+  button.addEventListener('click', closeReviewModal);
+});
+
+if (confirmBookingBtn) {
+  confirmBookingBtn.addEventListener('click', submitBookingForm);
+}
+
+if (reviewBookingBtn) {
+  reviewBookingBtn.addEventListener('click', function() {
+  const form = document.getElementById('bookingForm');
+  if (form && form.reportValidity && !form.reportValidity()) return;
+
   const startField = document.getElementById('startDate');
   const endField = document.getElementById('endDate');
   const reqSizeField = document.querySelector('[name="requested_size"]');
@@ -525,8 +561,9 @@ document.getElementById('reviewBookingBtn').addEventListener('click', function()
   const totalEl = document.getElementById('totalPrice');
   document.getElementById('reviewTotal').textContent = totalEl ? totalEl.textContent : '—';
   
-  document.getElementById('reviewModal').classList.remove('hidden');
-});
+  openReviewModal();
+  });
+}
 
 updatePricing();
 </script>

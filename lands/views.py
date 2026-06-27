@@ -899,11 +899,39 @@ def book_land(request, pk):
 @customer_required
 @login_required
 def my_reservations(request):
-    reservations = (Reservation.objects
-                    .filter(customer=request.user)
-                    .select_related('land')
-                    .order_by('-created_on'))
-    return render(request, 'lands/my_reservations.html', {'reservations': reservations})
+    status_filter = request.GET.get('status', 'all')
+    valid_statuses = {status for status, _ in Reservation.RESERVATION_STATUS}
+    qs = (Reservation.objects
+          .filter(customer=request.user)
+          .select_related('land')
+          .order_by('-created_on'))
+    total_count = qs.count()
+    pending_count = qs.filter(status='pending').count()
+    awaiting_payment_count = qs.filter(status='awaiting_payment').count()
+    approved_count = qs.filter(status='approved').count()
+    rejected_count = qs.filter(status='rejected').count()
+    cancelled_count = qs.filter(status='cancelled').count()
+    total_count = qs.count()
+    approved_count = qs.filter(status='approved').count()
+    cancelled_count = qs.filter(status='cancelled').count()
+    rejected_count = qs.filter(status='rejected').count()
+
+    if status_filter in valid_statuses:
+        reservations = qs.filter(status=status_filter)
+    else:
+        status_filter = 'all'
+        reservations = qs
+
+    return render(request, 'lands/my_reservations.html', {
+        'reservations': reservations,
+        'status_filter': status_filter,
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'awaiting_payment_count': awaiting_payment_count,
+        'approved_count': approved_count,
+        'cancelled_count': cancelled_count,
+        'rejected_count': rejected_count,
+    })
 
 
 @login_required
@@ -986,21 +1014,32 @@ def refund_request(request, pk):
 @login_required
 def customer_dashboard(request):
     qs        = Reservation.objects.filter(customer=request.user)
+    status_filter = request.GET.get('status', 'active')
+    valid_statuses = {status for status, _ in Reservation.RESERVATION_STATUS}
     total     = qs.count()
     pending   = qs.filter(status='pending').count()
     awaiting_payment = qs.filter(status='awaiting_payment').count()
     approved  = qs.filter(status='approved').count()
     cancelled = qs.filter(status='cancelled').count()
+    rejected = qs.filter(status='rejected').count()
     recent    = qs.select_related('land').order_by('-created_on')[:5]
     wishlist_count = Wishlist.objects.filter(user=request.user).count()
     wishlist_items = Wishlist.objects.filter(user=request.user).select_related('land', 'land__owner')[:4]
     featured_lands = Land.objects.filter(is_active=True).select_related('owner').order_by('-created_on')[:4]
-    active_reservations = qs.filter(status__in=['pending', 'awaiting_payment', 'approved']).select_related('land', 'land__owner').order_by('-created_on')[:6]
+    reservations_qs = qs.select_related('land', 'land__owner').order_by('-created_on')
+    if status_filter == 'all':
+        active_reservations = reservations_qs[:6]
+    elif status_filter in valid_statuses:
+        active_reservations = reservations_qs.filter(status=status_filter)[:6]
+    else:
+        status_filter = 'active'
+        active_reservations = reservations_qs.filter(status__in=['pending', 'awaiting_payment', 'approved'])[:6]
     unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
     latest_notifications = Notification.objects.filter(user=request.user).select_related('user')[:3]
     return render(request, 'lands/customer_dashboard.html', {
         'total': total, 'pending': pending,
         'approved': approved, 'awaiting_payment': awaiting_payment, 'cancelled': cancelled,
+        'rejected': rejected, 'status_filter': status_filter,
         'recent_reservations': recent,
         'active_reservations': active_reservations,
         'featured_lands': featured_lands,
@@ -1110,6 +1149,7 @@ def owner_dashboard(request):
 @owner_required
 @ratelimit(key='user', rate='20/m', method='POST', block=True)
 def add_land(request):
+    initial_step = 1
     if request.method == 'POST':
         initial_step = int(request.POST.get('current_step', 1) or 1)
         is_draft = request.POST.get('save_draft') == 'true'
@@ -1123,25 +1163,25 @@ def add_land(request):
             land.save()
             form.save_m2m()
 
-                # Handle multiple images
-                images = request.FILES.getlist('gallery_images')
-                positions = request.POST.getlist('image_positions')
-                
-                for i, img in enumerate(images):
-                    pos = positions[i]
-                    LandImage.objects.create(
-                        land=land,
-                        image=img,
-                        position=pos,
-                        is_primary=(i == 0 and not land.land_image_path),
-                        order=i
-                    )
+            # Handle multiple images
+            images = request.FILES.getlist('gallery_images')
+            positions = request.POST.getlist('image_positions')
 
-                if is_draft:
-                    messages.success(request, f'"{land.title}" saved as draft.')
-                else:
-                    messages.success(request, f'"{land.title}" published successfully.')
-                return redirect('lands:owner_dashboard')
+            for i, img in enumerate(images):
+                pos = positions[i]
+                LandImage.objects.create(
+                    land=land,
+                    image=img,
+                    position=pos,
+                    is_primary=(i == 0 and not land.land_image_path),
+                    order=i
+                )
+
+            if is_draft:
+                messages.success(request, f'"{land.title}" saved as draft.')
+            else:
+                messages.success(request, f'"{land.title}" published successfully.')
+            return redirect('lands:owner_dashboard')
     else:
         initial = {
             'contact_phone': getattr(request.user, 'phone', ''),
@@ -1169,21 +1209,21 @@ def edit_land(request, pk):
             land.save()
             form.save_m2m()
 
-                # Handle multiple images
-                images = request.FILES.getlist('gallery_images')
-                positions = request.POST.getlist('image_positions')
-                
-                for i, img in enumerate(images):
-                    pos = positions[i]
-                    LandImage.objects.create(
-                        land=land,
-                        image=img,
-                        position=pos,
-                        order=land.images.count() + i
-                    )
+            # Handle multiple images
+            images = request.FILES.getlist('gallery_images')
+            positions = request.POST.getlist('image_positions')
 
-                messages.success(request, 'Draft updated.' if is_draft else 'Land published successfully!')
-                return redirect('lands:owner_dashboard')
+            for i, img in enumerate(images):
+                pos = positions[i]
+                LandImage.objects.create(
+                    land=land,
+                    image=img,
+                    position=pos,
+                    order=land.images.count() + i
+                )
+
+            messages.success(request, 'Draft updated.' if is_draft else 'Land published successfully!')
+            return redirect('lands:owner_dashboard')
     else:
         form = LandForm(instance=land)
     
@@ -1217,16 +1257,24 @@ def reservations_management(request):
                      .filter(land__in=lands)
                      .select_related('land', 'customer')
                      .order_by('-created_on'))
+    total_count = qs.count()
     pending_count = qs.filter(status='pending').count()
     awaiting_payment_count = qs.filter(status='awaiting_payment').count()
+    approved_count = qs.filter(status='approved').count()
+    rejected_count = qs.filter(status='rejected').count()
+    cancelled_count = qs.filter(status='cancelled').count()
     sf = request.GET.get('status')
     if sf in ['pending', 'awaiting_payment', 'approved', 'rejected', 'cancelled']:
         qs = qs.filter(status=sf)
     from django.utils import timezone
     return render(request, 'lands/reservations_management.html', {
         'reservations': qs,
+        'total_count': total_count,
         'pending_count': pending_count,
         'awaiting_payment_count': awaiting_payment_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
+        'cancelled_count': cancelled_count,
         'today': timezone.now().date(),
     })
 

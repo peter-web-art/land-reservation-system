@@ -17,15 +17,26 @@
     </a>
   </div>
 
-  <!-- Summary strip -->
-  <div class="flex flex-wrap gap-6 mb-6 p-4 bg-gray-50 rounded-lg">
-    <div class="font-medium text-gray-700">{{ reservations|length }} total</div>
-    {% regroup reservations by status as status_groups %}
-    {% for group in status_groups %}
-    <div class="font-medium text-gray-700">
-      <span class="font-bold">{{ group.list|length }}</span> {{ group.grouper }}
-    </div>
-    {% endfor %}
+  <!-- Summary filters -->
+  <div class="flex flex-wrap gap-3 mb-6 p-4 bg-gray-50 rounded-lg">
+    <a href="{% url 'lands:my_reservations' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'all' %}bg-[#1a5c38] text-white border-[#1a5c38]{% else %}bg-white text-gray-700 border-gray-200 hover:border-[#1a5c38] hover:text-[#1a5c38]{% endif %}">
+      <span>{{ total_count }}</span> Total
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=pending" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'pending' %}bg-amber-500 text-white border-amber-500{% else %}bg-white text-gray-700 border-gray-200 hover:border-amber-500 hover:text-amber-700{% endif %}">
+      <span>{{ pending_count }}</span> Pending
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=awaiting_payment" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'awaiting_payment' %}bg-sky-500 text-white border-sky-500{% else %}bg-white text-gray-700 border-gray-200 hover:border-sky-500 hover:text-sky-700{% endif %}">
+      <span>{{ awaiting_payment_count }}</span> Awaiting Payment
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=approved" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'approved' %}bg-green-600 text-white border-green-600{% else %}bg-white text-gray-700 border-gray-200 hover:border-green-600 hover:text-green-700{% endif %}">
+      <span>{{ approved_count }}</span> Approved
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=cancelled" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'cancelled' %}bg-gray-600 text-white border-gray-600{% else %}bg-white text-gray-700 border-gray-200 hover:border-gray-500 hover:text-gray-800{% endif %}">
+      <span>{{ cancelled_count }}</span> Cancelled
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=rejected" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold no-underline {% if status_filter == 'rejected' %}bg-red-600 text-white border-red-600{% else %}bg-white text-gray-700 border-gray-200 hover:border-red-500 hover:text-red-700{% endif %}">
+      <span>{{ rejected_count }}</span> Rejected
+    </a>
   </div>
 
   {% if reservations %}
@@ -102,8 +113,8 @@
   {% else %}
   <div class="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-200 rounded-xl">
     <i class="bi bi-calendar-x text-5xl text-gray-300 mb-4"></i>
-    <h3 class="text-xl font-semibold text-gray-800 mb-2">No reservations yet</h3>
-    <p class="text-gray-500 mb-4">Browse available lands and make your first reservation.</p>
+    <h3 class="text-xl font-semibold text-gray-800 mb-2">No reservations found</h3>
+    <p class="text-gray-500 mb-4">No bookings match this filter.</p>
     <a href="{% url 'lands:browse_lands' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-[#1a5c38] text-white rounded-lg font-semibold text-sm hover:bg-[#134428] transition-colors">
       <i class="bi bi-search"></i> Browse Lands
     </a>

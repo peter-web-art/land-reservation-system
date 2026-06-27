@@ -16,23 +16,27 @@
   </div>
 
   <!-- Stats row -->
-  <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8">
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+    <a href="{% url 'lands:my_reservations' %}" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-[#1a5c38] hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Total Bookings</div>
       <div class="text-2xl font-bold text-gray-900">{{ total }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=pending" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-amber-500 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Pending</div>
       <div class="text-2xl font-bold text-orange-600">{{ pending }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=approved" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-green-600 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Confirmed</div>
       <div class="text-2xl font-bold text-green-600">{{ approved }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=cancelled" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-red-500 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Cancelled</div>
       <div class="text-2xl font-bold text-red-600">{{ cancelled }}</div>
-    </div>
+    </a>
+    <a href="{% url 'lands:my_reservations' %}?status=rejected" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-red-500 hover:shadow-md transition-all no-underline">
+      <div class="text-sm text-gray-500">Rejected</div>
+      <div class="text-2xl font-bold text-red-700">{{ rejected }}</div>
+    </a>
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div class="text-sm text-gray-500">Notifications</div>
       <div class="text-2xl font-bold text-[#1a5c38]">{{ unread_notifications }}</div>

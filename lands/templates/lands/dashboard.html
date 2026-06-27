@@ -29,26 +29,26 @@
 
   <!-- Stats -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    <a href="{% url 'lands:owner_dashboard' %}?status=published" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-[#1a5c38] hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Published</div>
       <div class="text-2xl font-bold text-gray-900">{{ published_count }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:owner_dashboard' %}?status=draft" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-amber-500 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Drafts</div>
       <div class="text-2xl font-bold text-amber-600">{{ draft_count }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:owner_dashboard' %}?status=published" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-green-600 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Available</div>
       <div class="text-2xl font-bold text-green-600">{{ available_count }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:reservations_management' %}?status=pending" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-amber-500 hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Pending Req.</div>
       <div class="text-2xl font-bold text-amber-600">{{ pending_count }}</div>
-    </div>
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    </a>
+    <a href="{% url 'lands:reservations_management' %}?status=approved" class="block bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:border-[#1a5c38] hover:shadow-md transition-all no-underline">
       <div class="text-sm text-gray-500">Confirmed</div>
       <div class="text-2xl font-bold text-[#1a5c38]">{{ approved_count }}</div>
-    </div>
+    </a>
     <a href="{% url 'lands:manage_payments' %}?payment=refunds" class="bg-white border border-amber-200 rounded-xl p-4 shadow-sm no-underline hover:shadow-md transition-shadow">
       <div class="text-sm text-amber-700">Refund Requests</div>
       <div class="text-2xl font-bold text-amber-700">{{ refund_requests_count|default:"0" }}</div>
