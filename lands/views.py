@@ -410,6 +410,9 @@ def reservation_payment_options(request, pk):
     if request.user != reservation.customer:
         messages.error(request, 'You are not authorized to view payment options for this reservation.')
         return redirect('lands:my_reservations')
+    if reservation.status == 'pending':
+        messages.info(request, 'Wait for the owner to confirm your booking before selecting a payment method.')
+        return redirect('lands:my_reservations')
 
     configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
 
@@ -1955,8 +1958,11 @@ def payments_and_bills(request):
 def submit_payment(request, pk):
     """View for customers to submit payment proof (reference/receipt)."""
     booking = get_object_or_404(Reservation.objects.prefetch_related('payments'), pk=pk, customer=request.user)
-    if booking.status not in ['pending', 'approved', 'awaiting_payment']:
-        messages.error(request, 'You can submit payment only while the booking is still active.')
+    if booking.status == 'pending':
+        messages.info(request, 'Wait for the owner to confirm your booking before making payment.')
+        return redirect('lands:my_reservations')
+    if booking.status not in ['approved', 'awaiting_payment']:
+        messages.error(request, 'You can submit payment only after the booking has been confirmed.')
         return redirect('lands:payments_and_bills')
     if booking.remaining_balance <= 0:
         messages.info(request, 'This booking is already fully paid.')

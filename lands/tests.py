@@ -169,7 +169,7 @@ class PaymentTrackingTests(TestCase):
         self.assertEqual(self.reservation.selected_operator_payment, config)
         self.assertEqual(self.reservation.payment_method, 'bank_transfer')
 
-    def test_pending_reservation_payment_method_selection_redirects_to_submit_payment(self):
+    def test_pending_reservation_payment_method_selection_is_blocked(self):
         config = OperatorPaymentConfig.objects.create(
             payment_method='bank_transfer',
             account_identifier='0123456789',
@@ -185,9 +185,9 @@ class PaymentTrackingTests(TestCase):
         )
 
         self.reservation.refresh_from_db()
-        self.assertRedirects(response, reverse('lands:submit_payment', args=[self.reservation.pk]))
-        self.assertEqual(self.reservation.selected_operator_payment, config)
-        self.assertEqual(self.reservation.payment_method, 'bank_transfer')
+        self.assertRedirects(response, reverse('lands:my_reservations'))
+        self.assertIsNone(self.reservation.selected_operator_payment)
+        self.assertIsNone(self.reservation.payment_method)
 
     def test_submit_payment_allows_approved_reservation(self):
         self.reservation.status = 'approved'
@@ -212,7 +212,7 @@ class PaymentTrackingTests(TestCase):
         self.assertEqual(str(payment.amount), '500000.00')
         self.assertEqual(self.reservation.payment_reference, 'APPROVED123')
 
-    def test_submit_payment_allows_pending_reservation_after_method_selection(self):
+    def test_submit_payment_blocks_pending_reservation(self):
         config = OperatorPaymentConfig.objects.create(
             payment_method='mpesa',
             account_identifier='0712000001',
@@ -237,11 +237,9 @@ class PaymentTrackingTests(TestCase):
         )
 
         self.reservation.refresh_from_db()
-        payment = PaymentRecord.objects.get(reservation=self.reservation)
-        self.assertRedirects(response, reverse('lands:payments_and_bills'))
+        self.assertRedirects(response, reverse('lands:my_reservations'))
+        self.assertFalse(PaymentRecord.objects.filter(reservation=self.reservation).exists())
         self.assertEqual(self.reservation.status, 'pending')
-        self.assertEqual(str(payment.amount), '500000.00')
-        self.assertEqual(self.reservation.payment_reference, 'PENDING123')
 
     def test_refund_request_is_available_for_approved_booking(self):
         self.reservation.status = 'approved'
@@ -281,13 +279,13 @@ class PaymentTrackingTests(TestCase):
         self.assertEqual(self.reservation.status, 'approved')
         self.assertFalse(self.reservation.refund_requested)
 
-    def test_payments_dashboard_shows_continue_payment_for_pending_reservation(self):
+    def test_payments_dashboard_shows_waiting_message_for_pending_reservation(self):
         self.client.force_login(self.customer)
 
         response = self.client.get(reverse('lands:payments_and_bills'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Continue payment')
+        self.assertContains(response, 'Waiting for owner confirmation')
 
     def test_payments_dashboard_shows_update_reference_when_reference_exists(self):
         config = OperatorPaymentConfig.objects.create(

@@ -32,9 +32,9 @@
             </a>
           {% endif %}
         {% else %}
-          <a href="{% url 'lands:reservation_payment_options' focus_booking.id %}" class="btn-primary no-underline">
-            <i class="bi bi-lightning-charge mr-2"></i> Continue payment
-          </a>
+          <span class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+            Waiting for owner confirmation
+          </span>
         {% endif %}
       {% endif %}
     </div>
@@ -289,9 +289,9 @@
                 </a>
               {% endif %}
             {% else %}
-              <a href="{% url 'lands:reservation_payment_options' booking.id %}" class="btn-primary no-underline text-sm">
-                <i class="bi bi-credit-card-2-front"></i> Continue payment
-              </a>
+              <span class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                Waiting for owner confirmation
+              </span>
             {% endif %}
           {% endif %}
         </div>

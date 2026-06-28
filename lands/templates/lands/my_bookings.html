@@ -111,25 +111,25 @@
             </a>
             
             {% if not b.payment_confirmed and b.remaining_balance > 0 %}
-              {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
-                {% if b.selected_operator_payment or b.payment_method %}
-                  <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
-                    <i class="bi bi-cash-coin"></i> {% if b.payment_reference or b.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
-                  </a>
-                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                    <i class="bi bi-credit-card"></i> Change Payment Method
-                  </a>
-                {% else %}
-                  <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
-                    <i class="bi bi-credit-card-2-front"></i> Continue payment
-                  </a>
-                {% endif %}
+            {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
+              {% if b.selected_operator_payment or b.payment_method %}
+                <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
+                  <i class="bi bi-cash-coin"></i> {% if b.payment_reference or b.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                </a>
+                <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
+                  <i class="bi bi-credit-card"></i> Change Payment Method
+                </a>
               {% else %}
                 <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
                   <i class="bi bi-credit-card-2-front"></i> Continue payment
                 </a>
               {% endif %}
+              {% else %}
+                <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-semibold border border-gray-200">
+                  <i class="bi bi-hourglass-split"></i> Waiting for owner confirmation
+                </span>
             {% endif %}
+          {% endif %}
             {% if b.status == 'approved' and not b.refund_requested %}
               <a href="{% url 'lands:refund_request' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-semibold hover:bg-amber-50 transition-colors no-underline">
                 <i class="bi bi-arrow-counterclockwise"></i> Request refund

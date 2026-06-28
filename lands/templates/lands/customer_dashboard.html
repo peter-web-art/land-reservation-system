@@ -156,9 +156,9 @@
                   </a>
                 {% endif %}
               {% else %}
-                <a href="{% url 'lands:reservation_payment_options' r.id %}" class="btn-outline no-underline text-sm">
-                  <i class="bi bi-credit-card-2-front"></i> Continue payment
-                </a>
+                <span class="inline-flex items-center rounded-lg px-3 py-2 bg-gray-100 text-gray-500 text-sm font-semibold border border-gray-200">
+                  <i class="bi bi-hourglass-split mr-2"></i> Waiting for owner confirmation
+                </span>
               {% endif %}
             {% endif %}
             {% if r.status == 'pending' or r.status == 'awaiting_payment' %}
