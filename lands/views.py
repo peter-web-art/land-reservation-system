@@ -383,7 +383,7 @@ class PaymentSubmissionForm(forms.ModelForm):
 
     class Meta:
         model = PaymentRecord
-        fields = ['amount', 'payment_method', 'payment_reference', 'payment_receipt', 'payment_date', 'notes']
+        fields = ['amount', 'payment_method', 'payment_reference', 'payment_date', 'notes']
         widgets = {
             'payment_date': forms.DateInput(attrs={'type': 'date'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Optional: Add any extra details about your payment...'}),
@@ -1380,8 +1380,20 @@ def update_reservation_status(request, pk, status):
 
     old_status = r.status
 
-    # FIX #2: overlap check before approving rent bookings
-    # BUG #3 FIX: Check both APPROVED and PENDING overlaps to prevent double-booking
+    # Prevent accepting a second booking when the land already has an active accepted booking.
+    if status == 'awaiting_payment':
+        conflicting_booking = Reservation.objects.filter(
+            land=r.land,
+            status__in=['awaiting_payment', 'approved'],
+        ).exclude(pk=r.pk).first()
+
+        if conflicting_booking:
+            messages.error(
+                request,
+                'Cannot accept this booking because another booking has already been accepted for this land.',
+            )
+            return redirect('lands:reservations_management')
+
     if status == 'awaiting_payment' and r.land.usage == 'rent':
         if r.start_date and r.end_date:
             conflict = Reservation.objects.filter(

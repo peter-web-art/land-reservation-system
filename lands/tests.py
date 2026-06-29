@@ -247,6 +247,17 @@ class PaymentTrackingTests(TestCase):
         self.assertFalse(PaymentRecord.objects.filter(reservation=self.reservation).exists())
         self.assertEqual(self.reservation.status, 'pending')
 
+    def test_submit_payment_form_does_not_show_receipt_upload(self):
+        self.reservation.status = 'awaiting_payment'
+        self.reservation.save()
+        self.client.force_login(self.customer)
+
+        response = self.client.get(reverse('lands:submit_payment', args=[self.reservation.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Upload Receipt/Screenshot (Optional)')
+        self.assertNotContains(response, 'name="payment_receipt"')
+
     def test_submit_payment_auto_generates_reference_and_amount(self):
         config = OperatorPaymentConfig.objects.create(
             payment_method='bank_transfer',
@@ -425,6 +436,28 @@ class PaymentTrackingTests(TestCase):
         self.assertEqual(str(payment.platform_fee_amount), '15000.00')
         self.assertEqual(str(self.reservation.confirmed_amount_total), '150000.00')
         self.assertEqual(str(self.reservation.remaining_balance), '350000.00')
+
+    def test_accepted_booking_blocks_other_booking_from_being_accepted(self):
+        self.reservation.status = 'awaiting_payment'
+        self.reservation.save()
+
+        second_booking = Reservation.objects.create(
+            land=self.land,
+            customer=self.customer,
+            customer_name='Second Buyer',
+            customer_email='second@example.com',
+            status='pending',
+        )
+
+        self.client.force_login(self.owner)
+        response = self.client.post(
+            reverse('lands:update_reservation_status', args=[second_booking.pk, 'approved']),
+            follow=True,
+        )
+
+        second_booking.refresh_from_db()
+        self.assertContains(response, 'another booking has already been accepted')
+        self.assertEqual(second_booking.status, 'pending')
 
     def test_approval_with_reference_does_not_auto_mark_payment_paid(self):
         self.reservation.payment_reference = 'ABC123XYZ'
