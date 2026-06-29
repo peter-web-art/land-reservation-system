@@ -12,7 +12,7 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Payment Management</h1>
-        <p class="text-sm text-gray-500 mt-1">Review and confirm customer payments • Hold funds in escrow • Release to owners</p>
+        <p class="text-sm text-gray-500 mt-1">Monitor confirmed payments, escrow, and fee splits. Legacy review actions remain hidden.</p>
       </div>
       <div class="flex gap-2">
         <a href="{% url 'accounts:admin_escrow_tracker' %}" class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 no-underline">
@@ -66,7 +66,7 @@
         <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Status</label>
         <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38]">
           <option value="">All Statuses</option>
-          <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Pending Review</option>
+          <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Legacy Review</option>
           <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
           <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
         </select>
@@ -103,7 +103,7 @@
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Amount</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Submitted</th>
-          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Action</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Details</th>
         </tr>
       </thead>
       <tbody>
@@ -134,22 +134,8 @@
             <div class="inline-flex items-center gap-2">
               <a href="{% url 'accounts:admin_payment_detail' payment.pk %}" 
                  class="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 no-underline transition-colors">
-                <i class="bi bi-eye mr-1"></i> Review
+                <i class="bi bi-eye mr-1"></i> View record
               </a>
-              <form method="post" action="{% url 'accounts:admin_confirm_payment' payment.pk %}" class="inline-block">{% csrf_token %}
-                <input type="hidden" name="payment_method" value="">
-                <button type="submit" {% if payment.status != 'submitted' %}disabled class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-200 text-gray-500 rounded-full text-sm font-semibold cursor-not-allowed"{% else %}class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1a5c38] text-white rounded-full text-sm font-semibold hover:bg-[#134428] shadow-sm"{% endif %}>
-                  <i class="bi bi-check2-lg"></i>
-                  <span>Confirm</span>
-                </button>
-              </form>
-              <form method="post" action="{% url 'accounts:admin_reject_payment' payment.pk %}" class="inline-block">{% csrf_token %}
-                <input type="hidden" name="rejection_reason" value="Rejected by admin via list">
-                <button type="submit" {% if payment.status != 'submitted' %}disabled class="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-200 text-gray-500 rounded-full text-sm font-semibold cursor-not-allowed" onclick="return false;"{% else %}class="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-full text-sm font-semibold hover:bg-red-700 shadow-sm" onclick="return confirm('Reject this payment?');"{% endif %}>
-                  <i class="bi bi-x-lg"></i>
-                  <span>Reject</span>
-                </button>
-              </form>
             </div>
           </td>
         </tr>

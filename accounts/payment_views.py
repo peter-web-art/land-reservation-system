@@ -499,6 +499,8 @@ def admin_escrow_tracker(request):
     total_held = Decimal('0')
     total_available = Decimal('0')
     total_overdue = Decimal('0')
+    total_system_fee = Decimal('0')
+    total_owner_net = Decimal('0')
     
     for payment in escrow_payments:
         if payment.owner_received_on:
@@ -508,12 +510,18 @@ def admin_escrow_tracker(request):
         elif today < payment.payout_release_available_on:
             holding.append(payment)
             total_held += payment.amount or Decimal('0')
+            total_system_fee += payment.platform_fee_amount or Decimal('0')
+            total_owner_net += payment.owner_net_amount or Decimal('0')
         elif today <= payment.payout_release_due_on:
             in_window.append(payment)
             total_available += payment.amount or Decimal('0')
+            total_system_fee += payment.platform_fee_amount or Decimal('0')
+            total_owner_net += payment.owner_net_amount or Decimal('0')
         else:
             overdue.append(payment)
             total_overdue += payment.amount or Decimal('0')
+            total_system_fee += payment.platform_fee_amount or Decimal('0')
+            total_owner_net += payment.owner_net_amount or Decimal('0')
     
     context = {
         'holding_payments': holding,
@@ -523,6 +531,9 @@ def admin_escrow_tracker(request):
         'total_held': total_held,
         'total_available': total_available,
         'total_overdue': total_overdue,
+        'total_system_fee': total_system_fee,
+        'total_owner_net': total_owner_net,
+        'platform_fee_percentage': get_platform_fee_percentage(),
         'today': today,
     }
     
@@ -1029,6 +1040,9 @@ def owner_payment_dashboard(request):
     # Calculate with fees
     total_held_net = sum(p['payment'].owner_net_amount for p in held_payments)
     total_available_net = sum(p['payment'].owner_net_amount for p in available_payments)
+    total_confirmed_gross = sum(payment.amount for payment in payments)
+    total_system_fee = sum((payment.platform_fee_amount or Decimal('0')) for payment in payments)
+    total_owner_net_all = sum(payment.owner_net_amount for payment in payments)
     
     # Pagination
     paginator = Paginator(payments, 10)
@@ -1046,6 +1060,10 @@ def owner_payment_dashboard(request):
         'total_available': total_available,
         'total_available_net': total_available_net,
         'total_released': total_released,
+        'total_confirmed_gross': total_confirmed_gross,
+        'total_system_fee': total_system_fee,
+        'total_owner_net_all': total_owner_net_all,
+        'platform_fee_percentage': get_platform_fee_percentage(),
         'held_count': len(held_payments),
         'available_count': len(available_payments),
         'released_count': len(released_payments),

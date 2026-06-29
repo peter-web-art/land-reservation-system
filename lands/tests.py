@@ -3,10 +3,10 @@ import base64
 from django.test import TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
-from datetime import date
+from datetime import date, timedelta
 
 from accounts.models import OperatorPaymentConfig, User, SystemSettings
-from .models import Land, Reservation, PaymentRecord
+from .models import Land, Reservation, PaymentRecord, Notification
 
 
 TEST_PNG_BYTES = base64.b64decode(
@@ -133,19 +133,21 @@ class PaymentTrackingTests(TestCase):
                 'payment_method': 'bank',
                 'payment_reference': 'ABC123XYZ',
                 'payment_date': date.today().isoformat(),
+                'payment_pin': '1234',
                 'notes': 'Paid via transfer',
             },
         )
 
         self.reservation.refresh_from_db()
         payment = PaymentRecord.objects.get(reservation=self.reservation)
-        self.assertRedirects(response, reverse('lands:payments_and_bills'))
-        self.assertEqual(self.reservation.status, 'awaiting_payment')
-        self.assertEqual(self.reservation.payment_status, 'unpaid')
-        self.assertFalse(self.reservation.payment_confirmed)
+        self.assertRedirects(response, reverse('lands:payment_processing', args=[self.reservation.pk]))
+        self.assertEqual(self.reservation.status, 'approved')
+        self.assertEqual(self.reservation.payment_status, 'paid')
+        self.assertTrue(self.reservation.payment_confirmed)
+        self.assertEqual(payment.status, 'confirmed')
         self.assertEqual(self.reservation.payment_reference, 'ABC123XYZ')
         self.assertEqual(str(payment.amount), '500000.00')
-        self.assertEqual(str(self.reservation.remaining_balance), '500000.00')
+        self.assertEqual(str(self.reservation.remaining_balance), '0')
 
     def test_payment_method_selection_redirects_to_submit_payment(self):
         config = OperatorPaymentConfig.objects.create(
@@ -201,16 +203,19 @@ class PaymentTrackingTests(TestCase):
                 'payment_method': 'bank',
                 'payment_reference': 'APPROVED123',
                 'payment_date': date.today().isoformat(),
+                'payment_pin': '1234',
                 'notes': 'Approved booking payment',
             },
         )
 
         self.reservation.refresh_from_db()
         payment = PaymentRecord.objects.get(reservation=self.reservation)
-        self.assertRedirects(response, reverse('lands:payments_and_bills'))
+        self.assertRedirects(response, reverse('lands:payment_processing', args=[self.reservation.pk]))
         self.assertEqual(self.reservation.status, 'approved')
         self.assertEqual(str(payment.amount), '500000.00')
         self.assertEqual(self.reservation.payment_reference, 'APPROVED123')
+        self.assertEqual(payment.status, 'confirmed')
+        self.assertTrue(self.reservation.payment_confirmed)
 
     def test_submit_payment_blocks_pending_reservation(self):
         config = OperatorPaymentConfig.objects.create(
@@ -232,6 +237,7 @@ class PaymentTrackingTests(TestCase):
                 'payment_method': 'mpesa',
                 'payment_reference': 'PENDING123',
                 'payment_date': date.today().isoformat(),
+                'payment_pin': '1234',
                 'notes': 'Pending booking payment',
             },
         )
@@ -240,6 +246,90 @@ class PaymentTrackingTests(TestCase):
         self.assertRedirects(response, reverse('lands:my_reservations'))
         self.assertFalse(PaymentRecord.objects.filter(reservation=self.reservation).exists())
         self.assertEqual(self.reservation.status, 'pending')
+
+    def test_submit_payment_auto_generates_reference_and_amount(self):
+        config = OperatorPaymentConfig.objects.create(
+            payment_method='bank_transfer',
+            account_identifier='0123456789',
+            account_holder_name='Land Reserve Ltd',
+            priority=1,
+            is_active=True,
+        )
+        self.reservation.status = 'awaiting_payment'
+        self.reservation.selected_operator_payment = config
+        self.reservation.payment_method = config.payment_method
+        self.reservation.save()
+        self.client.force_login(self.customer)
+
+        form_response = self.client.get(reverse('lands:submit_payment', args=[self.reservation.pk]))
+        self.assertEqual(form_response.status_code, 200)
+        self.assertContains(form_response, f'value="{date.today().isoformat()}"')
+
+        response = self.client.post(
+            reverse('lands:submit_payment', args=[self.reservation.pk]),
+            {
+                'amount': '',
+                'payment_method': 'bank_transfer',
+                'payment_reference': '',
+                'payment_date': date.today().isoformat(),
+                'payment_pin': '1234',
+                'notes': 'Auto-generated demo payment',
+            },
+        )
+
+        self.reservation.refresh_from_db()
+        payment = PaymentRecord.objects.get(reservation=self.reservation)
+        self.assertRedirects(response, reverse('lands:payment_processing', args=[self.reservation.pk]))
+        self.assertEqual(str(payment.amount), '500000.00')
+        self.assertTrue(payment.payment_reference.startswith('DEMO-'))
+        self.assertEqual(self.reservation.payment_reference, payment.payment_reference)
+        self.assertEqual(payment.status, 'confirmed')
+        self.assertTrue(self.reservation.payment_confirmed)
+        notification = Notification.objects.filter(user=self.customer).order_by('-created_on').first()
+        self.assertIsNotNone(notification)
+        self.assertIn('Booking Ready', notification.title)
+        processing_response = self.client.get(reverse('lands:payment_processing', args=[self.reservation.pk]))
+        self.assertEqual(processing_response.status_code, 200)
+        self.assertContains(processing_response, 'Processing your payment')
+
+    def test_fully_paid_booking_cannot_open_payment_flow_again(self):
+        self.reservation.status = 'approved'
+        self.reservation.payment_confirmed = True
+        self.reservation.payment_status = 'paid'
+        self.reservation.amount_paid = '500000.00'
+        self.reservation.save()
+        self.client.force_login(self.customer)
+
+        response = self.client.get(reverse('lands:submit_payment', args=[self.reservation.pk]))
+
+        self.assertRedirects(response, reverse('lands:payments_and_bills'))
+
+    def test_payment_processing_does_not_offer_review_form(self):
+        self.reservation.status = 'approved'
+        self.reservation.payment_confirmed = True
+        self.reservation.payment_status = 'paid'
+        self.reservation.amount_paid = '500000.00'
+        self.reservation.save()
+        self.client.force_login(self.customer)
+
+        response = self.client.get(reverse('lands:payment_processing', args=[self.reservation.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Open Payments and Bills now')
+        self.assertNotContains(response, 'Review payment form')
+
+    def test_booking_days_tracking_and_access_message_are_computed(self):
+        self.reservation.status = 'approved'
+        self.reservation.payment_confirmed = True
+        self.reservation.payment_status = 'paid'
+        self.reservation.start_date = date.today()
+        self.reservation.end_date = date.today() + timedelta(days=5)
+        self.reservation.save()
+
+        self.reservation.refresh_from_db()
+        self.assertEqual(self.reservation.booking_days_elapsed, 0)
+        self.assertGreaterEqual(self.reservation.booking_days_remaining, 0)
+        self.assertIn('active', self.reservation.activity_access_message.lower())
 
     def test_refund_request_is_available_for_approved_booking(self):
         self.reservation.status = 'approved'
@@ -287,7 +377,7 @@ class PaymentTrackingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Waiting for owner confirmation')
 
-    def test_payments_dashboard_shows_update_reference_when_reference_exists(self):
+    def test_payments_dashboard_shows_continue_payment_when_reference_exists(self):
         config = OperatorPaymentConfig.objects.create(
             payment_method='bank_transfer',
             account_identifier='0123456789',
@@ -305,7 +395,7 @@ class PaymentTrackingTests(TestCase):
         response = self.client.get(reverse('lands:payments_and_bills'), {'booking': self.reservation.pk})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Update reference number')
+        self.assertContains(response, 'Continue payment')
 
     def test_owner_confirmation_updates_paid_and_remaining_balance(self):
         payment = PaymentRecord.objects.create(
@@ -372,6 +462,7 @@ class PaymentTrackingTests(TestCase):
                 'payment_method': 'bank',
                 'payment_reference': 'SECOND123',
                 'payment_date': date.today().isoformat(),
+                'payment_pin': '1234',
             },
         )
 

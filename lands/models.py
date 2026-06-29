@@ -411,7 +411,7 @@ class Reservation(AuditBase):
     ]
     PAYMENT_METHOD = [
         ('mpesa', 'M-Pesa'), ('airtel', 'Airtel Money'), ('tigopesa', 'Tigo Pesa'),
-        ('bank', 'Bank Transfer'), ('cash', 'Cash on Arrival'),
+        ('bank', 'Bank Transfer'), ('bank_transfer', 'Bank Transfer'), ('cash', 'Cash on Arrival'),
     ]
 
     land           = models.ForeignKey(Land, on_delete=models.CASCADE, related_name='reservations')
@@ -472,6 +472,51 @@ class Reservation(AuditBase):
         if days >= 7:
             return f'{days // 7} week{"s" if days // 7 != 1 else ""}'
         return f'{days} day{"s" if days != 1 else ""}'
+
+    @property
+    def booking_days_elapsed(self):
+        if not self.start_date or not self.end_date:
+            return None
+        today = date.today()
+        if today <= self.start_date:
+            return 0
+        total_days = max((self.end_date - self.start_date).days, 0)
+        elapsed = (today - self.start_date).days
+        return min(max(elapsed, 0), total_days)
+
+    @property
+    def booking_days_remaining(self):
+        if not self.start_date or not self.end_date:
+            return None
+        today = date.today()
+        if today >= self.end_date:
+            return 0
+        return max((self.end_date - today).days, 0)
+
+    @property
+    def booking_progress_percent(self):
+        if not self.start_date or not self.end_date:
+            return None
+        total_days = (self.end_date - self.start_date).days
+        if total_days <= 0:
+            return 100
+        elapsed = self.booking_days_elapsed or 0
+        return min(100, round((elapsed / total_days) * 100))
+
+    @property
+    def activity_access_message(self):
+        if not self.payment_is_complete:
+            return 'Complete payment to unlock activity access.'
+        if not self.start_date or not self.end_date:
+            return 'Your booking is active and ready for the agreed activity.'
+        today = date.today()
+        if today < self.start_date:
+            return f'Your booking is confirmed. Activity starts on {self.start_date:%b %d, %Y}.'
+        if self.start_date <= today < self.end_date:
+            remaining = self.booking_days_remaining or 0
+            used = self.booking_days_elapsed or 0
+            return f'You are active now. {used} day{"s" if used != 1 else ""} used, {remaining} day{"s" if remaining != 1 else ""} remaining.'
+        return f'Your booking period ended on {self.end_date:%b %d, %Y}.'
 
     @property
     def release_status(self):
@@ -654,6 +699,10 @@ class Reservation(AuditBase):
     @property
     def is_fully_paid(self):
         return self.remaining_balance <= 0
+
+    @property
+    def payment_is_complete(self):
+        return self.payment_confirmed or self.payment_status == 'paid' or self.remaining_balance <= 0
 
 
 class PaymentRecord(AuditBase):

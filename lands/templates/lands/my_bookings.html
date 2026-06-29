@@ -76,6 +76,14 @@
               <p class="text-xs text-gray-400 mb-1">Duration</p>
               <p class="font-bold text-gray-700">{{ b.duration_display }}</p>
             </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Days Used</p>
+              <p class="font-bold text-gray-700">{{ b.booking_days_elapsed|default:"-" }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Days Left</p>
+              <p class="font-bold text-gray-700">{{ b.booking_days_remaining|default:"-" }}</p>
+            </div>
             {% endif %}
             <div>
               <p class="text-xs text-gray-400 mb-1">Payment Status</p>
@@ -109,12 +117,17 @@
             <a href="{% url 'lands:land_detail' b.land.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors no-underline">
               <i class="bi bi-eye"></i> View Details
             </a>
+            {% if b.payment_is_complete %}
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-800 rounded-lg text-sm font-semibold border border-emerald-200">
+              <i class="bi bi-shield-check"></i> {{ b.activity_access_message }}
+            </div>
+            {% endif %}
             
-            {% if not b.payment_confirmed and b.remaining_balance > 0 %}
+            {% if not b.payment_is_complete %}
             {% if b.status == 'approved' or b.status == 'awaiting_payment' %}
               {% if b.selected_operator_payment or b.payment_method %}
                 <a href="{% url 'lands:submit_payment' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5c38] text-white rounded-lg text-sm font-semibold hover:bg-[#134428] shadow-lg shadow-[#1a5c38]/20 transition-all no-underline">
-                  <i class="bi bi-cash-coin"></i> {% if b.payment_reference or b.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                  <i class="bi bi-cash-coin"></i> Continue payment
                 </a>
                 <a href="{% url 'lands:reservation_payment_options' b.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors no-underline">
                   <i class="bi bi-credit-card"></i> Change Payment Method

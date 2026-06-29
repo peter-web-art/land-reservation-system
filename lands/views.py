@@ -14,6 +14,7 @@ from django.core.paginator import Paginator
 from django.urls import reverse
 from accounts.decorators import owner_required, customer_required, admin_required
 import bleach, re
+from uuid import uuid4
 from datetime import date as date_cls, timedelta
 from decimal import Decimal
 
@@ -77,6 +78,14 @@ def sanitize_text(value, max_length=None):
     if max_length:
         cleaned = cleaned[:max_length]
     return cleaned
+
+
+def generate_payment_reference(reservation, payment_count=1):
+    """Generate a readable reference number for demo/customer payment flows."""
+    stamp = timezone.now().strftime('%Y%m%d%H%M%S')
+    suffix = uuid4().hex[:6].upper()
+    booking_id = reservation.pk or 'NEW'
+    return f'DEMO-{booking_id}-{stamp}-{payment_count:02d}-{suffix}'
 
 
 def validate_land_gallery_submission(request, existing_positions=None):
@@ -360,6 +369,18 @@ class ReservationForm(forms.ModelForm):
 
 
 class PaymentSubmissionForm(forms.ModelForm):
+    payment_pin = forms.CharField(
+        required=True,
+        min_length=4,
+        max_length=6,
+        widget=forms.PasswordInput(attrs={
+            'inputmode': 'numeric',
+            'autocomplete': 'one-time-code',
+            'placeholder': 'Enter PIN',
+        }),
+        help_text='Demo PIN is required to simulate USSD confirmation.',
+    )
+
     class Meta:
         model = PaymentRecord
         fields = ['amount', 'payment_method', 'payment_reference', 'payment_receipt', 'payment_date', 'notes']
@@ -374,14 +395,27 @@ class PaymentSubmissionForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors'})
         self.fields['amount'].widget.attrs['placeholder'] = 'e.g. 150000'
-        self.fields['payment_reference'].required = True
+        self.fields['amount'].widget.attrs['readonly'] = 'readonly'
+        self.fields['payment_reference'].required = False
+        self.fields['payment_reference'].widget.attrs['readonly'] = 'readonly'
         self.fields['payment_date'].required = True
-        self.fields['amount'].required = True
+        self.fields['amount'].required = False
+        self.fields['payment_pin'].widget.attrs.update({
+            'class': 'w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a5c38]/30 focus:border-[#1a5c38] transition-colors',
+        })
         if self.reservation and not self.is_bound:
             self.fields['amount'].initial = self.reservation.remaining_balance
+            self.fields['payment_reference'].initial = generate_payment_reference(
+                self.reservation,
+                payment_count=self.reservation.payments.count() + 1,
+            )
+            self.fields['payment_date'].initial = timezone.localdate()
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
+        if amount is None and self.reservation:
+            amount = self.reservation.remaining_balance
+            self.cleaned_data['amount'] = amount
         if amount is None or amount <= 0:
             raise forms.ValidationError('Enter a valid payment amount.')
         if self.reservation and amount != self.reservation.remaining_balance:
@@ -389,6 +423,23 @@ class PaymentSubmissionForm(forms.ModelForm):
                 f'You must pay the full remaining balance of Tsh {self.reservation.remaining_balance}.'
             )
         return amount
+
+    def clean_payment_reference(self):
+        reference = (self.cleaned_data.get('payment_reference') or '').strip()
+        if reference:
+            return reference
+        if self.reservation:
+            return generate_payment_reference(
+                self.reservation,
+                payment_count=self.reservation.payments.count() + 1,
+            )
+        return reference
+
+    def clean_payment_pin(self):
+        pin = (self.cleaned_data.get('payment_pin') or '').strip()
+        if not pin.isdigit() or len(pin) < 4 or len(pin) > 6:
+            raise forms.ValidationError('Enter a valid demo PIN with 4 to 6 digits.')
+        return pin
 
 
 class RefundRequestForm(forms.Form):
@@ -413,6 +464,9 @@ def reservation_payment_options(request, pk):
     if reservation.status == 'pending':
         messages.info(request, 'Wait for the owner to confirm your booking before selecting a payment method.')
         return redirect('lands:my_reservations')
+    if reservation.payment_confirmed or reservation.payment_status == 'paid' or reservation.remaining_balance <= 0:
+        messages.info(request, 'This booking is already fully paid.')
+        return redirect('lands:payments_and_bills')
 
     configs = OperatorPaymentConfig.objects.filter(is_active=True).order_by('priority')
 
@@ -1410,7 +1464,7 @@ def mark_payment(request, pk):
     r = get_object_or_404(Reservation, pk=pk, land__owner=request.user)
     messages.info(
         request,
-        'Payment verification is now handled by admin. Use the admin payments panel to confirm customer payments.'
+        'Payments are auto-confirmed in the demo flow after PIN verification.'
     )
     return redirect('lands:reservations_management')
 
@@ -1964,54 +2018,147 @@ def submit_payment(request, pk):
     if booking.status not in ['approved', 'awaiting_payment']:
         messages.error(request, 'You can submit payment only after the booking has been confirmed.')
         return redirect('lands:payments_and_bills')
-    if booking.remaining_balance <= 0:
+    if booking.payment_confirmed or booking.payment_status == 'paid' or booking.remaining_balance <= 0:
         messages.info(request, 'This booking is already fully paid.')
         return redirect('lands:payments_and_bills')
+
+    generated_reference = generate_payment_reference(
+        booking,
+        payment_count=booking.payments.count() + 1,
+    )
     
     if request.method == 'POST':
         form = PaymentSubmissionForm(request.POST, request.FILES, reservation=booking)
         if form.is_valid():
             payment = form.save(commit=False)
             payment.reservation = booking
+            payment.amount = booking.remaining_balance
+            payment.payment_reference = form.cleaned_data.get('payment_reference') or generated_reference
             payment.created_by = request.user
             payment.updated_by = request.user
+            payment.status = 'confirmed'
+            payment.confirmed_on = timezone.now()
+            payment = apply_platform_fee(payment)
             payment.save()
 
             booking.payment_status = 'unpaid'
-            booking.payment_confirmed = False
+            booking.payment_confirmed = True
             booking.payment_reference = payment.payment_reference
             booking.payment_receipt = payment.payment_receipt
             booking.payment_date = payment.payment_date
             booking.payment_method = payment.payment_method
             booking.updated_by = request.user
+            booking.amount_paid = booking.confirmed_amount_total
+            booking.payment_status = 'paid' if booking.remaining_balance <= 0 else 'unpaid'
+            if booking.remaining_balance <= 0 and booking.status in ['pending', 'awaiting_payment', 'approved']:
+                booking.status = 'approved'
             booking.save()
+
+            request.session['latest_payment_submission'] = {
+                'booking_id': booking.pk,
+                'payment_id': payment.pk,
+            }
             
             notify_admins(
                 notification_type='payment',
-                title="Payment Submitted",
+                title="Payment Confirmed",
                 message=(
-                    f"Customer {request.user.username} submitted Tsh {payment.amount} for {booking.land.title}. "
-                    f"Review reference: {payment.payment_reference}."
+                    f"Customer {request.user.username} confirmed Tsh {payment.amount} for {booking.land.title}. "
+                    f"Reference: {payment.payment_reference}."
                 ),
                 link=reverse('accounts:admin_payment_detail', args=[payment.pk])
             )
+
+            if booking.customer:
+                create_notification(
+                    user=booking.customer,
+                    notification_type='payment',
+                    title='Booking Ready - You May Proceed',
+                    message=_build_activity_access_message(booking),
+                    link=reverse('lands:payments_and_bills'),
+                )
+
+            if booking.land.owner:
+                create_notification(
+                    user=booking.land.owner,
+                    notification_type='payment',
+                    title='Customer Booking Ready',
+                    message=(
+                        f"Customer {request.user.username} payment of Tsh {payment.amount:,.0f} for {booking.land.title} "
+                        f"is confirmed. {booking.activity_access_message}"
+                    ),
+                    link=reverse('lands:manage_payments'),
+                )
             
-            messages.success(request, "Payment details submitted successfully. An admin will review and confirm it.")
-            return redirect('lands:payments_and_bills')
+            messages.success(request, "Payment confirmed successfully and sent to the dashboard.")
+            return redirect('lands:payment_processing', pk=booking.pk)
     else:
         initial_payment_method = booking.payment_method
         if not initial_payment_method and booking.selected_operator_payment:
             initial_payment_method = booking.selected_operator_payment.payment_method
         form = PaymentSubmissionForm(
             reservation=booking,
-            initial={'payment_method': initial_payment_method}
+            initial={
+                'payment_method': initial_payment_method,
+                'amount': booking.remaining_balance,
+                'payment_reference': generated_reference,
+                'payment_date': timezone.localdate(),
+            }
         )
         
     return render(request, 'lands/submit_payment.html', {
         'form': form,
         'booking': booking,
         'payment_history': booking.payments.all()[:5],
+        'generated_reference': generated_reference,
     })
+
+
+@login_required
+@customer_required
+def payment_processing(request, pk):
+    booking = get_object_or_404(Reservation.objects.select_related('land'), pk=pk, customer=request.user)
+    submission = request.session.get('latest_payment_submission') or {}
+    payment = None
+    if submission.get('booking_id') == booking.pk and submission.get('payment_id'):
+        payment = booking.payments.filter(pk=submission['payment_id']).first()
+        request.session.pop('latest_payment_submission', None)
+
+    return render(request, 'lands/payment_processing.html', {
+        'booking': booking,
+        'payment': payment,
+        'redirect_url': f"{reverse('lands:payments_and_bills')}?booking={booking.pk}",
+    })
+
+
+def _build_activity_access_message(reservation):
+    if not reservation.start_date or not reservation.end_date:
+        return (
+            f"Your payment for '{reservation.land.title}' is confirmed. "
+            f"You can now proceed with the agreed activity."
+        )
+
+    today = date_cls.today()
+    if today < reservation.start_date:
+        return (
+            f"Your payment for '{reservation.land.title}' is confirmed. "
+            f"Activity starts on {reservation.start_date:%b %d, %Y}. "
+            f"Your booking runs for {reservation.duration_display}."
+        )
+
+    if reservation.start_date <= today < reservation.end_date:
+        used = reservation.booking_days_elapsed or 0
+        remaining = reservation.booking_days_remaining or 0
+        return (
+            f"Your payment for '{reservation.land.title}' is confirmed. "
+            f"You may proceed now. {used} day{'s' if used != 1 else ''} used, "
+            f"{remaining} day{'s' if remaining != 1 else ''} remaining."
+        )
+
+    return (
+        f"Your payment for '{reservation.land.title}' is confirmed. "
+        f"The booking period ended on {reservation.end_date:%b %d, %Y}."
+    )
 
 
 @login_required
@@ -2062,6 +2209,7 @@ def manage_payments(request):
         'platform_fee_total': platform_fee_total,
         'owner_net_total': owner_net_total,
         'expected_income': expected_income,
+        'platform_fee_percentage': get_platform_fee_percentage(),
     })
 
 

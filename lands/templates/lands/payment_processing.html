@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Processing Payment — Land Reserve{% endblock %}
+{% block content %}
+<meta http-equiv="refresh" content="7;url={{ redirect_url }}">
+<div class="min-h-screen bg-gradient-to-br from-[#f3faf3] via-white to-[#eef6f0] py-16">
+  <div class="max-w-3xl mx-auto px-4">
+    <div class="bg-white rounded-[2rem] shadow-2xl shadow-[#1a5c38]/10 border border-gray-100 overflow-hidden">
+      <div class="p-8 bg-[#1a5c38] text-white">
+        <p class="text-xs uppercase tracking-[0.3em] font-bold opacity-80">USSD Demo Gateway</p>
+        <h1 class="text-3xl font-black mt-2">Processing your payment</h1>
+        <p class="text-sm opacity-85 mt-2">This screen simulates a mobile payment gateway while the transaction is finalized.</p>
+      </div>
+
+      <div class="p-8 space-y-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="rounded-3xl border border-gray-200 bg-[#0f172a] text-white p-5 shadow-lg">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-[10px] uppercase tracking-[0.3em] text-cyan-200 font-bold">USSD Session</p>
+                <p class="text-2xl font-black mt-1">*150*00#</p>
+              </div>
+              <div class="h-3 w-3 rounded-full bg-emerald-400 animate-pulse"></div>
+            </div>
+
+            <div class="mt-5 space-y-3 text-sm">
+              <div class="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <div class="text-cyan-200 text-[10px] uppercase tracking-widest font-bold">1. Dialling</div>
+                <div id="step-one" class="font-semibold">Connecting to payment gateway...</div>
+              </div>
+              <div class="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <div class="text-cyan-200 text-[10px] uppercase tracking-widest font-bold">2. PIN</div>
+                <div id="step-two" class="font-semibold">Verifying demo PIN...</div>
+              </div>
+              <div class="rounded-2xl bg-white/10 border border-white/10 p-3">
+                <div class="text-cyan-200 text-[10px] uppercase tracking-widest font-bold">3. Confirmation</div>
+                <div id="step-three" class="font-semibold">Finalizing and confirming transaction...</div>
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <div class="flex items-center justify-between text-xs text-cyan-100 mb-2">
+                <span>Loading</span>
+                <span id="progress-label">10%</span>
+              </div>
+              <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div id="progress-bar" class="h-full w-[10%] bg-gradient-to-r from-cyan-300 to-emerald-400 rounded-full transition-all duration-700"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="rounded-3xl border border-gray-200 bg-gray-50 p-5">
+              <p class="text-xs uppercase tracking-widest text-gray-500 font-bold">Booking</p>
+              <p class="text-xl font-black text-gray-900 mt-1">{{ booking.land.title }}</p>
+              <p class="text-sm text-gray-500">{{ booking.land.location }}</p>
+              <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div class="rounded-2xl bg-white border border-gray-200 p-3">
+                  <div class="text-gray-500 text-xs uppercase font-bold">Amount</div>
+                  <div class="font-semibold text-gray-900">Tsh {{ payment.amount|default:booking.remaining_balance }}</div>
+                </div>
+                <div class="rounded-2xl bg-white border border-gray-200 p-3">
+                  <div class="text-gray-500 text-xs uppercase font-bold">Reference</div>
+                  <div class="font-semibold text-gray-900 break-all">{{ payment.payment_reference|default:booking.payment_reference }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-3xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-800">
+              <div class="font-semibold mb-1">What is happening now</div>
+              <ul class="space-y-1 list-disc pl-5">
+                <li>Your demo PIN is being checked.</li>
+                <li>The payment amount is fixed to the full remaining balance.</li>
+                <li>The payment is now confirmed automatically and the dashboard is updated.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 text-sm text-emerald-800">
+              <div class="font-semibold">Auto redirect in a few seconds</div>
+              <p class="mt-1">After the loading sequence completes, you will return to Payments and Bills with the booking focused.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <a href="{% url 'lands:payments_and_bills' %}" class="btn-primary no-underline text-center">
+            Open Payments and Bills now
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const steps = [
+      ['step-one', 'Connecting to payment gateway...'],
+      ['step-two', 'Verifying demo PIN...'],
+      ['step-three', 'Finalizing and confirming transaction...'],
+    ];
+    const progressBar = document.getElementById('progress-bar');
+    const progressLabel = document.getElementById('progress-label');
+    let percent = 10;
+    let current = 0;
+
+    const timer = setInterval(() => {
+      percent += 18;
+      if (percent > 100) percent = 100;
+      progressBar.style.width = percent + '%';
+      progressLabel.textContent = percent + '%';
+
+      const stepIndex = Math.min(current, steps.length - 1);
+      const stepNode = document.getElementById(steps[stepIndex][0]);
+      if (stepNode) {
+        stepNode.textContent = steps[stepIndex][1];
+      }
+      current += 1;
+
+      if (percent >= 100) {
+        clearInterval(timer);
+      }
+    }, 1400);
+  })();
+</script>
+{% endblock %}

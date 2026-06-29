@@ -50,6 +50,7 @@ urlpatterns = [
     path('payments/',                                   views.payments_and_bills,     name='payments_and_bills'),
     path('payments/manage/',                            views.manage_payments,        name='manage_payments'),
     path('bookings/<int:pk>/submit-payment/',           views.submit_payment,         name='submit_payment'),
+    path('bookings/<int:pk>/payment-processing/',       views.payment_processing,     name='payment_processing'),
     path('reservations/<int:pk>/payment-options/',       views.reservation_payment_options, name='reservation_payment_options'),
     path('bookings/<int:pk>/confirm-payment/',          views.confirm_payment_receipt, name='confirm_payment_receipt'),
     path('payments/<int:payment_id>/acknowledge-payout/', views.acknowledge_payout_received, name='acknowledge_payout_received'),

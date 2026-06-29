@@ -129,6 +129,7 @@
               <div class="mt-2 text-sm text-gray-700 space-y-1">
                 {% if r.start_date and r.end_date %}
                 <div><strong>Period:</strong> {{ r.start_date|date:"M d, Y" }} &rarr; {{ r.end_date|date:"M d, Y" }} ({{ r.duration_display }})</div>
+                <div><strong>Days Used:</strong> {{ r.booking_days_elapsed|default:"-" }} | <strong>Days Left:</strong> {{ r.booking_days_remaining|default:"-" }}</div>
                 {% endif %}
                 <div><strong>Status:</strong> {% if r.is_escrow_holding %}Money on hold and will be released after 24 hours{% else %}{{ r.get_status_display }}{% endif %}</div>
                 <div><strong>Amount:</strong> Tsh {{ r.total_amount }}</div>
@@ -136,16 +137,17 @@
                 {% if r.land.contact_phone %}<div><i class="bi bi-phone"></i> {{ r.land.contact_phone }}</div>{% endif %}
                 {% if r.land.contact_email %}<div><i class="bi bi-envelope"></i> {{ r.land.contact_email }}</div>{% endif %}
                 {% if r.release_status %}<div class="text-sm text-green-700"><i class="bi bi-clock-history"></i> {{ r.release_status }}</div>{% endif %}
+                {% if r.payment_is_complete %}<div class="text-sm text-emerald-700"><i class="bi bi-shield-check"></i> {{ r.activity_access_message }}</div>{% endif %}
               </div>
             </div>
           </div>
           <div class="flex flex-col gap-2 min-w-[170px]">
             <a href="{% url 'lands:land_detail' r.land.id %}" class="btn-primary no-underline text-sm">View land</a>
-            {% if not r.payment_confirmed and r.remaining_balance > 0 %}
+            {% if not r.payment_is_complete %}
               {% if r.status == 'approved' or r.status == 'awaiting_payment' %}
                 {% if r.selected_operator_payment or r.payment_method %}
                   <a href="{% url 'lands:submit_payment' r.id %}" class="btn-outline no-underline text-sm">
-                    <i class="bi bi-receipt"></i> {% if r.payment_reference or r.latest_pending_payment %}Update reference number{% else %}Continue payment{% endif %}
+                    <i class="bi bi-receipt"></i> Continue payment
                   </a>
                   <a href="{% url 'lands:reservation_payment_options' r.id %}" class="btn-outline no-underline text-sm">
                     <i class="bi bi-credit-card-2-front"></i> Change Payment Method

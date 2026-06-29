@@ -61,7 +61,7 @@
             <div>
               <p class="text-sm font-semibold text-gray-900">Payment Confirmed</p>
               <p class="text-sm text-gray-600">{{ payment.confirmed_on|date:"M d, Y H:i" }}</p>
-              <p class="text-xs text-gray-500 mt-1">Customer payment verified by operator</p>
+              <p class="text-xs text-gray-500 mt-1">Customer payment confirmed automatically and queued for escrow release</p>
             </div>
           </div>
 
@@ -79,7 +79,7 @@
               {% if escrow_status == 'held' %}
               <p class="text-xs text-amber-600 mt-1 font-semibold">🕐 Still in hold — {{ days_until_release }} day{{ days_until_release|pluralize }} remaining</p>
               {% else %}
-              <p class="text-xs text-gray-500 mt-1">Hold period completed</p>
+              <p class="text-xs text-gray-500 mt-1">Hold period completed or not applicable</p>
               {% endif %}
             </div>
           </div>
@@ -118,7 +118,7 @@
               <p class="text-sm text-gray-600">{{ payment.owner_received_on|date:"M d, Y H:i" }}</p>
               <p class="text-xs text-blue-600 mt-1">Funds have been transferred to your account</p>
               {% else %}
-              <p class="text-sm text-gray-600">Waiting for scheduled release; the operator/admin will process the release.</p>
+              <p class="text-sm text-gray-600">Waiting for scheduled release; the system will process it automatically once the window expires.</p>
               <p class="text-xs text-gray-500 mt-1">If you need help, contact support or open a message in the communication tab.</p>
               {% endif %}
             </div>
@@ -166,6 +166,18 @@
               <div class="text-sm font-semibold text-green-700 mt-1">Tsh {{ reservation.confirmed_amount_total|floatformat:0 }}</div>
             </div>
           </div>
+          {% if reservation.start_date and reservation.end_date %}
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Days Used</div>
+              <div class="text-sm font-semibold text-gray-900 mt-1">{{ reservation.booking_days_elapsed|default:"-" }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 uppercase font-semibold">Days Left</div>
+              <div class="text-sm font-semibold text-gray-900 mt-1">{{ reservation.booking_days_remaining|default:"-" }}</div>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
 
